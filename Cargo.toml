@@ -1,7 +1,7 @@
 [package]
-name = "eframe_template"
+name = "rvcd"
 version = "0.1.0"
-authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
+authors = ["Chiro <Chiro2001@163.com>"]
 edition = "2021"
 rust-version = "1.65"
 
@@ -17,6 +17,10 @@ eframe = { version = "0.20.0", default-features = false, features = [
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
+vcd = "0.6.1"
+anyhow = "1.0.68"
+log = "0.4.17"
+env_logger = "0.10.0"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
