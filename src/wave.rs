@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::Read;
 use anyhow::Result;
 use log::info;
-use vcd::{Header, IdCode, ScopeItem};
-use vcd::Command::{ChangeScalar, Timestamp};
+use vcd::{Header, IdCode, ScopeItem, Value};
+use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
 use vcd::ScopeItem::{Scope, Var};
 
 pub fn vcd_header_show(header: &Header) {
@@ -59,13 +59,14 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
     let code_name = vcd_code_name(&header);
     for command_result in parser {
         let command = command_result?;
-        match command {
+        match &command {
             Timestamp(i) => println!("#{}", i),
             ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, match code_name.get(&i) {
                 Some(v) => v,
                 None => "None"
             }),
-            _ => {}
+            ChangeVector(i, v) => {}
+            c => println!("unknown: {:#?}", c)
         }
         cache.push(command);
     }

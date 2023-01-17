@@ -21,6 +21,9 @@ vcd = "0.6.1"
 anyhow = "1.0.68"
 log = "0.4.17"
 env_logger = "0.10.0"
+num = "0.4.0"
+num-bigint = "0.4.3"
+num-traits = "0.2.15"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
