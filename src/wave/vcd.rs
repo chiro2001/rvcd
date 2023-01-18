@@ -1,5 +1,9 @@
-use crate::wave::{Wave, WaveDataItem, WaveDataValue, WaveLoader, WaveTimescaleUnit, WireValue};
-use anyhow::Result;
+use crate::radix::radix_value_big_uint;
+use crate::wave::WaveDataValue::{Comp, Raw};
+use crate::wave::{
+    Wave, WaveCompressor, WaveDataItem, WaveDataValue, WaveLoader, WaveTimescaleUnit, WireValue,
+};
+use anyhow::{anyhow, Result};
 use log::info;
 use std::collections::HashMap;
 use std::io::Read;
@@ -160,7 +164,7 @@ impl WaveLoader for Vcd {
 
 #[cfg(test)]
 mod test {
-    use crate::radix::vcd_vector_to_string_n;
+    use crate::radix::radix_vector_to_string_n;
     use crate::wave::vcd::{vcd_code_name, vcd_header_show, vcd_tree_show};
     use anyhow::Result;
     use std::fs::File;
@@ -192,7 +196,7 @@ mod test {
                 ChangeVector(i, v) => println!(
                     "code={}, value={}, name={}",
                     i,
-                    vcd_vector_to_string_n(v, 4),
+                    radix_vector_to_string_n(&v.iter().map(|x| (*x).into()).collect(), 4),
                     get_name(i)
                 ),
                 c => println!("unknown: {:#?}", c),
@@ -208,5 +212,29 @@ mod test {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         vcd_read(&mut input)?;
         Ok(())
+    }
+}
+
+impl WaveCompressor for Vcd {
+    fn compress_item(item: WaveDataItem) -> Result<WaveDataItem> {
+        if match &item.value {
+            Comp(v) => v.len(),
+            Raw(v) => v.len(),
+        } == 0
+        {
+            return Err(anyhow!(""));
+        }
+        match &item.value {
+            Comp(_) => Ok(item),
+            Raw(v) => {
+                let ability = !v.iter().any(|i| i == &WireValue::X || i == &WireValue::Z);
+                if ability {
+                    let value = Comp(radix_value_big_uint(v).to_bytes_le());
+                    Ok(WaveDataItem { value, ..item })
+                } else {
+                    Ok(item)
+                }
+            }
+        }
     }
 }

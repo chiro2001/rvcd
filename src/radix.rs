@@ -1,6 +1,6 @@
+use crate::wave::WireValue;
 use num_bigint::BigUint;
 use std::cmp::min;
-use vcd::Value;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Radix {
@@ -10,9 +10,9 @@ pub enum Radix {
     Hex,
 }
 
-pub fn vcd_vector_to_string(radix: Radix, vec: &Vec<Value>) -> String {
+pub fn radix_vector_to_string(radix: Radix, vec: &Vec<WireValue>) -> String {
     if radix == Radix::Dec {
-        vcd_vector_dec(vec)
+        radix_vector_dec(vec)
     } else {
         let n: usize = match radix {
             Radix::Bin => 1,
@@ -20,11 +20,11 @@ pub fn vcd_vector_to_string(radix: Radix, vec: &Vec<Value>) -> String {
             Radix::Hex => 4,
             _ => panic!("internal err"),
         };
-        vcd_vector_to_string_n(vec, n)
+        radix_vector_to_string_n(vec, n)
     }
 }
 
-pub fn vcd_vector_bin(vec: &[Value]) -> String {
+pub fn radix_vector_bin(vec: &[WireValue]) -> String {
     vec.iter()
         .rev()
         .map(|v| v.to_string())
@@ -32,14 +32,14 @@ pub fn vcd_vector_bin(vec: &[Value]) -> String {
         .join("")
 }
 
-fn value_map_val(v: &Value) -> u8 {
+fn value_map_val(v: &WireValue) -> u8 {
     match v {
-        Value::V0 => 0,
+        WireValue::V0 => 0,
         _ => 1,
     }
 }
 
-fn value_big_int(vec: &Vec<Value>) -> BigUint {
+pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
     let bits = vec.iter().map(value_map_val);
     let mut bytes: Vec<u8> = vec![];
     let mut byte = 0_u8;
@@ -61,15 +61,15 @@ fn value_big_int(vec: &Vec<Value>) -> BigUint {
     BigUint::from_bytes_le(&bytes)
 }
 
-pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
+pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
     println!("n = {}", n);
     assert!(n > 0);
-    let val = value_big_int(vec);
+    let val = radix_value_big_uint(vec);
     let mut str = val.to_str_radix(1 << n);
     let bits_should_len = ((vec.len() / n) + usize::from(vec.len() % n != 0)) * n;
     let vec_extended = vec
         .iter()
-        .chain((0..(bits_should_len - vec.len())).map(|_| &Value::V0))
+        .chain((0..(bits_should_len - vec.len())).map(|_| &WireValue::V0))
         .copied()
         .collect::<Vec<_>>();
     println!(
@@ -93,7 +93,7 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
             vec_extended,
             vec_extended.iter().rev().collect::<Vec<_>>()
         );
-        let indexes_target = |target: Value| {
+        let indexes_target = |target: WireValue| {
             vec_extended
                 .iter()
                 .rev()
@@ -102,8 +102,8 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
                 .map(|i| i.0)
                 .collect::<Vec<_>>()
         };
-        let indexes_z = indexes_target(Value::Z);
-        let indexes_x = indexes_target(Value::X);
+        let indexes_z = indexes_target(WireValue::Z);
+        let indexes_x = indexes_target(WireValue::X);
         let mut do_replace = |indexes: Vec<usize>, with: &str| {
             println!("indexes for {}: {:?}", with, indexes);
             indexes.into_iter().map(|i| i / n).for_each(|i| {
@@ -116,11 +116,11 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
     str
 }
 
-pub fn vcd_vector_dec(vec: &Vec<Value>) -> String {
-    let val = value_big_int(vec);
+pub fn radix_vector_dec(vec: &Vec<WireValue>) -> String {
+    let val = radix_value_big_uint(vec);
     let str = val.to_str_radix(10);
-    let exists_x = vec.contains(&Value::X);
-    let exists_z = vec.contains(&Value::Z);
+    let exists_x = vec.contains(&WireValue::X);
+    let exists_z = vec.contains(&WireValue::Z);
     if exists_x || exists_z {
         // directly change all chars to x or z
         (0..str.len())
@@ -134,18 +134,18 @@ pub fn vcd_vector_dec(vec: &Vec<Value>) -> String {
 
 #[cfg(test)]
 mod test {
-    use crate::radix::{vcd_vector_to_string, Radix};
+    use crate::radix::{radix_vector_to_string, Radix};
+    use crate::wave::WireValue;
+    use crate::wave::WireValue::*;
     use anyhow::Result;
-    use vcd::Value;
-    use vcd::Value::*;
 
     #[test]
     fn test_vector_string() -> Result<()> {
-        let vec: Vec<Value> = vec![V1, V1, V1, V0, V0, V1, V1, V0];
-        let bin = vcd_vector_to_string(Radix::Bin, &vec);
-        let oct = vcd_vector_to_string(Radix::Oct, &vec);
-        let dec = vcd_vector_to_string(Radix::Dec, &vec);
-        let hex = vcd_vector_to_string(Radix::Hex, &vec);
+        let vec: Vec<WireValue> = vec![V1, V1, V1, V0, V0, V1, V1, V0];
+        let bin = radix_vector_to_string(Radix::Bin, &vec);
+        let oct = radix_vector_to_string(Radix::Oct, &vec);
+        let dec = radix_vector_to_string(Radix::Dec, &vec);
+        let hex = radix_vector_to_string(Radix::Hex, &vec);
         println!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),
@@ -155,11 +155,11 @@ mod test {
             hex
         );
 
-        let vec: Vec<Value> = vec![V1, V1, V1, X, V0, V1, V1, Z];
-        let bin = vcd_vector_to_string(Radix::Bin, &vec);
-        let oct = vcd_vector_to_string(Radix::Oct, &vec);
-        let dec = vcd_vector_to_string(Radix::Dec, &vec);
-        let hex = vcd_vector_to_string(Radix::Hex, &vec);
+        let vec: Vec<WireValue> = vec![V1, V1, V1, X, V0, V1, V1, Z];
+        let bin = radix_vector_to_string(Radix::Bin, &vec);
+        let oct = radix_vector_to_string(Radix::Oct, &vec);
+        let dec = radix_vector_to_string(Radix::Dec, &vec);
+        let hex = radix_vector_to_string(Radix::Hex, &vec);
         println!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),
@@ -169,11 +169,11 @@ mod test {
             hex
         );
 
-        let vec: Vec<Value> = vec![V1, V1, V1, X, V0, V1, X, Z, V0, V0, V0];
-        let bin = vcd_vector_to_string(Radix::Bin, &vec);
-        let oct = vcd_vector_to_string(Radix::Oct, &vec);
-        let dec = vcd_vector_to_string(Radix::Dec, &vec);
-        let hex = vcd_vector_to_string(Radix::Hex, &vec);
+        let vec: Vec<WireValue> = vec![V1, V1, V1, X, V0, V1, X, Z, V0, V0, V0];
+        let bin = radix_vector_to_string(Radix::Bin, &vec);
+        let oct = radix_vector_to_string(Radix::Oct, &vec);
+        let dec = radix_vector_to_string(Radix::Dec, &vec);
+        let hex = radix_vector_to_string(Radix::Hex, &vec);
         println!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),

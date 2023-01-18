@@ -7,13 +7,28 @@ use std::io::Read;
 pub mod vcd;
 
 /// like [vcd::Value], basically for (de)serialize
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
 pub enum WireValue {
     #[default]
     V0,
     V1,
     X,
     Z,
+}
+
+impl Display for WireValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WireValue::V0 => "0",
+                WireValue::V1 => "1",
+                WireValue::X => "x",
+                WireValue::Z => "z",
+            }
+        )
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Debug)]
@@ -64,7 +79,11 @@ pub struct Wave {
 
 impl Display for Wave {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Wave {}{} {:?}", self.timescale.0, self.timescale.1, self.headers)
+        write!(
+            f,
+            "Wave {}{} {:?}",
+            self.timescale.0, self.timescale.1, self.headers
+        )
     }
 }
 
@@ -72,11 +91,15 @@ pub trait WaveLoader {
     fn load(reader: &mut dyn Read) -> Result<Wave>;
 }
 
+pub trait WaveCompressor {
+    fn compress_item(value: WaveDataItem) -> Result<WaveDataItem>;
+}
+
 #[cfg(test)]
 mod test {
-    use std::fs::File;
     use crate::wave::vcd::Vcd;
     use crate::wave::WaveLoader;
+    use std::fs::File;
 
     #[test]
     fn test_load_vcd() -> anyhow::Result<()> {
