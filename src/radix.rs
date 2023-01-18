@@ -68,7 +68,7 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
     let vec_extended = vec.iter().chain((0..(bits_should_len - vec.len())).map(|_| &Value::V0))
         .map(|i| *i).collect::<Vec<_>>();
     println!("str len={}, vec len={}, str_len<<(n-1)={}, bits_should_len={}", str.len(), vec.len(), str.len() << (n - 1), bits_should_len);
-    let prefix_len = ((bits_should_len / n) - str.len());
+    let prefix_len = (bits_should_len / n) - str.len();
     let prefix = (0..prefix_len).map(|_| "0").collect::<Vec<_>>().join("");
     println!("prefix = {}", prefix);
     str = prefix + &str;

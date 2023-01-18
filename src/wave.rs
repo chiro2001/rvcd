@@ -5,6 +5,7 @@ use log::info;
 use vcd::{Header, IdCode, ScopeItem};
 use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
 use vcd::ScopeItem::{Scope, Var};
+use crate::radix::vcd_vector_to_string_n;
 
 pub fn vcd_header_show(header: &Header) {
     header.comment.as_ref().map(|c| info!("comment: {}", c));
@@ -59,13 +60,15 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
     let code_name = vcd_code_name(&header);
     for command_result in parser {
         let command = command_result?;
+        let get_name = |code: &IdCode| match code_name.get(code) {
+            Some(v) => v,
+            None => "None"
+        };
         match &command {
             Timestamp(i) => println!("#{}", i),
-            ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, match code_name.get(&i) {
-                Some(v) => v,
-                None => "None"
-            }),
-            ChangeVector(i, v) => {}
+            ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, get_name(&i)),
+            ChangeVector(i, v) =>
+                println!("code={}, value={}, name={}", i, vcd_vector_to_string_n(v, 4), get_name(&i)),
             c => println!("unknown: {:#?}", c)
         }
         cache.push(command);
