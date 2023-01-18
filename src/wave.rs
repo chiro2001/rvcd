@@ -9,13 +9,18 @@ use vcd::ScopeItem::{Scope, Var};
 use vcd::{Header, IdCode, ScopeItem};
 
 pub fn vcd_header_show(header: &Header) {
-    header.comment.as_ref().map(|c| info!("comment: {}", c));
-    header.date.as_ref().map(|c| info!("date: {}", c));
-    header.version.as_ref().map(|c| info!("version: {}", c));
-    header
-        .timescale
-        .as_ref()
-        .map(|c| info!("timescale: {} / {}", c.0, c.1));
+    if let Some(c) = header.comment.as_ref() {
+        info!("comment: {}", c)
+    }
+    if let Some(c) = header.date.as_ref() {
+        info!("date: {}", c)
+    }
+    if let Some(c) = header.version.as_ref() {
+        info!("version: {}", c)
+    }
+    if let Some(c) = header.timescale.as_ref() {
+        info!("timescale: {} / {}", c.0, c.1)
+    }
 }
 
 pub fn vcd_tree_show(header: &Header) {
@@ -80,12 +85,12 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
         };
         match &command {
             Timestamp(i) => println!("#{}", i),
-            ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, get_name(&i)),
+            ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, get_name(i)),
             ChangeVector(i, v) => println!(
                 "code={}, value={}, name={}",
                 i,
                 vcd_vector_to_string_n(v, 4),
-                get_name(&i)
+                get_name(i)
             ),
             c => println!("unknown: {:#?}", c),
         }

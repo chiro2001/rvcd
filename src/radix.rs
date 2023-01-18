@@ -24,7 +24,7 @@ pub fn vcd_vector_to_string(radix: Radix, vec: &Vec<Value>) -> String {
     }
 }
 
-pub fn vcd_vector_bin(vec: &Vec<Value>) -> String {
+pub fn vcd_vector_bin(vec: &[Value]) -> String {
     vec.iter()
         .rev()
         .map(|v| v.to_string())
@@ -66,11 +66,11 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
     assert!(n > 0);
     let val = value_big_int(vec);
     let mut str = val.to_str_radix(1 << n);
-    let bits_should_len = ((vec.len() / n) + (if vec.len() % n == 0 { 0 } else { 1 })) * n;
+    let bits_should_len = ((vec.len() / n) + usize::from(vec.len() % n != 0)) * n;
     let vec_extended = vec
         .iter()
         .chain((0..(bits_should_len - vec.len())).map(|_| &Value::V0))
-        .map(|i| *i)
+        .copied()
         .collect::<Vec<_>>();
     println!(
         "str len={}, vec len={}, str_len<<(n-1)={}, bits_should_len={}",
