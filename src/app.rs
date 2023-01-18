@@ -1,15 +1,18 @@
+use vcd::IdCode;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
     label: String,
-
-    name: String,
-
     // this how you opt-out of serialization of a member
     #[serde(skip)]
     value: f32,
+    // shown signals
+    signal_paths: Vec<Vec<String>>,
+    #[serde(skip)]
+    signals: Vec<IdCode>,
 }
 
 impl Default for TemplateApp {
@@ -17,8 +20,9 @@ impl Default for TemplateApp {
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
-            name: "".to_string(),
             value: 2.7,
+            signal_paths: vec![],
+            signals: vec![],
         }
     }
 }

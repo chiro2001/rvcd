@@ -101,7 +101,7 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use crate::wave::vcd_read;
+    use crate::wave::vcd::vcd_read;
     use anyhow::Result;
     use std::fs::File;
 
