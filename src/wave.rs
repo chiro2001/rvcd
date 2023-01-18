@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use anyhow::Result;
 use log::info;
-use vcd::{Header, IdCode, ScopeItem, Value};
+use vcd::{Header, IdCode, ScopeItem};
 use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
 use vcd::ScopeItem::{Scope, Var};
 
