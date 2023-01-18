@@ -1,4 +1,5 @@
-use anyhow::Result;
+use crate::radix::radix_value_big_uint;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -68,6 +69,30 @@ pub struct WaveDataItem {
     timestamp: u64,
 }
 
+impl WaveDataItem {
+    fn compress(self) -> Result<Self> {
+        if match &self.value {
+            WaveDataValue::Comp(v) => v.len(),
+            WaveDataValue::Raw(v) => v.len(),
+        } == 0
+        {
+            return Err(anyhow!("compressing invalid data!"));
+        }
+        match &self.value {
+            WaveDataValue::Comp(_) => Ok(self),
+            WaveDataValue::Raw(v) => {
+                let ability = !v.iter().any(|i| i == &WireValue::X || i == &WireValue::Z);
+                if ability {
+                    let value = WaveDataValue::Comp(radix_value_big_uint(v).to_bytes_le());
+                    Ok(Self { value, ..self })
+                } else {
+                    Ok(self)
+                }
+            }
+        }
+    }
+}
+
 /// loaded wave data in memory
 #[derive(Default, Serialize, Deserialize)]
 pub struct Wave {
@@ -89,10 +114,6 @@ impl Display for Wave {
 
 pub trait WaveLoader {
     fn load(reader: &mut dyn Read) -> Result<Wave>;
-}
-
-pub trait WaveCompressor {
-    fn compress_item(value: WaveDataItem) -> Result<WaveDataItem>;
 }
 
 #[cfg(test)]

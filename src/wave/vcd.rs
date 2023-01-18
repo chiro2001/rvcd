@@ -1,9 +1,6 @@
-use crate::radix::radix_value_big_uint;
-use crate::wave::WaveDataValue::{Comp, Raw};
-use crate::wave::{
-    Wave, WaveCompressor, WaveDataItem, WaveDataValue, WaveLoader, WaveTimescaleUnit, WireValue,
-};
-use anyhow::{anyhow, Result};
+use crate::wave::WaveDataValue::Raw;
+use crate::wave::{Wave, WaveDataItem, WaveLoader, WaveTimescaleUnit, WireValue};
+use anyhow::Result;
 use log::info;
 use std::collections::HashMap;
 use std::io::Read;
@@ -134,19 +131,25 @@ impl WaveLoader for Vcd {
                 Command::Timestamp(t) => timestamp = t,
                 Command::ChangeScalar(i, v) => {
                     let IdCode(id) = i;
-                    data.push(WaveDataItem {
-                        id,
-                        value: WaveDataValue::Raw(vec![v.into()]),
-                        timestamp,
-                    });
+                    data.push(
+                        WaveDataItem {
+                            id,
+                            value: Raw(vec![v.into()]),
+                            timestamp,
+                        }
+                        .compress()?,
+                    );
                 }
                 Command::ChangeVector(i, v) => {
                     let IdCode(id) = i;
-                    data.push(WaveDataItem {
-                        id,
-                        value: WaveDataValue::Raw(v.into_iter().map(|x| x.into()).collect()),
-                        timestamp,
-                    });
+                    data.push(
+                        WaveDataItem {
+                            id,
+                            value: Raw(v.into_iter().map(|x| x.into()).collect()),
+                            timestamp,
+                        }
+                        .compress()?,
+                    );
                 }
                 Command::ChangeReal(_, _) => {}
                 Command::ChangeString(_, _) => {}
@@ -212,29 +215,5 @@ mod test {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         vcd_read(&mut input)?;
         Ok(())
-    }
-}
-
-impl WaveCompressor for Vcd {
-    fn compress_item(item: WaveDataItem) -> Result<WaveDataItem> {
-        if match &item.value {
-            Comp(v) => v.len(),
-            Raw(v) => v.len(),
-        } == 0
-        {
-            return Err(anyhow!(""));
-        }
-        match &item.value {
-            Comp(_) => Ok(item),
-            Raw(v) => {
-                let ability = !v.iter().any(|i| i == &WireValue::X || i == &WireValue::Z);
-                if ability {
-                    let value = Comp(radix_value_big_uint(v).to_bytes_le());
-                    Ok(WaveDataItem { value, ..item })
-                } else {
-                    Ok(item)
-                }
-            }
-        }
     }
 }
