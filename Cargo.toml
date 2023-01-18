@@ -17,7 +17,7 @@ eframe = { version = "0.20.0", default-features = false, features = [
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
-vcd = "0.6.1"
+vcd = { git = "https://github.com/chiro2001/rust-vcd", branch = "master" }
 anyhow = "1.0.68"
 log = "0.4.17"
 num = "0.4.0"
