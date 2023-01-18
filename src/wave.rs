@@ -1,30 +1,41 @@
-use std::collections::HashMap;
-use std::io::Read;
+use crate::radix::vcd_vector_to_string_n;
 use anyhow::Result;
 use log::info;
-use vcd::{Header, IdCode, ScopeItem};
+use std::collections::HashMap;
+use std::io::Read;
+use std::slice::Iter;
 use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
 use vcd::ScopeItem::{Scope, Var};
-use crate::radix::vcd_vector_to_string_n;
+use vcd::{Header, IdCode, ScopeItem};
 
 pub fn vcd_header_show(header: &Header) {
     header.comment.as_ref().map(|c| info!("comment: {}", c));
     header.date.as_ref().map(|c| info!("date: {}", c));
     header.version.as_ref().map(|c| info!("version: {}", c));
-    header.timescale.as_ref().map(|c| info!("timescale: {} / {}", c.0, c.1));
+    header
+        .timescale
+        .as_ref()
+        .map(|c| info!("timescale: {} / {}", c.0, c.1));
 }
 
 pub fn vcd_tree_show(header: &Header) {
     fn show(item: &ScopeItem, level: usize) {
         match item {
             Scope(scope) => {
-                println!("{}{}", (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""), scope.identifier);
+                println!(
+                    "{}{}",
+                    (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""),
+                    scope.identifier
+                );
                 scope.children.iter().for_each(|i| show(i, level + 1));
             }
             Var(var) => {
-                println!("{}{} width={}",
-                         (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""),
-                         var.reference, var.size);
+                println!(
+                    "{}{} width={}",
+                    (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""),
+                    var.reference,
+                    var.size
+                );
             }
         }
     }
@@ -32,22 +43,25 @@ pub fn vcd_tree_show(header: &Header) {
 }
 
 pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, String> {
+    fn add_to_map(m: &mut HashMap<IdCode, String>, it: Iter<'_, ScopeItem>) {
+        it.for_each(|c| {
+            iterate(c).iter().for_each(|(k, v)| {
+                m.insert(*k, v.to_string());
+            })
+        });
+    }
     fn iterate(item: &ScopeItem) -> HashMap<IdCode, String> {
         match item {
             Scope(scope) => {
                 let mut m: HashMap<IdCode, String> = HashMap::new();
-                scope.children.iter().for_each(|c| iterate(c).iter().for_each(|(k, v)| {
-                    m.insert(*k, v.to_string());
-                }));
+                add_to_map(&mut m, scope.children.iter());
                 m
             }
-            Var(var) => HashMap::from([(var.code, var.reference.to_string())])
+            Var(var) => HashMap::from([(var.code, var.reference.to_string())]),
         }
     }
     let mut map = HashMap::new();
-    header.items.iter().for_each(|i| iterate(i).iter().for_each(|(k, v)| {
-        map.insert(*k, v.to_string());
-    }));
+    add_to_map(&mut map, header.items.iter());
     map
 }
 
@@ -62,14 +76,18 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
         let command = command_result?;
         let get_name = |code: &IdCode| match code_name.get(code) {
             Some(v) => v,
-            None => "None"
+            None => "None",
         };
         match &command {
             Timestamp(i) => println!("#{}", i),
             ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, get_name(&i)),
-            ChangeVector(i, v) =>
-                println!("code={}, value={}, name={}", i, vcd_vector_to_string_n(v, 4), get_name(&i)),
-            c => println!("unknown: {:#?}", c)
+            ChangeVector(i, v) => println!(
+                "code={}, value={}, name={}",
+                i,
+                vcd_vector_to_string_n(v, 4),
+                get_name(&i)
+            ),
+            c => println!("unknown: {:#?}", c),
         }
         cache.push(command);
     }
@@ -78,9 +96,9 @@ pub fn vcd_read(r: &mut dyn Read) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
-    use anyhow::Result;
     use crate::wave::vcd_read;
+    use anyhow::Result;
+    use std::fs::File;
 
     fn init() {
         std::env::set_var("RUST_LOG", "debug");
