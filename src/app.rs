@@ -74,6 +74,7 @@ impl eframe::App for TemplateApp {
                 ui.label("Write something: ");
                 ui.text_edit_singleline(label);
             });
+            ui.label(format!("your input: '{label}'"));
 
             ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
             if ui.button("Increment").clicked() {
