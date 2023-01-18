@@ -64,13 +64,11 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
     assert!(n > 0);
     let val = value_big_int(vec);
     let mut str = val.to_str_radix(1 << n);
-    // let prefix_len = (vec.len() - str.len()) >> (n - 1);
-    let bits_should_len = ((vec.len() >> (n - 1)) + (if vec.len() % (1 << n) == 0 { 0 } else { 1 })) << (n - 1);
+    let bits_should_len = ((vec.len() / n) + (if vec.len() % n == 0 { 0 } else { 1 })) * n;
     let vec_extended = vec.iter().chain((0..(bits_should_len - vec.len())).map(|_| &Value::V0))
         .map(|i| *i).collect::<Vec<_>>();
     println!("str len={}, vec len={}, str_len<<(n-1)={}, bits_should_len={}", str.len(), vec.len(), str.len() << (n - 1), bits_should_len);
-    // let prefix_len = (bits_should_len - (str.len() << (n - 1))) >> (n - 1);
-    let prefix_len = ((bits_should_len >> (n - 1)) - str.len()) + (if vec.len() % (1 << (n - 1)) == 0 { 0 } else { 1 });
+    let prefix_len = ((bits_should_len / n) - str.len());
     let prefix = (0..prefix_len).map(|_| "0").collect::<Vec<_>>().join("");
     println!("prefix = {}", prefix);
     str = prefix + &str;
@@ -79,17 +77,17 @@ pub fn vcd_vector_to_string_n(vec: &Vec<Value>, n: usize) -> String {
     // 2. in this 2^n bit have 'x' and 'z', use 'x'
     println!("str={}", str);
     if !str.is_empty() {
-        println!("vec_extended = {:?}", vec_extended);
+        println!("vec_extended = {:?}\nrev: {:?}", vec_extended, vec_extended.iter().rev().collect::<Vec<_>>());
         let indexes_target = |target: Value|
-            vec_extended.iter().enumerate()
+            vec_extended.iter().rev().enumerate()
                 .filter(|(_, v)| **v == target)
-                .map(|i| vec_extended.len() - i.0)
+                .map(|i| i.0)
                 .collect::<Vec<_>>();
         let indexes_z = indexes_target(Value::Z);
         let indexes_x = indexes_target(Value::X);
         let mut do_replace = |indexes: Vec<usize>, with: &str| {
             println!("indexes for {}: {:?}", with, indexes);
-            indexes.into_iter().map(|i| i >> (n - 1))
+            indexes.into_iter().map(|i| i / n)
                 .for_each(|i| str.replace_range(min(i, str.len() - 1)..min(i + 1, str.len()), with));
         };
         do_replace(indexes_z, "z");
@@ -118,26 +116,25 @@ mod test {
 
     #[test]
     fn test_vector_string() -> Result<()> {
-        // let vec: Vec<Value> = vec![V1, V1, V1, V0, V0, V1, V1, V0];
-        // let bin = vcd_vector_to_string(Radix::Bin, &vec);
-        // let oct = vcd_vector_to_string(Radix::Oct, &vec);
-        // let dec = vcd_vector_to_string(Radix::Dec, &vec);
-        // let hex = vcd_vector_to_string(Radix::Hex, &vec);
-        // println!("vec: {:?}, bin={}, oct={}, dec={}, hex={}", vec, bin, oct, dec, hex);
-        //
-        // let vec: Vec<Value> = vec![V1, V1, V1, X, V0, V1, V1, Z];
-        // let bin = vcd_vector_to_string(Radix::Bin, &vec);
-        // let oct = vcd_vector_to_string(Radix::Oct, &vec);
-        // let dec = vcd_vector_to_string(Radix::Dec, &vec);
-        // let hex = vcd_vector_to_string(Radix::Hex, &vec);
-        // println!("vec: {:?}, bin={}, oct={}, dec={}, hex={}", vec, bin, oct, dec, hex);
+        let vec: Vec<Value> = vec![V1, V1, V1, V0, V0, V1, V1, V0];
+        let bin = vcd_vector_to_string(Radix::Bin, &vec);
+        let oct = vcd_vector_to_string(Radix::Oct, &vec);
+        let dec = vcd_vector_to_string(Radix::Dec, &vec);
+        let hex = vcd_vector_to_string(Radix::Hex, &vec);
+        println!("vec rev: {:?}, bin={}, oct={}, dec={}, hex={}", vec.iter().rev().collect::<Vec<_>>(), bin, oct, dec, hex);
+
+        let vec: Vec<Value> = vec![V1, V1, V1, X, V0, V1, V1, Z];
+        let bin = vcd_vector_to_string(Radix::Bin, &vec);
+        let oct = vcd_vector_to_string(Radix::Oct, &vec);
+        let dec = vcd_vector_to_string(Radix::Dec, &vec);
+        let hex = vcd_vector_to_string(Radix::Hex, &vec);
+        println!("vec rev: {:?}, bin={}, oct={}, dec={}, hex={}", vec.iter().rev().collect::<Vec<_>>(), bin, oct, dec, hex);
 
         let vec: Vec<Value> = vec![V1, V1, V1, X, V0, V1, X, Z, V0, V0, V0];
         let bin = vcd_vector_to_string(Radix::Bin, &vec);
         let oct = vcd_vector_to_string(Radix::Oct, &vec);
         let dec = vcd_vector_to_string(Radix::Dec, &vec);
         let hex = vcd_vector_to_string(Radix::Hex, &vec);
-        // println!("vec: {:?}, bin={}, oct={}, dec={}, hex={}", vec, bin, oct, dec, hex);
         println!("vec rev: {:?}, bin={}, oct={}, dec={}, hex={}", vec.iter().rev().collect::<Vec<_>>(), bin, oct, dec, hex);
         Ok(())
     }
