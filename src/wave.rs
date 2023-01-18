@@ -84,7 +84,7 @@ mod test {
 
     fn init() {
         std::env::set_var("RUST_LOG", "debug");
-        env_logger::init();
+        tracing_subscriber::fmt::init();
     }
 
     #[test]
