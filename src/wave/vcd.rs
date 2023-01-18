@@ -1,11 +1,11 @@
-use crate::wave::{Wave, WaveLoader, WaveTimescaleUnit, WireValue};
+use crate::wave::{Wave, WaveDataItem, WaveDataValue, WaveLoader, WaveTimescaleUnit, WireValue};
 use anyhow::Result;
 use log::info;
 use std::collections::HashMap;
 use std::io::Read;
 use std::slice::Iter;
 use vcd::ScopeItem::{Scope, Var};
-use vcd::{Header, IdCode, ScopeItem, TimescaleUnit, Value};
+use vcd::{Command, Header, IdCode, ScopeItem, TimescaleUnit, Value};
 
 pub fn vcd_header_show(header: &Header) {
     if let Some(c) = header.comment.as_ref() {
@@ -107,26 +107,53 @@ impl WaveLoader for Vcd {
                 (id, i.1)
             })
             .collect();
-        let mut headers = HashMap::new();
+        let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(c) = header.comment.as_ref() {
-            headers.insert("comment", c.to_string());
+            headers.insert("comment".to_string(), c.to_string());
         }
         if let Some(c) = header.date.as_ref() {
-            headers.insert("date", c.to_string());
+            headers.insert("date".to_string(), c.to_string());
         }
         if let Some(c) = header.version.as_ref() {
-            headers.insert("version", c.to_string());
+            headers.insert("version".to_string(), c.to_string());
         }
         let timescale = if let Some(c) = header.timescale.as_ref() {
             (c.0 as u64, c.1.into())
         } else {
             (1, WaveTimescaleUnit::default())
         };
+        let mut data = vec![];
+        let mut timestamp = 0u64;
+        for command_result in parser {
+            let command = command_result?;
+            match command {
+                Command::Timestamp(t) => timestamp = t,
+                Command::ChangeScalar(i, v) => {
+                    let IdCode(id) = i;
+                    data.push(WaveDataItem {
+                        id,
+                        value: WaveDataValue::Raw(vec![v.into()]),
+                        timestamp,
+                    });
+                }
+                Command::ChangeVector(i, v) => {
+                    let IdCode(id) = i;
+                    data.push(WaveDataItem {
+                        id,
+                        value: WaveDataValue::Raw(v.into_iter().map(|x| x.into()).collect()),
+                        timestamp,
+                    });
+                }
+                Command::ChangeReal(_, _) => {}
+                Command::ChangeString(_, _) => {}
+                _ => {}
+            }
+        }
         Ok(Wave {
             timescale,
-            headers: Default::default(),
+            headers,
             code_names,
-            data: vec![],
+            data,
         })
     }
 }
