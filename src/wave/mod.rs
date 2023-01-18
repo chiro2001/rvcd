@@ -1,9 +1,10 @@
-use crate::radix::radix_value_big_uint;
+use crate::radix::{Radix, radix_value_big_uint, radix_vector_to_string};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
+use num_bigint::BigUint;
 
 pub mod vcd;
 
@@ -48,11 +49,20 @@ impl Display for WaveTimescaleUnit {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WaveDataValue {
     /// when vec empty, invalid
     Comp(Vec<u8>),
     Raw(Vec<WireValue>),
+}
+
+impl Display for WaveDataValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WaveDataValue::Comp(v) => write!(f, "{}", BigUint::from_bytes_le(v).to_str_radix(16)),
+            WaveDataValue::Raw(v) => write!(f, "{}", radix_vector_to_string(Radix::Hex, v)),
+        }
+    }
 }
 
 impl Default for WaveDataValue {
@@ -62,11 +72,17 @@ impl Default for WaveDataValue {
 }
 
 /// item struct in data list
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone, Debug)]
 pub struct WaveDataItem {
     id: u64,
     value: WaveDataValue,
     timestamp: u64,
+}
+
+impl Display for WaveDataItem {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#{} [{}] {}", self.timestamp, self.id, self.value)
+    }
 }
 
 impl WaveDataItem {
@@ -127,6 +143,9 @@ mod test {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         let wave = Vcd::load(&mut input)?;
         println!("loaded wave: {}", wave);
+        for item in &wave.data {
+            println!("item: {}", item);
+        }
         Ok(())
     }
 }
