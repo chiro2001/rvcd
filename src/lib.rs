@@ -1,5 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
+extern crate core;
+
 pub mod app;
 pub mod radix;
 pub mod wave;

@@ -1,11 +1,14 @@
-use crate::radix::{Radix, radix_value_big_uint, radix_vector_to_string};
+use crate::radix::{radix_value_big_uint, radix_vector_to_string, Radix};
 use anyhow::{anyhow, Result};
+use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
-use num_bigint::BigUint;
+use std::ops::{Deref, DerefMut};
+use trees::Tree;
 
+pub mod utils;
 pub mod vcd;
 
 /// like [vcd::Value], basically for (de)serialize
@@ -109,13 +112,20 @@ impl WaveDataItem {
     }
 }
 
+#[derive(Serialize, Clone)]
+pub enum WaveTreeNode {
+    WaveRoot,
+    WaveScope(String),
+    WaveVar(u64),
+}
+
 /// loaded wave data in memory
-#[derive(Default, Serialize, Deserialize)]
 pub struct Wave {
     pub timescale: (u64, WaveTimescaleUnit),
     pub headers: HashMap<String, String>,
     pub code_names: HashMap<u64, String>,
     pub code_paths: HashMap<u64, Vec<String>>,
+    pub tree: Tree<WaveTreeNode>,
     pub data: Vec<WaveDataItem>,
 }
 
@@ -138,6 +148,8 @@ mod test {
     use crate::wave::vcd::Vcd;
     use crate::wave::WaveLoader;
     use std::fs::File;
+    // use trees::Node;
+    use crate::wave::utils::Node;
 
     #[test]
     fn test_load_wave() -> anyhow::Result<()> {
@@ -149,8 +161,23 @@ mod test {
         // }
         println!("code paths:");
         for (id, path) in wave.code_paths.iter() {
-            println!("code: {}, name: {}, path: {:?}", id, wave.code_names.get(id).unwrap(), path);
+            println!(
+                "code: {}, name: {}, path: {:?}",
+                id,
+                wave.code_names.get(id).unwrap(),
+                path
+            );
         }
+        println!("tree:");
+        println!(
+            "{}",
+            serde_json::to_string(&Node(wave.tree.root())).unwrap()
+        );
+
+        use trees::tr;
+
+        let tree = tr(0) / (tr(1) / tr(2) / tr(3)) / (tr(4) / tr(5) / tr(6));
+        println!("{}", serde_json::to_string(&Node(tree.root())).unwrap());
         Ok(())
     }
 }

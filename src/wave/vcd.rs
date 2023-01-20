@@ -1,11 +1,14 @@
 use crate::wave::WaveDataValue::Raw;
-use crate::wave::{Wave, WaveDataItem, WaveLoader, WaveTimescaleUnit, WireValue};
+use crate::wave::WaveTreeNode::WaveRoot;
+use crate::wave::{Wave, WaveDataItem, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue};
 use anyhow::{anyhow, Result};
 use log::info;
 use queues::{IsQueue, Queue};
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::io::Read;
 use std::slice::Iter;
+use trees::{Node, Tree};
 use vcd::{Command, Header, IdCode, Scope, ScopeItem, TimescaleUnit, Value, Var};
 
 pub fn vcd_header_show(header: &Header) {
@@ -48,7 +51,7 @@ pub fn vcd_tree_show(header: &Header) {
     header.items.iter().for_each(|item| show(item, 0));
 }
 
-fn vcd_iterate_tree(
+fn vcd_iterate_path(
     result: &mut HashMap<IdCode, Vec<String>>,
     path: &mut Queue<String>,
     items: &[ScopeItem],
@@ -93,6 +96,47 @@ pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, String> {
     map
 }
 
+fn vcd_iterate_tree(
+    mut tree: Box<Tree<WaveTreeNode>>,
+    items: &[ScopeItem],
+    on_scope: fn(Box<Tree<WaveTreeNode>>, &Scope) -> Tree<WaveTreeNode>,
+    on_var: fn(Box<Tree<WaveTreeNode>>, &Var) -> Tree<WaveTreeNode>,
+) -> Tree<WaveTreeNode> {
+    for item in items.iter() {
+        match item {
+            ScopeItem::Scope(scope) => {
+                let mut node = Box::new(Tree::new(WaveTreeNode::WaveScope(
+                    scope.identifier.to_string(),
+                )));
+                tree.push_back(on_scope(node, scope));
+            }
+            ScopeItem::Var(var) => {
+                let IdCode(id) = var.code;
+                let mut node = Box::new(Tree::new(WaveTreeNode::WaveVar(id)));
+                tree.push_back(on_var(node, var));
+            }
+            _ => {}
+        }
+    }
+    tree.deep_clone()
+}
+
+pub fn vcd_tree(header: &Header) -> Result<Tree<WaveTreeNode>> {
+    let mut root = Box::new(Tree::new(WaveRoot));
+    fn on_scope(tree: Box<Tree<WaveTreeNode>>, scope: &Scope) -> Tree<WaveTreeNode> {
+        vcd_iterate_tree(tree, scope.children.as_slice(), on_scope, on_var)
+    }
+    fn on_var(tree: Box<Tree<WaveTreeNode>>, var: &Var) -> Tree<WaveTreeNode> {
+        tree.deep_clone()
+    }
+    Ok(vcd_iterate_tree(
+        root,
+        header.items.as_slice(),
+        on_scope,
+        on_var,
+    ))
+}
+
 pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
     let mut map: HashMap<IdCode, Vec<String>> = HashMap::new();
     /*
@@ -127,9 +171,9 @@ pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
     ) -> Result<()> {
         path.add(scope.identifier.to_string())
             .map_err(|e| anyhow!("cannot add path queue: {}", e))?;
-        vcd_iterate_tree(result, path, scope.children.as_slice(), on_scope, on_var)
+        vcd_iterate_path(result, path, scope.children.as_slice(), on_scope, on_var)
     }
-    vcd_iterate_tree(
+    vcd_iterate_path(
         &mut map,
         &mut path,
         header.items.as_slice(),
@@ -182,6 +226,7 @@ impl WaveLoader for Vcd {
                 (id, path)
             })
             .collect();
+        let tree = vcd_tree(&header)?;
         let mut headers: HashMap<String, String> = HashMap::new();
         if let Some(c) = header.comment.as_ref() {
             headers.insert("comment".to_string(), c.to_string());
@@ -235,6 +280,7 @@ impl WaveLoader for Vcd {
             headers,
             code_names,
             code_paths,
+            tree,
             data,
         })
     }
