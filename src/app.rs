@@ -4,7 +4,7 @@ use crate::utils::execute;
 use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
-use egui::{pos2, Align2, Layout, ScrollArea, Sense, Shape, TextStyle, Color32};
+use egui::{Align2, Layout, ScrollArea, Sense};
 use tracing::info;
 
 impl eframe::App for RVCD {
@@ -141,19 +141,19 @@ impl eframe::App for RVCD {
                                 ui.scope(|ui| {
                                     ui.set_height(SIGNAL_HEIGHT);
                                     ui.centered_and_justified(|ui| {
-                                        let (mut response, painter) = ui.allocate_painter(
+                                        let (mut _response, painter) = ui.allocate_painter(
                                             ui.available_size_before_wrap(),
                                             Sense::hover(),
                                         );
-                                        let text = "text";
-                                        let color = ui.visuals().text_color();
+                                        let text = format!("id: {}", id);
+                                        let color = ui.visuals().strong_text_color();
                                         let rect = ui.max_rect();
                                         painter.text(
                                             rect.center(),
                                             Align2::CENTER_CENTER,
                                             text,
                                             Default::default(),
-                                            Color32::GREEN,
+                                            color,
                                         );
                                     });
                                 });
