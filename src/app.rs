@@ -28,9 +28,8 @@ impl eframe::App for RVCD {
                                     sender.send(RVCDMsg::FileOpen(path)).ok();
                                 }
                             });
-                        } else {
-                            error!("no channel found!");
                         }
+                        ui.close_menu();
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
