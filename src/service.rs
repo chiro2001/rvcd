@@ -3,7 +3,7 @@ use crate::utils::execute;
 use crate::wave::vcd::Vcd;
 use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
-use log::info;
+use log::{debug, info};
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
@@ -18,6 +18,7 @@ unsafe impl Send for Service {}
 
 impl Service {
     async fn handle_message(&mut self, msg: RVCDMsg) -> Result<()> {
+        debug!("handle message: {:?}", msg);
         match msg {
             RVCDMsg::FileOpen(path) => {
                 info!("loading file: {:?}", path);
@@ -33,7 +34,6 @@ impl Service {
                         self.channel.tx.send(RVCDMsg::FileOpen(path)).unwrap();
                     }
                     // *wave.lock().unwrap() = Some(w);
-                    // tx.lock().unwrap().send(RVCDMsg::UpdateInfo(wave.lock().unwrap().unwrap().info)).unwrap();
                 }
             }
             _ => {}
@@ -48,7 +48,8 @@ impl Service {
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(mut self) {
+        info!("service starts");
         loop {
             sleep(Duration::from_millis(10));
             self.channel
@@ -59,7 +60,9 @@ impl Service {
         }
     }
 
-    pub fn start(mut self) {
-        execute(async move { self.run().await });
+    pub fn start(channel: RVCDChannel) {
+        execute(async move {
+            Service::new(channel).run().await;
+        });
     }
 }

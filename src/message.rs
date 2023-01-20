@@ -1,7 +1,7 @@
 use crate::wave::WaveInfo;
 use std::sync::mpsc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum RVCDMsg {
     FileOpen(std::path::PathBuf),
     UpdateInfo(WaveInfo),

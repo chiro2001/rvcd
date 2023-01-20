@@ -111,7 +111,7 @@ impl WaveDataItem {
     }
 }
 
-#[derive(Serialize, Clone, Default)]
+#[derive(Serialize, Clone, Default, Debug)]
 pub enum WaveTreeNode {
     #[default]
     WaveRoot,
@@ -133,7 +133,7 @@ impl Display for WaveTreeNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WaveInfo {
     pub timescale: (u64, WaveTimescaleUnit),
     pub headers: HashMap<String, String>,

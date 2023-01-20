@@ -4,6 +4,7 @@ use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
 use std::path::PathBuf;
 use std::sync::mpsc;
+use log::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
@@ -55,23 +56,17 @@ impl RVCD {
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
         // launch service
-        let service = Service::new(RVCDChannel {
+        Service::start(RVCDChannel {
             tx: channel_resp_tx,
             rx: channel_req_rx,
         });
-        // execute(async {
-        //     service.run().await;
-        // });
-        // std::thread::spawn(async {
-        //     service.run().await;
-        // });
-        service.start();
 
         let def = if let Some(storage) = cc.storage {
             let def: RVCD = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             // auto open file
             // let filepath = "data/cpu_ila_commit.vcd";
             let filepath = &def.filepath;
+            info!("last file: {}", filepath);
             if !filepath.is_empty() {
                 channel_req_tx
                     .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
