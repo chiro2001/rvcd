@@ -42,9 +42,9 @@ impl eframe::App for RVCD {
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
             egui::CentralPanel::default().show_inside(ui, |ui| {
-                CollapsingHeader::new("Signal Tree")
-                    .default_open(true)
-                    .show(ui, |ui| self.tree.ui(ui));
+                if let Some(info) = &self.wave_info {
+                    self.tree.item_ui(ui, info.tree.root());
+                }
             });
             egui::TopBottomPanel::bottom("signal_leaf")
                 .min_height(200.0)

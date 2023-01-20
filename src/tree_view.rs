@@ -1,6 +1,6 @@
 use crate::wave::WaveTreeNode;
 use egui::{CollapsingHeader, Ui};
-use trees::Tree;
+use trees::{Node, Tree};
 
 pub struct TreeView(Tree<WaveTreeNode>);
 
@@ -16,6 +16,15 @@ pub enum TreeAction {
 }
 
 impl TreeView {
+    pub fn item_ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>) {
+        CollapsingHeader::new(tree.data().to_string())
+            .default_open(true)
+            .show(ui, |ui| {
+                for child in tree.iter() {
+                    self.item_ui(ui, child)
+                }
+            });
+    }
     pub fn ui(&mut self, ui: &mut Ui) -> TreeAction {
         self.ui_impl(ui, self.0.root().data().to_string().as_str(), true)
     }
