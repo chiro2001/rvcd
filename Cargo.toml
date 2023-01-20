@@ -26,6 +26,7 @@ num-traits = "0.2.15"
 egui_extras = "0.20.0"
 rfd = "0.10.0"
 futures = "0.3.25"
+queues = "1.1.0"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

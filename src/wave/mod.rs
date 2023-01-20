@@ -112,10 +112,11 @@ impl WaveDataItem {
 /// loaded wave data in memory
 #[derive(Default, Serialize, Deserialize)]
 pub struct Wave {
-    timescale: (u64, WaveTimescaleUnit),
-    headers: HashMap<String, String>,
-    code_names: HashMap<u64, String>,
-    data: Vec<WaveDataItem>,
+    pub timescale: (u64, WaveTimescaleUnit),
+    pub headers: HashMap<String, String>,
+    pub code_names: HashMap<u64, String>,
+    pub code_paths: HashMap<u64, Vec<String>>,
+    pub data: Vec<WaveDataItem>,
 }
 
 impl Display for Wave {

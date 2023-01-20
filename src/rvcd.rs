@@ -1,4 +1,4 @@
-use crate::message::{RVCDChannel, RVCDMsg};
+use crate::message::RVCDChannel;
 use crate::service::service;
 use crate::utils::execute;
 use std::sync::mpsc;

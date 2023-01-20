@@ -1,12 +1,12 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::{Wave, WaveDataItem, WaveLoader, WaveTimescaleUnit, WireValue};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::info;
+use queues::{IsQueue, Queue};
 use std::collections::HashMap;
 use std::io::Read;
 use std::slice::Iter;
-use vcd::ScopeItem::{Scope, Var};
-use vcd::{Command, Header, IdCode, ScopeItem, TimescaleUnit, Value};
+use vcd::{Command, Header, IdCode, Scope, ScopeItem, TimescaleUnit, Value, Var};
 
 pub fn vcd_header_show(header: &Header) {
     if let Some(c) = header.comment.as_ref() {
@@ -26,7 +26,7 @@ pub fn vcd_header_show(header: &Header) {
 pub fn vcd_tree_show(header: &Header) {
     fn show(item: &ScopeItem, level: usize) {
         match item {
-            Scope(scope) => {
+            ScopeItem::Scope(scope) => {
                 println!(
                     "{}{}",
                     (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""),
@@ -34,7 +34,7 @@ pub fn vcd_tree_show(header: &Header) {
                 );
                 scope.children.iter().for_each(|i| show(i, level + 1));
             }
-            Var(var) => {
+            ScopeItem::Var(var) => {
                 println!(
                     "{}{} width={}",
                     (0..level).map(|_| "\t").collect::<Vec<&str>>().join(""),
@@ -48,6 +48,27 @@ pub fn vcd_tree_show(header: &Header) {
     header.items.iter().for_each(|item| show(item, 0));
 }
 
+fn vcd_iterate_tree(
+    result: &mut HashMap<IdCode, Vec<String>>,
+    path: &mut Queue<String>,
+    items: &[ScopeItem],
+    on_scope: fn(
+        result: &mut HashMap<IdCode, Vec<String>>,
+        &mut Queue<String>,
+        &Scope,
+    ) -> Result<()>,
+    on_var: fn(result: &mut HashMap<IdCode, Vec<String>>, &mut Queue<String>, &Var) -> Result<()>,
+) -> Result<()> {
+    for item in items.iter() {
+        match item {
+            ScopeItem::Scope(scope) => on_scope(result, path, scope)?,
+            ScopeItem::Var(var) => on_var(result, path, var)?,
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, String> {
     fn add_to_map(m: &mut HashMap<IdCode, String>, it: Iter<'_, ScopeItem>) {
         it.for_each(|c| {
@@ -58,18 +79,64 @@ pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, String> {
     }
     fn iterate(item: &ScopeItem) -> HashMap<IdCode, String> {
         match item {
-            Scope(scope) => {
+            ScopeItem::Scope(scope) => {
                 let mut m: HashMap<IdCode, String> = HashMap::new();
                 add_to_map(&mut m, scope.children.iter());
                 m
             }
-            Var(var) => HashMap::from([(var.code, var.reference.to_string())]),
+            ScopeItem::Var(var) => HashMap::from([(var.code, var.reference.to_string())]),
             _ => HashMap::new(),
         }
     }
     let mut map = HashMap::new();
     add_to_map(&mut map, header.items.iter());
     map
+}
+
+pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
+    let mut map: HashMap<IdCode, Vec<String>> = HashMap::new();
+    /*
+        1 <-- header.items
+       / \
+      2   3 <-- scope.children
+     / | | \
+    4  5 6  7
+    */
+    let mut path: Queue<String> = Queue::new();
+    fn on_var(
+        result: &mut HashMap<IdCode, Vec<String>>,
+        path: &mut Queue<String>,
+        var: &Var,
+    ) -> Result<()> {
+        let mut vec = vec![];
+        while path.size() > 0 {
+            let v = path.remove().map_err(|e| anyhow!("cannot pop: {}", e))?;
+            vec.push(v);
+        }
+        for v in vec.iter() {
+            path.add(v.to_string())
+                .map_err(|e| anyhow!("cannot push: {}", e))?;
+        }
+        result.insert(var.code, vec);
+        Ok(())
+    }
+    fn on_scope(
+        result: &mut HashMap<IdCode, Vec<String>>,
+        path: &mut Queue<String>,
+        scope: &Scope,
+    ) -> Result<()> {
+        path.add(scope.identifier.to_string())
+            .map_err(|e| anyhow!("cannot add path queue"))?;
+        vcd_iterate_tree(result, path, scope.children.as_slice(), on_scope, on_var)
+    }
+    vcd_iterate_tree(
+        &mut map,
+        &mut path,
+        header.items.as_slice(),
+        on_scope,
+        on_var,
+    )?;
+    Ok(map)
 }
 
 impl From<Value> for WireValue {
@@ -106,6 +173,13 @@ impl WaveLoader for Vcd {
             .map(|i| {
                 let IdCode(id) = i.0;
                 (id, i.1)
+            })
+            .collect();
+        let code_paths = vcd_code_path(&header)?
+            .into_iter()
+            .map(|(i, path)| {
+                let IdCode(id) = i;
+                (id, path)
             })
             .collect();
         let mut headers: HashMap<String, String> = HashMap::new();
@@ -160,6 +234,7 @@ impl WaveLoader for Vcd {
             timescale,
             headers,
             code_names,
+            code_paths,
             data,
         })
     }

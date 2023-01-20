@@ -1,7 +1,6 @@
 use crate::message::{RVCDChannel, RVCDMsg};
 use log::info;
-use std::sync::mpsc::TryRecvError;
-use std::sync::{mpsc, Arc, Mutex, TryLockResult};
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -17,6 +16,7 @@ pub async fn service(channel: RVCDChannel) {
                     RVCDMsg::FileOpen(path) => {
                         info!("loading file: {:?}", path);
                     }
+                    _ => {}
                 })
                 .ok()
             })

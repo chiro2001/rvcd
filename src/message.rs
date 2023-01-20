@@ -1,7 +1,8 @@
 use std::sync::mpsc;
 
 pub enum RVCDMsg {
-    FileOpen(std::path::PathBuf)
+    FileOpen(std::path::PathBuf),
+    UpdateInfo()
 }
 
 pub struct RVCDChannel {

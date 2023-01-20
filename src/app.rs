@@ -1,8 +1,6 @@
 use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
-use egui_extras::{Size, StripBuilder};
-use log::error;
 use std::path::PathBuf;
 
 impl eframe::App for RVCD {
