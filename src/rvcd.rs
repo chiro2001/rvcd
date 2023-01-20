@@ -2,9 +2,9 @@ use crate::message::{RVCDChannel, RVCDMsg};
 use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
+use log::info;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use log::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
