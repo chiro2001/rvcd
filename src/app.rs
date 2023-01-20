@@ -3,6 +3,7 @@ use crate::utils::execute;
 use crate::RVCD;
 use egui::CollapsingHeader;
 use std::path::PathBuf;
+use log::info;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -59,6 +60,18 @@ impl eframe::App for RVCD {
                 .show_inside(ui, |ui| ui.label("signals"));
             egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
         });
+
+        if let Some(channel) = &self.channel {
+            if let Ok(rx) = channel.rx.try_recv() {
+                match rx {
+                    RVCDMsg::UpdateInfo(info) => {
+                        info!("ui recv info");
+                        self.wave_info = Some(info);
+                    }
+                    _ => {}
+                };
+            }
+        }
 
         // if false {
         //     egui::Window::new("Window").show(ctx, |ui| {
