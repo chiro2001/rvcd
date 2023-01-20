@@ -140,12 +140,16 @@ mod test {
     use std::fs::File;
 
     #[test]
-    fn test_load_vcd() -> anyhow::Result<()> {
+    fn test_load_wave() -> anyhow::Result<()> {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         let wave = Vcd::load(&mut input)?;
         println!("loaded wave: {}", wave);
-        for item in &wave.data {
-            println!("item: {}", item);
+        // for item in &wave.data {
+        //     println!("item: {}", item);
+        // }
+        println!("code paths:");
+        for (id, path) in wave.code_paths.iter() {
+            println!("code: {}, name: {}, path: {:?}", id, wave.code_names.get(id).unwrap(), path);
         }
         Ok(())
     }

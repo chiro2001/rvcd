@@ -126,7 +126,7 @@ pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
         scope: &Scope,
     ) -> Result<()> {
         path.add(scope.identifier.to_string())
-            .map_err(|e| anyhow!("cannot add path queue"))?;
+            .map_err(|e| anyhow!("cannot add path queue: {}", e))?;
         vcd_iterate_tree(result, path, scope.children.as_slice(), on_scope, on_var)
     }
     vcd_iterate_tree(
