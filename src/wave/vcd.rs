@@ -113,7 +113,10 @@ fn vcd_iterate_tree(
             }
             ScopeItem::Var(var) => {
                 let IdCode(id) = var.code;
-                let node = Box::new(Tree::new(WaveTreeNode::WaveVar(id)));
+                let node = Box::new(Tree::new(WaveTreeNode::WaveVar((
+                    id,
+                    var.reference.to_string(),
+                ))));
                 tree.push_back(on_var(node, var));
             }
             _ => {}

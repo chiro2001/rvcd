@@ -116,7 +116,9 @@ pub enum WaveTreeNode {
     #[default]
     WaveRoot,
     WaveScope(String),
-    WaveVar(u64),
+    WaveVar((u64, String)),
+    // id only to save space
+    WaveId(u64),
 }
 
 impl Display for WaveTreeNode {
@@ -127,7 +129,8 @@ impl Display for WaveTreeNode {
             match self {
                 WaveTreeNode::WaveRoot => "root".to_string(),
                 WaveTreeNode::WaveScope(scope) => scope.to_string(),
-                WaveTreeNode::WaveVar(var) => format!("{}", var),
+                WaveTreeNode::WaveVar((_i, s)) => s.to_string(),
+                WaveTreeNode::WaveId(var) => format!("{}", var),
             }
         )
     }
