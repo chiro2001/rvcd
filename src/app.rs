@@ -39,6 +39,9 @@ impl eframe::App for RVCD {
                         _frame.close();
                     }
                 });
+                let mut debug_on_hover = ui.ctx().debug_on_hover();
+                ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
+                ui.ctx().set_debug_on_hover(debug_on_hover);
                 egui::warn_if_debug_build(ui);
             });
         });
