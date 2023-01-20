@@ -150,7 +150,7 @@ impl WaveInfo {
     pub fn copy(&self) -> Self {
         Self {
             timescale: self.timescale,
-            range: (0, 0),
+            range: self.range,
             headers: self.headers.clone(),
             code_names: self.code_names.clone(),
             code_paths: self.code_paths.clone(),
@@ -166,17 +166,23 @@ pub struct Wave {
     pub data: Vec<WaveDataItem>,
 }
 
-impl Display for Wave {
+impl Display for WaveInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "Wave {}{} #{}~#{} {:?}",
-            self.info.timescale.0,
-            self.info.timescale.1,
-            self.info.range.0,
-            self.info.range.1,
-            self.info.headers
+            self.timescale.0,
+            self.timescale.1,
+            self.range.0,
+            self.range.1,
+            self.headers
         )
+    }
+}
+
+impl Display for Wave {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.info.fmt(f)
     }
 }
 

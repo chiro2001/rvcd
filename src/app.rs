@@ -4,7 +4,7 @@ use crate::utils::execute;
 use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Layout, ScrollArea, Sense};
+use egui::{vec2, Align2, Layout, ScrollArea, Sense};
 use tracing::info;
 
 impl eframe::App for RVCD {
@@ -156,8 +156,7 @@ impl eframe::App for RVCD {
                                                 let percent = ((item.timestamp - info.range.0)
                                                     as f32)
                                                     / ((info.range.1 - info.range.0) as f32);
-                                                let pos =
-                                                    rect.left_center() + vec2(width * percent, 0.0);
+                                                let pos = rect.left_center() + vec2(width * percent, 0.0);
                                                 painter.text(
                                                     pos,
                                                     Align2::CENTER_CENTER,
@@ -180,7 +179,7 @@ impl eframe::App for RVCD {
             if let Ok(rx) = channel.rx.try_recv() {
                 match rx {
                     RVCDMsg::UpdateInfo(info) => {
-                        info!("ui recv info");
+                        info!("ui recv info: {}", info);
                         self.wave_info = Some(info);
                     }
                     RVCDMsg::FileOpen(_path) => {

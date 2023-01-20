@@ -26,6 +26,7 @@ impl Service {
                 // if let Ok(w) = Vcd::load(&mut file) {
                 let mut reader = Cursor::new(data);
                 if let Ok(w) = Vcd::load(&mut reader) {
+                    info!("service load wave: {}", w);
                     if let Ok(mut wave) = self.wave.lock() {
                         *wave = Some(w);
                         self.channel

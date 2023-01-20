@@ -248,7 +248,7 @@ impl WaveLoader for Vcd {
         };
         let mut data = vec![];
         let mut timestamp = 0u64;
-        let mut time_start = 0xffffffffffffffffu64;
+        let mut time_start = 0xfffffffffffffu64;
         let mut time_stop = 0u64;
         for command_result in parser {
             let command = command_result?;
