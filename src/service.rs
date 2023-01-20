@@ -4,7 +4,7 @@ use crate::wave::vcd::Vcd;
 use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
 use log::{debug, error, info};
-use std::fs::File;
+use std::io::Cursor;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
@@ -20,11 +20,14 @@ impl Service {
     async fn handle_message(&mut self, msg: RVCDMsg) -> Result<()> {
         debug!("handle message: {:?}", msg);
         match msg {
-            RVCDMsg::FileOpen(path) => {
-                info!("loading file: {:?}", path);
+            RVCDMsg::FileOpen(mut file) => {
+                info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
-                let mut file = File::open(path.to_string()).unwrap();
-                if let Ok(w) = Vcd::load(&mut file) {
+                // let mut file = File::open(path.to_string()).unwrap();
+                let data = file.read().await;
+                // if let Ok(w) = Vcd::load(&mut file) {
+                let mut reader = Cursor::new(data);
+                if let Ok(w) = Vcd::load(&mut reader) {
                     if let Ok(mut wave) = self.wave.lock() {
                         *wave = Some(w);
                         self.channel
@@ -32,7 +35,7 @@ impl Service {
                             .send(RVCDMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
                             .unwrap();
                         // send path back
-                        self.channel.tx.send(RVCDMsg::FileOpen(path)).unwrap();
+                        self.channel.tx.send(RVCDMsg::FileOpen(file)).unwrap();
                     }
                     // *wave.lock().unwrap() = Some(w);
                 }

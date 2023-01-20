@@ -3,6 +3,8 @@ use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
 use log::info;
+use rfd::FileHandle;
+use std::path::PathBuf;
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -66,13 +68,17 @@ impl RVCD {
             let def: RVCD = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             // auto open file
             // let filepath = "data/cpu_ila_commit.vcd";
-            let filepath = &def.filepath;
-            info!("last file: {}", filepath);
-            if !filepath.is_empty() {
-                channel_req_tx
-                    // .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
-                    .send(RVCDMsg::FileOpen(filepath.to_string()))
-                    .unwrap();
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let filepath = &def.filepath;
+                info!("last file: {}", filepath);
+                if !filepath.is_empty() {
+                    channel_req_tx
+                        // .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
+                        // .send(RVCDMsg::FileOpen(filepath.to_string()))
+                        .send(RVCDMsg::FileOpen(FileHandle::from(PathBuf::from(filepath))))
+                        .unwrap();
+                }
             }
             def
         } else {

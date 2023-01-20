@@ -1,9 +1,10 @@
 use crate::wave::WaveInfo;
 use std::sync::mpsc;
+use rfd::FileHandle;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum RVCDMsg {
-    FileOpen(String),
+    FileOpen(FileHandle),
     UpdateInfo(WaveInfo),
 }
 

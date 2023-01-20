@@ -27,8 +27,8 @@ impl eframe::App for RVCD {
                                 let file = task.await;
                                 if let Some(file) = file {
                                     // let path = PathBuf::from(file);
-                                    let path = file.path().to_str().unwrap().to_string();
-                                    sender.send(RVCDMsg::FileOpen(path)).ok();
+                                    // let path = file.path().to_str().unwrap().to_string();
+                                    sender.send(RVCDMsg::FileOpen(file)).ok();
                                 }
                             });
                         }
@@ -129,7 +129,10 @@ impl eframe::App for RVCD {
                     }
                     RVCDMsg::FileOpen(path) => {
                         // self.filepath = path.to_str().unwrap().to_string();
-                        self.filepath = path;
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            self.filepath = path.path().to_str().unwrap().to_string();
+                        }
                     }
                 };
             }
