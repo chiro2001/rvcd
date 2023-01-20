@@ -6,7 +6,6 @@ use anyhow::Result;
 use tracing::{debug, error, info};
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 pub struct Service {
     pub wave: Arc<Mutex<Option<Wave>>>,
@@ -19,7 +18,7 @@ impl Service {
     async fn handle_message(&mut self, msg: RVCDMsg) -> Result<()> {
         debug!("handle message: {:?}", msg);
         match msg {
-            RVCDMsg::FileOpen(mut file) => {
+            RVCDMsg::FileOpen(file) => {
                 info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
                 // let mut file = File::open(path.to_string()).unwrap();
@@ -54,9 +53,7 @@ impl Service {
     pub async fn run(&mut self) {
         loop {
             #[cfg(not(target_arch = "wasm32"))]
-            {
-                std::thread::sleep(Duration::from_millis(10));
-            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
             #[cfg(target_arch = "wasm32")]
             {
                 // #[wasm_bindgen]

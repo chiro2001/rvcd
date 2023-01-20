@@ -10,7 +10,7 @@ use tracing::info;
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
@@ -36,7 +36,7 @@ impl eframe::App for RVCD {
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
-                        frame.close();
+                        _frame.close();
                     }
                 });
                 egui::warn_if_debug_build(ui);
@@ -127,11 +127,11 @@ impl eframe::App for RVCD {
                         info!("ui recv info");
                         self.wave_info = Some(info);
                     }
-                    RVCDMsg::FileOpen(path) => {
+                    RVCDMsg::FileOpen(_path) => {
                         // self.filepath = path.to_str().unwrap().to_string();
                         #[cfg(not(target_arch = "wasm32"))]
                         {
-                            self.filepath = path.path().to_str().unwrap().to_string();
+                            self.filepath = _path.path().to_str().unwrap().to_string();
                         }
                     }
                 };

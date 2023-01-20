@@ -1,10 +1,7 @@
-use crate::message::{RVCDChannel, RVCDMsg};
+use crate::message::RVCDChannel;
 use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
-use tracing::info;
-use rfd::FileHandle;
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -71,12 +68,10 @@ impl RVCD {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let filepath = &def.filepath;
-                info!("last file: {}", filepath);
+                tracing::info!("last file: {}", filepath);
                 if !filepath.is_empty() {
                     channel_req_tx
-                        // .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
-                        // .send(RVCDMsg::FileOpen(filepath.to_string()))
-                        .send(RVCDMsg::FileOpen(FileHandle::from(PathBuf::from(filepath))))
+                        .send(crate::message::RVCDMsg::FileOpen(rfd::FileHandle::from(std::path::PathBuf::from(filepath))))
                         .unwrap();
                 }
             }
