@@ -181,6 +181,8 @@ impl eframe::App for RVCD {
                     RVCDMsg::UpdateInfo(info) => {
                         info!("ui recv info: {}", info);
                         self.wave_info = Some(info);
+                        self.signals.clear();
+                        self.signal_leaves.clear();
                     }
                     RVCDMsg::FileOpen(_path) => {
                         // self.filepath = path.to_str().unwrap().to_string();
@@ -188,6 +190,8 @@ impl eframe::App for RVCD {
                         {
                             self.filepath = _path.path().to_str().unwrap().to_string();
                         }
+                        self.signals.clear();
+                        self.signal_leaves.clear();
                     }
                     RVCDMsg::UpdateData(data) => {
                         self.wave_data = data;
