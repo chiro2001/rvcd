@@ -47,80 +47,92 @@ impl eframe::App for RVCD {
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            egui::TopBottomPanel::bottom("signal_leaf")
-                .min_height(100.0)
-                .max_height(400.0)
-                .resizable(true)
-                .show_inside(ui, |ui| {
-                    ScrollArea::vertical().show(ui, |ui| {
-                        ui.with_layout(
-                            Layout::top_down(Align::LEFT).with_cross_justify(true),
-                            |ui| {
-                                for (id, name) in self.signal_leaves.iter() {
-                                    let response =
-                                        ui.add(egui::Label::new(name).sense(Sense::click()));
-                                    if response.double_clicked() {
-                                        if !self.signals.contains(id) {
-                                            self.signals.push(*id);
-                                        }
-                                    }
-                                }
-                            },
-                        );
-                    });
-                });
-            egui::CentralPanel::default().show_inside(ui, |ui| {
-                if let Some(info) = &self.wave_info {
-                    ScrollArea::vertical().show(ui, |ui| {
-                        ui.with_layout(
-                            Layout::top_down(Align::LEFT).with_cross_justify(true),
-                            |ui| {
-                                match self.tree.ui(ui, info.tree.root()) {
-                                    TreeAction::None => {}
-                                    TreeAction::AddSignal(node) => match node {
-                                        WaveTreeNode::WaveVar(d) => {
-                                            if !self.signals.contains(&d.0) {
-                                                self.signals.push(d.0);
+            ui.with_layout(
+                Layout::top_down(Align::LEFT).with_cross_justify(true),
+                |ui| {
+                    egui::TopBottomPanel::bottom("signal_leaf")
+                        // .min_height(100.0)
+                        .max_height(400.0)
+                        .resizable(true)
+                        .show_inside(ui, |ui| {
+                            ScrollArea::vertical().show(ui, |ui| {
+                                ui.with_layout(
+                                    Layout::top_down(Align::LEFT).with_cross_justify(true),
+                                    |ui| {
+                                        for (id, name) in self.signal_leaves.iter() {
+                                            let response = ui
+                                                .add(egui::Label::new(name).sense(Sense::click()));
+                                            if response.double_clicked() {
+                                                if !self.signals.contains(id) {
+                                                    self.signals.push(*id);
+                                                }
                                             }
                                         }
-                                        _ => {}
                                     },
-                                    TreeAction::SelectScope(nodes) => {
-                                        self.signal_leaves = nodes
-                                            .into_iter()
-                                            .map(|node| match node {
-                                                WaveTreeNode::WaveVar(v) => Some(v),
-                                                _ => None,
-                                            })
-                                            .filter(|x| x.is_some())
-                                            .map(|x| x.unwrap())
-                                            .collect();
+                                );
+                            });
+                        });
+                    egui::CentralPanel::default().show_inside(ui, |ui| {
+                        ScrollArea::vertical().show(ui, |ui| {
+                            ui.with_layout(
+                                Layout::left_to_right(Align::LEFT).with_cross_justify(false),
+                                |ui| {
+                                    // ScrollArea::vertical().show(ui, |ui| {
+                                    if let Some(info) = &self.wave_info {
+                                        match self.tree.ui(ui, info.tree.root()) {
+                                            TreeAction::None => {}
+                                            TreeAction::AddSignal(node) => match node {
+                                                WaveTreeNode::WaveVar(d) => {
+                                                    if !self.signals.contains(&d.0) {
+                                                        self.signals.push(d.0);
+                                                    }
+                                                }
+                                                _ => {}
+                                            },
+                                            TreeAction::SelectScope(nodes) => {
+                                                self.signal_leaves = nodes
+                                                    .into_iter()
+                                                    .map(|node| match node {
+                                                        WaveTreeNode::WaveVar(v) => Some(v),
+                                                        _ => None,
+                                                    })
+                                                    .filter(|x| x.is_some())
+                                                    .map(|x| x.unwrap())
+                                                    .collect();
+                                            }
+                                        }
+                                    } else {
+                                        ui.centered_and_justified(|ui| ui.label("No file loaded"));
                                     }
-                                };
-                            },
-                        );
+                                    // });
+                                },
+                            );
+                        });
                     });
-                } else {
-                    ui.centered_and_justified(|ui| ui.label("No file loaded"));
-                }
-            });
+                },
+            );
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ScrollArea::vertical().show(ui, |ui| {
-                egui::SidePanel::left("signals")
-                    .resizable(true)
-                    .show_inside(ui, |ui| {
-                        if let Some(info) = &self.wave_info {
-                            for id in self.signals.iter() {
-                                if let Some(name) = info.code_names.get(id) {
-                                    ui.label(name);
+            ui.with_layout(
+                Layout::top_down(Align::LEFT).with_cross_justify(true),
+                |ui| {
+                    ScrollArea::vertical().show(ui, |ui| {
+                        egui::SidePanel::left("signals")
+                            .resizable(true)
+                            .show_inside(ui, |ui| {
+                                if let Some(info) = &self.wave_info {
+                                    for id in self.signals.iter() {
+                                        if let Some(name) = info.code_names.get(id) {
+                                            ui.label(name);
+                                        }
+                                    }
                                 }
-                            }
-                        }
+                            });
+                        egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
                     });
-                egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
-            });
+                },
+            );
         });
 
         if let Some(channel) = &self.channel {
