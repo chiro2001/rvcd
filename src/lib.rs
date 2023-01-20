@@ -3,5 +3,6 @@
 pub mod app;
 pub mod radix;
 pub mod wave;
+pub mod rvcd;
 
-pub use app::TemplateApp;
+pub use rvcd::RVCD;
