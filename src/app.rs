@@ -1,6 +1,8 @@
 use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
+use eframe::emath::Align;
+use egui::{Layout, ScrollArea};
 use log::info;
 use std::path::PathBuf;
 
@@ -40,17 +42,26 @@ impl eframe::App for RVCD {
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            egui::CentralPanel::default().show_inside(ui, |ui| {
-                if let Some(info) = &self.wave_info {
-                    self.tree.item_ui(ui, info.tree.root());
-                }
-            });
             egui::TopBottomPanel::bottom("signal_leaf")
                 .min_height(200.0)
                 .resizable(true)
                 .show_inside(ui, |ui| {
                     ui.label("signal leaf");
                 });
+            egui::CentralPanel::default().show_inside(ui, |ui| {
+                if let Some(info) = &self.wave_info {
+                    ScrollArea::vertical().show(ui, |ui| {
+                        ui.with_layout(
+                            Layout::top_down(Align::LEFT).with_cross_justify(true),
+                            |ui| {
+                                self.tree.item_ui(ui, info.tree.root());
+                            },
+                        );
+                    });
+                } else {
+                    ui.centered_and_justified(|ui| ui.label("No file loaded"));
+                }
+            });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
