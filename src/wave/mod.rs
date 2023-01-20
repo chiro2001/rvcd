@@ -111,7 +111,7 @@ impl WaveDataItem {
     }
 }
 
-#[derive(Serialize, Clone, Default, Debug)]
+#[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub enum WaveTreeNode {
     #[default]
     WaveRoot,

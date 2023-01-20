@@ -1,5 +1,6 @@
 use crate::wave::WaveTreeNode;
-use egui::{CollapsingHeader, Ui};
+use egui::{CollapsingHeader, Sense, Ui};
+use log::info;
 use trees::{Node, Tree};
 
 pub struct TreeView(Tree<WaveTreeNode>);
@@ -10,43 +11,46 @@ impl Default for TreeView {
     }
 }
 
+#[derive(PartialEq)]
 pub enum TreeAction {
-    Keep,
-    Delete,
+    None,
+    ClickLeaf(WaveTreeNode),
+    Select(WaveTreeNode),
 }
 
 impl TreeView {
-    pub fn item_ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>) {
+    pub fn ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>) -> TreeAction {
         if tree.has_no_child() {
-            ui.label(tree.data().to_string());
+            let node = tree.data();
+            // if ui.button(node.to_string()).clicked() {
+            // let button = ui.label(node.to_string());
+            let response = ui.add(
+                egui::Label::new(node.to_string())
+                    .sense(Sense::click())
+            );
+            // button.sense.click
+            if response.clicked() {
+                // info!("clicked: {}", node);
+                TreeAction::ClickLeaf(node.clone())
+            } else {
+                TreeAction::None
+            }
         } else {
-            CollapsingHeader::new(tree.data().to_string())
+            match CollapsingHeader::new(tree.data().to_string())
                 .default_open(true)
                 .show(ui, |ui| {
-                    for child in tree.iter() {
-                        self.item_ui(ui, child)
-                    }
-                });
+                    tree.iter()
+                        .map(|child| self.ui(ui, child))
+                        .find(|a| *a != TreeAction::None)
+                })
+                .body_returned
+            {
+                None => TreeAction::None,
+                Some(a) => match a {
+                    None => TreeAction::None,
+                    Some(a) => a,
+                },
+            }
         }
-    }
-    pub fn ui(&mut self, ui: &mut Ui) -> TreeAction {
-        self.ui_impl(ui, self.0.root().data().to_string().as_str(), true)
-    }
-    fn ui_impl(&mut self, ui: &mut Ui, name: &str, default_open: bool) -> TreeAction {
-        CollapsingHeader::new(name)
-            .default_open(default_open)
-            .show(ui, |ui| self.children_ui(ui))
-            .body_returned
-            .unwrap_or(TreeAction::Keep)
-    }
-    fn children_ui(&mut self, _ui: &mut Ui) -> TreeAction {
-        // self.0 = std::mem::take(self)
-        //     .0
-        //     .into_iter()
-        //     .enumerate()
-        //     .filter_map(|(i, mut tree)| {
-        //         if tree.
-        //     });
-        TreeAction::Keep
     }
 }

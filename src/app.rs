@@ -5,6 +5,7 @@ use eframe::emath::Align;
 use egui::{Layout, ScrollArea};
 use log::info;
 use std::path::PathBuf;
+use crate::tree_view::TreeAction;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -54,7 +55,11 @@ impl eframe::App for RVCD {
                         ui.with_layout(
                             Layout::top_down(Align::LEFT).with_cross_justify(true),
                             |ui| {
-                                self.tree.item_ui(ui, info.tree.root());
+                                match self.tree.ui(ui, info.tree.root()) {
+                                    TreeAction::None => {}
+                                    TreeAction::ClickLeaf(node) => {}
+                                    TreeAction::Select(node) => {}
+                                };
                             },
                         );
                     });
