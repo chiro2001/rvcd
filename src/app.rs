@@ -19,7 +19,7 @@ impl eframe::App for RVCD {
                     // #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Open").clicked() {
                         if let Some(channel) = &self.channel {
-                            let task = rfd::AsyncFileDiatracing::new()
+                            let task = rfd::AsyncFileDialog::new()
                                 .add_filter("VCD File", &["vcd"])
                                 .pick_file();
                             let sender = channel.tx.clone();
