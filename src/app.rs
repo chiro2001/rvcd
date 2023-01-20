@@ -124,7 +124,12 @@ impl eframe::App for RVCD {
                                 if let Some(info) = &self.wave_info {
                                     for id in self.signals.iter() {
                                         if let Some(name) = info.code_names.get(id) {
-                                            ui.add(egui::Label::new(name).wrap(false));
+                                            ui.scope(|ui| {
+                                                ui.set_height(30.0);
+                                                ui.centered_and_justified(|ui| {
+                                                    ui.add(egui::Label::new(name).wrap(false));
+                                                });
+                                            });
                                         }
                                     }
                                 }
