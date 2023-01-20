@@ -1,4 +1,5 @@
-use crate::message::RVCDChannel;
+use std::path::PathBuf;
+use crate::message::{RVCDChannel, RVCDMsg};
 use crate::service::service;
 use crate::tree_view::TreeView;
 use crate::utils::execute;
@@ -59,6 +60,10 @@ impl RVCD {
             tx: channel_resp_tx,
             rx: channel_req_rx,
         }));
+
+        // auto open file
+        let file = "data/cpu_ila_commit.vcd";
+        channel_req_tx.send(RVCDMsg::FileOpen(PathBuf::from(file))).unwrap();
 
         if let Some(storage) = cc.storage {
             Self {
