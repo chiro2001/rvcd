@@ -2,8 +2,8 @@ use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
 use egui::CollapsingHeader;
-use std::path::PathBuf;
 use log::info;
+use std::path::PathBuf;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.

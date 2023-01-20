@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::wave::WaveTreeNode;
 use egui::{CollapsingHeader, Ui};
 use trees::Tree;
@@ -27,7 +26,7 @@ impl TreeView {
             .body_returned
             .unwrap_or(TreeAction::Keep)
     }
-    fn children_ui(&mut self, ui: &mut Ui) -> TreeAction {
+    fn children_ui(&mut self, _ui: &mut Ui) -> TreeAction {
         // self.0 = std::mem::take(self)
         //     .0
         //     .into_iter()

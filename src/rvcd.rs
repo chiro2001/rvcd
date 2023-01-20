@@ -1,9 +1,9 @@
 use crate::message::RVCDChannel;
 use crate::service::service;
-use crate::utils::execute;
-use std::sync::mpsc;
 use crate::tree_view::TreeView;
+use crate::utils::execute;
 use crate::wave::WaveInfo;
+use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
@@ -31,7 +31,7 @@ pub struct RVCD {
     #[serde(skip)]
     pub(crate) tree: TreeView,
     #[serde(skip)]
-    pub(crate) wave_info: Option<WaveInfo>
+    pub(crate) wave_info: Option<WaveInfo>,
 }
 
 impl Default for RVCD {
