@@ -1,9 +1,8 @@
-use std::path::PathBuf;
 use crate::message::{RVCDChannel, RVCDMsg};
-use crate::service::service;
+use crate::service::Service;
 use crate::tree_view::TreeView;
-use crate::utils::execute;
 use crate::wave::WaveInfo;
+use std::path::PathBuf;
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -56,31 +55,38 @@ impl RVCD {
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
         // launch service
-        execute(service(RVCDChannel {
+        let service = Service::new(RVCDChannel {
             tx: channel_resp_tx,
             rx: channel_req_rx,
-        }));
+        });
+        // execute(async {
+        //     service.run().await;
+        // });
+        // std::thread::spawn(async {
+        //     service.run().await;
+        // });
+        service.start();
 
-        // auto open file
-        let file = "data/cpu_ila_commit.vcd";
-        channel_req_tx.send(RVCDMsg::FileOpen(PathBuf::from(file))).unwrap();
-
-        if let Some(storage) = cc.storage {
-            Self {
-                channel: Some(RVCDChannel {
-                    tx: channel_req_tx,
-                    rx: channel_resp_rx,
-                }),
-                ..eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        let def = if let Some(storage) = cc.storage {
+            let def: RVCD = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            // auto open file
+            // let filepath = "data/cpu_ila_commit.vcd";
+            let filepath = &def.filepath;
+            if !filepath.is_empty() {
+                channel_req_tx
+                    .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
+                    .unwrap();
             }
+            def
         } else {
-            Self {
-                channel: Some(RVCDChannel {
-                    tx: channel_req_tx,
-                    rx: channel_resp_rx,
-                }),
-                ..Default::default()
-            }
+            Default::default()
+        };
+        Self {
+            channel: Some(RVCDChannel {
+                tx: channel_req_tx,
+                rx: channel_resp_rx,
+            }),
+            ..def
         }
     }
 }

@@ -1,7 +1,6 @@
 use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
-use egui::CollapsingHeader;
 use log::info;
 use std::path::PathBuf;
 
@@ -68,7 +67,9 @@ impl eframe::App for RVCD {
                         info!("ui recv info");
                         self.wave_info = Some(info);
                     }
-                    _ => {}
+                    RVCDMsg::FileOpen(path) => {
+                        self.filepath = path.to_str().unwrap().to_string();
+                    }
                 };
             }
         }

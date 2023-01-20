@@ -4,7 +4,6 @@ use std::sync::mpsc;
 #[derive(Clone)]
 pub enum RVCDMsg {
     FileOpen(std::path::PathBuf),
-    // UpdateInfo(Arc<Mutex<WaveInfo>>)
     UpdateInfo(WaveInfo),
 }
 
