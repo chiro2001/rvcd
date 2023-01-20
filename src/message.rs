@@ -3,7 +3,7 @@ use std::sync::mpsc;
 
 #[derive(Clone, Debug)]
 pub enum RVCDMsg {
-    FileOpen(std::path::PathBuf),
+    FileOpen(String),
     UpdateInfo(WaveInfo),
 }
 

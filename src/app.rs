@@ -6,7 +6,6 @@ use crate::RVCD;
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense};
 use log::info;
-use std::path::PathBuf;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -27,7 +26,8 @@ impl eframe::App for RVCD {
                             execute(async move {
                                 let file = task.await;
                                 if let Some(file) = file {
-                                    let path = PathBuf::from(file);
+                                    // let path = PathBuf::from(file);
+                                    let path = file.path().to_str().unwrap().to_string();
                                     sender.send(RVCDMsg::FileOpen(path)).ok();
                                 }
                             });
@@ -78,11 +78,6 @@ impl eframe::App for RVCD {
                                         WaveTreeNode::WaveVar(d) => {
                                             if !self.signals.contains(&d.0) {
                                                 self.signals.push(d.0);
-                                                // if let Some(info) = &self.wave_info {
-                                                //     if let Some(path) = info.code_paths.get(&d.0) {
-                                                //         self.signal_paths
-                                                //     }
-                                                // }
                                             }
                                         }
                                         _ => {}
@@ -133,7 +128,8 @@ impl eframe::App for RVCD {
                         self.wave_info = Some(info);
                     }
                     RVCDMsg::FileOpen(path) => {
-                        self.filepath = path.to_str().unwrap().to_string();
+                        // self.filepath = path.to_str().unwrap().to_string();
+                        self.filepath = path;
                     }
                 };
             }

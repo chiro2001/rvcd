@@ -22,7 +22,8 @@ impl Service {
         match msg {
             RVCDMsg::FileOpen(path) => {
                 info!("loading file: {:?}", path);
-                let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
+                // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
+                let mut file = File::open(path.to_string()).unwrap();
                 if let Ok(w) = Vcd::load(&mut file) {
                     if let Ok(mut wave) = self.wave.lock() {
                         *wave = Some(w);

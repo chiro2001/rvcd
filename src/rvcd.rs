@@ -3,7 +3,6 @@ use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
 use log::info;
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -71,7 +70,8 @@ impl RVCD {
             info!("last file: {}", filepath);
             if !filepath.is_empty() {
                 channel_req_tx
-                    .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
+                    // .send(RVCDMsg::FileOpen(PathBuf::from(filepath)))
+                    .send(RVCDMsg::FileOpen(filepath.to_string()))
                     .unwrap();
             }
             def
