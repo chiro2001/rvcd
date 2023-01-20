@@ -124,7 +124,7 @@ impl eframe::App for RVCD {
                                 if let Some(info) = &self.wave_info {
                                     for id in self.signals.iter() {
                                         if let Some(name) = info.code_names.get(id) {
-                                            ui.label(name);
+                                            ui.add(egui::Label::new(name).wrap(false));
                                         }
                                     }
                                 }
