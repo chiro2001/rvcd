@@ -6,5 +6,6 @@ pub mod wave;
 pub mod rvcd;
 pub mod utils;
 pub mod message;
+pub mod service;
 
 pub use rvcd::RVCD;

@@ -5,6 +5,6 @@ pub enum RVCDMsg {
 }
 
 pub struct RVCDChannel {
-    pub(crate) sender: mpsc::Sender<RVCDMsg>,
-    pub(crate) receiver: mpsc::Receiver<RVCDMsg>,
+    pub(crate) tx: mpsc::Sender<RVCDMsg>,
+    pub(crate) rx: mpsc::Receiver<RVCDMsg>,
 }

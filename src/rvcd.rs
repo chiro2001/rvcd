@@ -1,4 +1,6 @@
-use crate::message::RVCDChannel;
+use crate::message::{RVCDChannel, RVCDMsg};
+use crate::service::service;
+use crate::utils::execute;
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -15,6 +17,7 @@ pub enum State {
 pub struct RVCD {
     #[serde(skip)]
     pub(crate) state: State,
+    /// ui <- -> service
     #[serde(skip)]
     pub(crate) channel: Option<RVCDChannel>,
 
@@ -39,20 +42,29 @@ impl Default for RVCD {
 impl RVCD {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let c = mpsc::channel();
-        let channel = Some(RVCDChannel {
-            sender: c.0,
-            receiver: c.1,
-        });
+        let (channel_req_tx, channel_req_rx) = mpsc::channel();
+        let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
+
+        // launch service
+        execute(service(RVCDChannel {
+            tx: channel_resp_tx,
+            rx: channel_req_rx,
+        }));
 
         if let Some(storage) = cc.storage {
             Self {
-                channel,
+                channel: Some(RVCDChannel {
+                    tx: channel_req_tx,
+                    rx: channel_resp_rx,
+                }),
                 ..eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
             }
         } else {
             Self {
-                channel,
+                channel: Some(RVCDChannel {
+                    tx: channel_req_tx,
+                    rx: channel_resp_rx,
+                }),
                 ..Default::default()
             }
         }

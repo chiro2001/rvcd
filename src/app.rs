@@ -20,7 +20,7 @@ impl eframe::App for RVCD {
                             let task = rfd::AsyncFileDialog::new()
                                 .add_filter("VCD File", &["vcd"])
                                 .pick_file();
-                            let sender = channel.sender.clone();
+                            let sender = channel.tx.clone();
                             execute(async move {
                                 let file = task.await;
                                 if let Some(file) = file {
