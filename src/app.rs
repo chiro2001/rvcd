@@ -5,7 +5,7 @@ use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense};
-use log::info;
+use tracing::info;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -19,7 +19,7 @@ impl eframe::App for RVCD {
                     // #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Open").clicked() {
                         if let Some(channel) = &self.channel {
-                            let task = rfd::AsyncFileDialog::new()
+                            let task = rfd::AsyncFileDiatracing::new()
                                 .add_filter("VCD File", &["vcd"])
                                 .pick_file();
                             let sender = channel.tx.clone();

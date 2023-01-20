@@ -3,10 +3,9 @@ use crate::utils::execute;
 use crate::wave::vcd::Vcd;
 use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
-use log::{debug, error, info};
+use tracing::{debug, error, info};
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
-use std::thread::sleep;
 use std::time::Duration;
 
 pub struct Service {
@@ -54,7 +53,24 @@ impl Service {
 
     pub async fn run(&mut self) {
         loop {
-            sleep(Duration::from_millis(10));
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                // #[wasm_bindgen]
+                pub fn sleep(ms: i32) -> js_sys::Promise {
+                    js_sys::Promise::new(&mut |resolve, _| {
+                        web_sys::window()
+                            .unwrap()
+                            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
+                            .unwrap();
+                    })
+                }
+                let promise = sleep(10);
+                let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+            }
             let r = self
                 .channel
                 .rx
@@ -72,9 +88,11 @@ impl Service {
     }
 
     pub fn start(channel: RVCDChannel) {
+        info!("starting service...");
         execute(async move {
             run_service(channel).await;
         });
+        info!("service started");
     }
 }
 

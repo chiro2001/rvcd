@@ -19,16 +19,16 @@ eframe = { version = "0.20.0", default-features = false, features = [
 serde = { version = "1", features = ["derive"] }
 vcd = { git = "https://github.com/chiro2001/rust-vcd", branch = "master" }
 anyhow = "1.0.68"
-log = "0.4.17"
 num = "0.4.0"
 num-bigint = "0.4.3"
 num-traits = "0.2.15"
 egui_extras = "0.20.0"
-rfd = "0.10.0"
 futures = "0.3.25"
 queues = "1.1.0"
 trees = "0.4.2"
 serde_json = "1.0.91"
+tracing = "0.1.37"
+rfd = "0.10.0"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -39,6 +39,8 @@ tracing-subscriber = "0.3"
 console_error_panic_hook = "0.1.6"
 tracing-wasm = "0.2"
 wasm-bindgen-futures = "0.4"
+js-sys = "0.3.60"
+web-sys = { version = "0.3.60", features = ["Window"] }
 
 
 [profile.release]

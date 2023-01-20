@@ -4,7 +4,7 @@ use crate::wave::{
     Wave, WaveDataItem, WaveInfo, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue,
 };
 use anyhow::{anyhow, Result};
-use log::info;
+use tracing::info;
 use queues::{IsQueue, Queue};
 use std::collections::HashMap;
 use std::io::Read;

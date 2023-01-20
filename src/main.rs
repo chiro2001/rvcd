@@ -28,6 +28,8 @@ fn main() {
 
     let web_options = eframe::WebOptions::default();
 
+    tracing::info!("log test");
+
     wasm_bindgen_futures::spawn_local(async {
         eframe::start_web(
             "the_canvas_id", // hardcode it

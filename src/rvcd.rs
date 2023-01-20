@@ -2,7 +2,7 @@ use crate::message::{RVCDChannel, RVCDMsg};
 use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::WaveInfo;
-use log::info;
+use tracing::info;
 use rfd::FileHandle;
 use std::path::PathBuf;
 use std::sync::mpsc;
