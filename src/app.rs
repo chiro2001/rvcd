@@ -1,11 +1,12 @@
 use crate::message::RVCDMsg;
+use crate::tree_view::TreeAction;
 use crate::utils::execute;
+use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea};
 use log::info;
 use std::path::PathBuf;
-use crate::tree_view::TreeAction;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -44,10 +45,13 @@ impl eframe::App for RVCD {
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
             egui::TopBottomPanel::bottom("signal_leaf")
-                .min_height(200.0)
+                .min_height(100.0)
                 .resizable(true)
                 .show_inside(ui, |ui| {
-                    ui.label("signal leaf");
+                    // ui.label("signal leaf");
+                    for (_id, name) in self.signal_leaves.iter() {
+                        ui.label(name);
+                    }
                 });
             egui::CentralPanel::default().show_inside(ui, |ui| {
                 if let Some(info) = &self.wave_info {
@@ -57,8 +61,30 @@ impl eframe::App for RVCD {
                             |ui| {
                                 match self.tree.ui(ui, info.tree.root()) {
                                     TreeAction::None => {}
-                                    TreeAction::ClickLeaf(node) => {}
-                                    TreeAction::Select(node) => {}
+                                    TreeAction::AddSignal(node) => match node {
+                                        WaveTreeNode::WaveVar(d) => {
+                                            if !self.signals.contains(&d.0) {
+                                                self.signals.push(d.0);
+                                                // if let Some(info) = &self.wave_info {
+                                                //     if let Some(path) = info.code_paths.get(&d.0) {
+                                                //         self.signal_paths
+                                                //     }
+                                                // }
+                                            }
+                                        }
+                                        _ => {}
+                                    },
+                                    TreeAction::SelectScope(nodes) => {
+                                        self.signal_leaves = nodes
+                                            .into_iter()
+                                            .map(|node| match node {
+                                                WaveTreeNode::WaveVar(v) => Some(v),
+                                                _ => None,
+                                            })
+                                            .filter(|x| x.is_some())
+                                            .map(|x| x.unwrap())
+                                            .collect();
+                                    }
                                 };
                             },
                         );

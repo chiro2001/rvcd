@@ -25,9 +25,11 @@ pub struct RVCD {
     pub(crate) channel: Option<RVCDChannel>,
 
     pub(crate) filepath: String,
-    pub(crate) signal_paths: Vec<Vec<String>>,
     #[serde(skip)]
     pub(crate) signals: Vec<u64>,
+
+    #[serde(skip)]
+    pub(crate) signal_leaves: Vec<(u64, String)>,
 
     #[serde(skip)]
     pub(crate) tree: TreeView,
@@ -41,8 +43,8 @@ impl Default for RVCD {
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
-            signal_paths: vec![],
             signals: vec![],
+            signal_leaves: vec![],
             tree: Default::default(),
             wave_info: None,
         }
