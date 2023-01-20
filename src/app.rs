@@ -46,12 +46,19 @@ impl eframe::App for RVCD {
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
             egui::TopBottomPanel::bottom("signal_leaf")
                 .min_height(100.0)
+                .max_height(400.0)
                 .resizable(true)
                 .show_inside(ui, |ui| {
-                    // ui.label("signal leaf");
-                    for (_id, name) in self.signal_leaves.iter() {
-                        ui.label(name);
-                    }
+                    ScrollArea::vertical().show(ui, |ui| {
+                        ui.with_layout(
+                            Layout::top_down(Align::LEFT).with_cross_justify(true),
+                            |ui| {
+                                for (_id, name) in self.signal_leaves.iter() {
+                                    ui.label(name);
+                                }
+                            },
+                        );
+                    });
                 });
             egui::CentralPanel::default().show_inside(ui, |ui| {
                 if let Some(info) = &self.wave_info {
