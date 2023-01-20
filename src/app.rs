@@ -2,8 +2,8 @@ use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
 use egui_extras::{Size, StripBuilder};
-use std::path::PathBuf;
 use log::error;
+use std::path::PathBuf;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -36,21 +36,20 @@ impl eframe::App for RVCD {
                         frame.close();
                     }
                 });
+                egui::warn_if_debug_build(ui);
             });
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            egui::warn_if_debug_build(ui);
-            StripBuilder::new(ui)
-                .sizes(Size::remainder(), 2)
-                .vertical(|mut strip| {
-                    strip.cell(|ui| {
-                        ui.label("50% up");
-                    });
-                    strip.cell(|ui| {
-                        ui.label("50% bottom");
-                    });
-                });
+            egui::CentralPanel::default().show_inside(ui, |ui| {
+                ui.label("signal tree");
+            });
+            egui::TopBottomPanel::bottom("signal_leaf")
+                .min_height(200.0)
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                ui.label("signal leaf");
+            });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
