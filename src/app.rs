@@ -4,7 +4,7 @@ use crate::utils::execute;
 use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
-use egui::{Layout, ScrollArea};
+use egui::{Layout, ScrollArea, Sense};
 use log::info;
 use std::path::PathBuf;
 
@@ -53,8 +53,14 @@ impl eframe::App for RVCD {
                         ui.with_layout(
                             Layout::top_down(Align::LEFT).with_cross_justify(true),
                             |ui| {
-                                for (_id, name) in self.signal_leaves.iter() {
-                                    ui.label(name);
+                                for (id, name) in self.signal_leaves.iter() {
+                                    let response =
+                                        ui.add(egui::Label::new(name).sense(Sense::click()));
+                                    if response.double_clicked() {
+                                        if !self.signals.contains(id) {
+                                            self.signals.push(*id);
+                                        }
+                                    }
                                 }
                             },
                         );
@@ -107,7 +113,6 @@ impl eframe::App for RVCD {
                 egui::SidePanel::left("signals")
                     .resizable(true)
                     .show_inside(ui, |ui| {
-                        ui.label("signals");
                         if let Some(info) = &self.wave_info {
                             for id in self.signals.iter() {
                                 if let Some(name) = info.code_names.get(id) {
