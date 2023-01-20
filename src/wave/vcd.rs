@@ -4,11 +4,11 @@ use crate::wave::{
     Wave, WaveDataItem, WaveInfo, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue,
 };
 use anyhow::{anyhow, Result};
-use tracing::info;
 use queues::{IsQueue, Queue};
 use std::collections::HashMap;
 use std::io::Read;
 use std::slice::Iter;
+use tracing::info;
 use trees::Tree;
 use vcd::{Command, Header, IdCode, Scope, ScopeItem, TimescaleUnit, Value, Var};
 
@@ -248,10 +248,20 @@ impl WaveLoader for Vcd {
         };
         let mut data = vec![];
         let mut timestamp = 0u64;
+        let mut time_start = 0xffffffffffffffffu64;
+        let mut time_stop = 0u64;
         for command_result in parser {
             let command = command_result?;
             match command {
-                Command::Timestamp(t) => timestamp = t,
+                Command::Timestamp(t) => {
+                    if time_start > t {
+                        time_start = t;
+                    }
+                    if time_stop < t {
+                        time_stop = t;
+                    }
+                    timestamp = t;
+                }
                 Command::ChangeScalar(i, v) => {
                     let IdCode(id) = i;
                     data.push(
@@ -282,6 +292,7 @@ impl WaveLoader for Vcd {
         Ok(Wave {
             info: WaveInfo {
                 timescale,
+                range: (time_start, time_stop),
                 headers,
                 code_names,
                 code_paths,

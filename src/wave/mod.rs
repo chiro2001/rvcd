@@ -139,6 +139,7 @@ impl Display for WaveTreeNode {
 #[derive(Clone, Debug)]
 pub struct WaveInfo {
     pub timescale: (u64, WaveTimescaleUnit),
+    pub range: (u64, u64),
     pub headers: HashMap<String, String>,
     pub code_names: HashMap<u64, String>,
     pub code_paths: HashMap<u64, Vec<String>>,
@@ -149,6 +150,7 @@ impl WaveInfo {
     pub fn copy(&self) -> Self {
         Self {
             timescale: self.timescale,
+            range: (0, 0),
             headers: self.headers.clone(),
             code_names: self.code_names.clone(),
             code_paths: self.code_paths.clone(),
@@ -168,8 +170,12 @@ impl Display for Wave {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Wave {}{} {:?}",
-            self.info.timescale.0, self.info.timescale.1, self.info.headers
+            "Wave {}{} #{}~#{} {:?}",
+            self.info.timescale.0,
+            self.info.timescale.1,
+            self.info.range.0,
+            self.info.range.1,
+            self.info.headers
         )
     }
 }
