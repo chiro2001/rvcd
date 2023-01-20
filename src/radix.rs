@@ -1,6 +1,7 @@
 use crate::wave::WireValue;
 use num_bigint::BigUint;
 use std::cmp::min;
+use tracing::debug;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Radix {
@@ -62,7 +63,7 @@ pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
 }
 
 pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
-    println!("n = {}", n);
+    debug!("n = {}", n);
     assert!(n > 0);
     let val = radix_value_big_uint(vec);
     let mut str = val.to_str_radix(1 << n);
@@ -72,7 +73,7 @@ pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
         .chain((0..(bits_should_len - vec.len())).map(|_| &WireValue::V0))
         .copied()
         .collect::<Vec<_>>();
-    println!(
+    debug!(
         "str len={}, vec len={}, str_len<<(n-1)={}, bits_should_len={}",
         str.len(),
         vec.len(),
@@ -81,14 +82,14 @@ pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
     );
     let prefix_len = (bits_should_len / n) - str.len();
     let prefix = (0..prefix_len).map(|_| "0").collect::<Vec<_>>().join("");
-    println!("prefix = {}", prefix);
+    debug!("prefix = {}", prefix);
     str = prefix + &str;
     // for every 'z' or 'x' bit,
     // 1. in this 2^n bit have only one 'x' or 'z', then change char as 'x' or 'z'
     // 2. in this 2^n bit have 'x' and 'z', use 'x'
-    println!("str={}", str);
+    debug!("str={}", str);
     if !str.is_empty() {
-        println!(
+        debug!(
             "vec_extended = {:?}\nrev: {:?}",
             vec_extended,
             vec_extended.iter().rev().collect::<Vec<_>>()
@@ -105,7 +106,7 @@ pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
         let indexes_z = indexes_target(WireValue::Z);
         let indexes_x = indexes_target(WireValue::X);
         let mut do_replace = |indexes: Vec<usize>, with: &str| {
-            println!("indexes for {}: {:?}", with, indexes);
+            debug!("indexes for {}: {:?}", with, indexes);
             indexes.into_iter().map(|i| i / n).for_each(|i| {
                 str.replace_range(min(i, str.len() - 1)..min(i + 1, str.len()), with)
             });
@@ -146,7 +147,7 @@ mod test {
         let oct = radix_vector_to_string(Radix::Oct, &vec);
         let dec = radix_vector_to_string(Radix::Dec, &vec);
         let hex = radix_vector_to_string(Radix::Hex, &vec);
-        println!(
+        debug!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),
             bin,
@@ -160,7 +161,7 @@ mod test {
         let oct = radix_vector_to_string(Radix::Oct, &vec);
         let dec = radix_vector_to_string(Radix::Dec, &vec);
         let hex = radix_vector_to_string(Radix::Hex, &vec);
-        println!(
+        debug!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),
             bin,
@@ -174,7 +175,7 @@ mod test {
         let oct = radix_vector_to_string(Radix::Oct, &vec);
         let dec = radix_vector_to_string(Radix::Dec, &vec);
         let hex = radix_vector_to_string(Radix::Hex, &vec);
-        println!(
+        debug!(
             "vec rev: {:?}, bin={}, oct={}, dec={}, hex={}",
             vec.iter().rev().collect::<Vec<_>>(),
             bin,

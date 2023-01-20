@@ -1,7 +1,7 @@
 use crate::message::RVCDChannel;
 use crate::service::Service;
 use crate::tree_view::TreeView;
-use crate::wave::WaveInfo;
+use crate::wave::{WaveDataItem, WaveInfo};
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -33,6 +33,9 @@ pub struct RVCD {
     pub(crate) tree: TreeView,
     #[serde(skip)]
     pub(crate) wave_info: Option<WaveInfo>,
+
+    #[serde(skip)]
+    pub(crate) wave_data: Vec<WaveDataItem>,
 }
 
 impl Default for RVCD {
@@ -45,6 +48,7 @@ impl Default for RVCD {
             signal_leaves: vec![],
             tree: Default::default(),
             wave_info: None,
+            wave_data: vec![],
         }
     }
 }

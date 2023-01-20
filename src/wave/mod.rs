@@ -76,9 +76,9 @@ impl Default for WaveDataValue {
 /// item struct in data list
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
 pub struct WaveDataItem {
-    id: u64,
-    value: WaveDataValue,
-    timestamp: u64,
+    pub id: u64,
+    pub value: WaveDataValue,
+    pub timestamp: u64,
 }
 
 impl Display for WaveDataItem {

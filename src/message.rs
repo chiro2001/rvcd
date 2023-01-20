@@ -1,4 +1,4 @@
-use crate::wave::WaveInfo;
+use crate::wave::{WaveDataItem, WaveInfo};
 use std::sync::mpsc;
 use rfd::FileHandle;
 
@@ -6,6 +6,7 @@ use rfd::FileHandle;
 pub enum RVCDMsg {
     FileOpen(FileHandle),
     UpdateInfo(WaveInfo),
+    UpdateData(Vec<WaveDataItem>),
 }
 
 unsafe impl Send for RVCDMsg {}

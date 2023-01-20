@@ -4,7 +4,7 @@ use crate::utils::execute;
 use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
-use egui::{Align2, Layout, ScrollArea, Sense};
+use egui::{pos2, vec2, Align2, Layout, ScrollArea, Sense};
 use tracing::info;
 
 impl eframe::App for RVCD {
@@ -137,26 +137,38 @@ impl eframe::App for RVCD {
                                 }
                             });
                         egui::CentralPanel::default().show_inside(ui, |ui| {
-                            for id in self.signals.iter() {
-                                ui.scope(|ui| {
-                                    ui.set_height(SIGNAL_HEIGHT);
-                                    ui.centered_and_justified(|ui| {
-                                        let (mut _response, painter) = ui.allocate_painter(
-                                            ui.available_size_before_wrap(),
-                                            Sense::hover(),
-                                        );
-                                        let text = format!("id: {}", id);
-                                        let color = ui.visuals().strong_text_color();
-                                        let rect = ui.max_rect();
-                                        painter.text(
-                                            rect.center(),
-                                            Align2::CENTER_CENTER,
-                                            text,
-                                            Default::default(),
-                                            color,
-                                        );
+                            if let Some(info) = &self.wave_info {
+                                for id in self.signals.iter() {
+                                    ui.scope(|ui| {
+                                        ui.set_height(SIGNAL_HEIGHT);
+                                        ui.centered_and_justified(|ui| {
+                                            let (mut _response, painter) = ui.allocate_painter(
+                                                ui.available_size_before_wrap(),
+                                                Sense::hover(),
+                                            );
+                                            let items =
+                                                self.wave_data.iter().filter(|i| i.id == *id); //.collect::<Vec<_>>();
+                                            let color = ui.visuals().strong_text_color();
+                                            let rect = ui.max_rect();
+                                            for item in items {
+                                                let text = item.value.to_string();
+                                                let width = rect.right() - rect.left();
+                                                let percent = ((item.timestamp - info.range.0)
+                                                    as f32)
+                                                    / ((info.range.1 - info.range.0) as f32);
+                                                let pos =
+                                                    rect.left_center() + vec2(width * percent, 0.0);
+                                                painter.text(
+                                                    pos,
+                                                    Align2::CENTER_CENTER,
+                                                    text,
+                                                    Default::default(),
+                                                    color,
+                                                );
+                                            }
+                                        });
                                     });
-                                });
+                                }
                             }
                         });
                     });
@@ -177,6 +189,9 @@ impl eframe::App for RVCD {
                         {
                             self.filepath = _path.path().to_str().unwrap().to_string();
                         }
+                    }
+                    RVCDMsg::UpdateData(data) => {
+                        self.wave_data = data;
                     }
                 };
             }

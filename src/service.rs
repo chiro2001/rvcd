@@ -32,6 +32,10 @@ impl Service {
                             .tx
                             .send(RVCDMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
                             .unwrap();
+                        self.channel
+                            .tx
+                            .send(RVCDMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
+                            .unwrap();
                         // send path back
                         self.channel.tx.send(RVCDMsg::FileOpen(file)).unwrap();
                     }
