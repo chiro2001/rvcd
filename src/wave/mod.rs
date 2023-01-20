@@ -112,11 +112,26 @@ impl WaveDataItem {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Default)]
 pub enum WaveTreeNode {
+    #[default]
     WaveRoot,
     WaveScope(String),
     WaveVar(u64),
+}
+
+impl Display for WaveTreeNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WaveTreeNode::WaveRoot => "root".to_string(),
+                WaveTreeNode::WaveScope(scope) => scope.to_string(),
+                WaveTreeNode::WaveVar(var) => format!("{}", var),
+            }
+        )
+    }
 }
 
 /// loaded wave data in memory

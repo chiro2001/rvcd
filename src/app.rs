@@ -1,6 +1,7 @@
 use crate::message::RVCDMsg;
 use crate::utils::execute;
 use crate::RVCD;
+use egui::CollapsingHeader;
 use std::path::PathBuf;
 
 impl eframe::App for RVCD {
@@ -40,14 +41,16 @@ impl eframe::App for RVCD {
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
             egui::CentralPanel::default().show_inside(ui, |ui| {
-                ui.label("signal tree");
+                CollapsingHeader::new("Signal Tree")
+                    .default_open(true)
+                    .show(ui, |ui| self.tree.ui(ui));
             });
             egui::TopBottomPanel::bottom("signal_leaf")
                 .min_height(200.0)
                 .resizable(true)
                 .show_inside(ui, |ui| {
-                ui.label("signal leaf");
-            });
+                    ui.label("signal leaf");
+                });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {

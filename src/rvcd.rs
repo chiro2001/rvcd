@@ -2,6 +2,7 @@ use crate::message::RVCDChannel;
 use crate::service::service;
 use crate::utils::execute;
 use std::sync::mpsc;
+use crate::tree_view::TreeView;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
@@ -25,6 +26,9 @@ pub struct RVCD {
     pub(crate) signal_paths: Vec<Vec<String>>,
     #[serde(skip)]
     pub(crate) signals: Vec<u64>,
+
+    #[serde(skip)]
+    pub(crate) tree: TreeView,
 }
 
 impl Default for RVCD {
@@ -35,6 +39,7 @@ impl Default for RVCD {
             filepath: "".to_string(),
             signal_paths: vec![],
             signals: vec![],
+            tree: Default::default(),
         }
     }
 }

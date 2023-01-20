@@ -9,5 +9,6 @@ pub mod rvcd;
 pub mod utils;
 pub mod message;
 pub mod service;
+pub mod tree_view;
 
 pub use rvcd::RVCD;
