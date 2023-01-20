@@ -1,6 +1,6 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::WaveTreeNode::WaveRoot;
-use crate::wave::{Wave, WaveDataItem, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue};
+use crate::wave::{Wave, WaveDataItem, WaveInfo, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue};
 use anyhow::{anyhow, Result};
 use log::info;
 use queues::{IsQueue, Queue};
@@ -276,11 +276,13 @@ impl WaveLoader for Vcd {
             }
         }
         Ok(Wave {
-            timescale,
-            headers,
-            code_names,
-            code_paths,
-            tree,
+            info: WaveInfo {
+                timescale,
+                headers,
+                code_names,
+                code_paths,
+                tree,
+            },
             data,
         })
     }

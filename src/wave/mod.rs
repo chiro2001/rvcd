@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
-use std::ops::{Deref, DerefMut};
 use trees::Tree;
 
 pub mod utils;
@@ -36,7 +35,7 @@ impl Display for WireValue {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum WaveTimescaleUnit {
     S,
     MS,
@@ -134,13 +133,31 @@ impl Display for WaveTreeNode {
     }
 }
 
-/// loaded wave data in memory
-pub struct Wave {
+#[derive(Clone)]
+pub struct WaveInfo {
     pub timescale: (u64, WaveTimescaleUnit),
     pub headers: HashMap<String, String>,
     pub code_names: HashMap<u64, String>,
     pub code_paths: HashMap<u64, Vec<String>>,
     pub tree: Tree<WaveTreeNode>,
+}
+
+impl WaveInfo {
+    pub fn copy(&self) -> Self {
+        Self {
+            timescale: self.timescale,
+            headers: self.headers.clone(),
+            code_names: self.code_names.clone(),
+            code_paths: self.code_paths.clone(),
+            tree: self.tree.deep_clone(),
+        }
+    }
+}
+
+/// loaded wave data in memory
+#[derive(Clone)]
+pub struct Wave {
+    pub info: WaveInfo,
     pub data: Vec<WaveDataItem>,
 }
 
@@ -149,7 +166,7 @@ impl Display for Wave {
         write!(
             f,
             "Wave {}{} {:?}",
-            self.timescale.0, self.timescale.1, self.headers
+            self.info.timescale.0, self.info.timescale.1, self.info.headers
         )
     }
 }
@@ -175,18 +192,18 @@ mod test {
         //     println!("item: {}", item);
         // }
         println!("code paths:");
-        for (id, path) in wave.code_paths.iter() {
+        for (id, path) in wave.info.code_paths.iter() {
             println!(
                 "code: {}, name: {}, path: {:?}",
                 id,
-                wave.code_names.get(id).unwrap(),
+                wave.info.code_names.get(id).unwrap(),
                 path
             );
         }
         println!("tree:");
         println!(
             "{}",
-            serde_json::to_string(&Node(wave.tree.root())).unwrap()
+            serde_json::to_string(&Node(wave.info.tree.root())).unwrap()
         );
 
         use trees::tr;
