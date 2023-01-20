@@ -4,7 +4,7 @@ use crate::utils::execute;
 use crate::wave::WaveTreeNode;
 use crate::RVCD;
 use eframe::emath::Align;
-use egui::{Layout, ScrollArea, Sense};
+use egui::{pos2, Align2, Layout, ScrollArea, Sense, Shape, TextStyle, Color32};
 use tracing::info;
 
 impl eframe::App for RVCD {
@@ -113,6 +113,8 @@ impl eframe::App for RVCD {
             );
         });
 
+        const SIGNAL_HEIGHT: f32 = 30.0;
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(
                 Layout::top_down(Align::LEFT).with_cross_justify(true),
@@ -125,7 +127,7 @@ impl eframe::App for RVCD {
                                     for id in self.signals.iter() {
                                         if let Some(name) = info.code_names.get(id) {
                                             ui.scope(|ui| {
-                                                ui.set_height(30.0);
+                                                ui.set_height(SIGNAL_HEIGHT);
                                                 ui.centered_and_justified(|ui| {
                                                     ui.add(egui::Label::new(name).wrap(false));
                                                 });
@@ -134,7 +136,29 @@ impl eframe::App for RVCD {
                                     }
                                 }
                             });
-                        egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
+                        egui::CentralPanel::default().show_inside(ui, |ui| {
+                            for id in self.signals.iter() {
+                                ui.scope(|ui| {
+                                    ui.set_height(SIGNAL_HEIGHT);
+                                    ui.centered_and_justified(|ui| {
+                                        let (mut response, painter) = ui.allocate_painter(
+                                            ui.available_size_before_wrap(),
+                                            Sense::hover(),
+                                        );
+                                        let text = "text";
+                                        let color = ui.visuals().text_color();
+                                        let rect = ui.max_rect();
+                                        painter.text(
+                                            rect.center(),
+                                            Align2::CENTER_CENTER,
+                                            text,
+                                            Default::default(),
+                                            Color32::GREEN,
+                                        );
+                                    });
+                                });
+                            }
+                        });
                     });
                 },
             );
