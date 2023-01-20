@@ -1,5 +1,9 @@
+use crate::message::RVCDMsg;
+use crate::utils::execute;
 use crate::RVCD;
 use egui_extras::{Size, StripBuilder};
+use std::path::PathBuf;
+use log::error;
 
 impl eframe::App for RVCD {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -9,8 +13,26 @@ impl eframe::App for RVCD {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                 ui.menu_button("File", |ui| {
+                    // #[cfg(not(target_arch = "wasm32"))]
+                    if ui.button("Open").clicked() {
+                        if let Some(channel) = &self.channel {
+                            let task = rfd::AsyncFileDialog::new()
+                                .add_filter("VCD File", &["vcd"])
+                                .pick_file();
+                            let sender = channel.sender.clone();
+                            execute(async move {
+                                let file = task.await;
+                                if let Some(file) = file {
+                                    let path = PathBuf::from(file);
+                                    sender.send(RVCDMsg::FileOpen(path)).ok();
+                                }
+                            });
+                        } else {
+                            error!("no channel found!");
+                        }
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
                         frame.close();
                     }
@@ -19,6 +41,7 @@ impl eframe::App for RVCD {
         });
 
         egui::SidePanel::left("side_panel").show(ctx, |ui| {
+            egui::warn_if_debug_build(ui);
             StripBuilder::new(ui)
                 .sizes(Size::remainder(), 2)
                 .vertical(|mut strip| {
@@ -32,25 +55,20 @@ impl eframe::App for RVCD {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-
-            ui.heading("eframe template");
-            ui.hyperlink("https://github.com/emilk/eframe_template");
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));
-            egui::warn_if_debug_build(ui);
+            egui::SidePanel::left("signals")
+                .resizable(true)
+                .show_inside(ui, |ui| ui.label("signals"));
+            egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
         });
 
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally choose either panels OR windows.");
-            });
-        }
+        // if false {
+        //     egui::Window::new("Window").show(ctx, |ui| {
+        //         ui.label("Windows can be moved by dragging them.");
+        //         ui.label("They are automatically sized based on contents.");
+        //         ui.label("You can turn on resizing and scrolling if you like.");
+        //         ui.label("You would normally choose either panels OR windows.");
+        //     });
+        // }
     }
 
     /// Called by the frame work to save state before shutdown.
