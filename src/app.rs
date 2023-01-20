@@ -103,10 +103,21 @@ impl eframe::App for RVCD {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::SidePanel::left("signals")
-                .resizable(true)
-                .show_inside(ui, |ui| ui.label("signals"));
-            egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
+            ScrollArea::vertical().show(ui, |ui| {
+                egui::SidePanel::left("signals")
+                    .resizable(true)
+                    .show_inside(ui, |ui| {
+                        ui.label("signals");
+                        if let Some(info) = &self.wave_info {
+                            for id in self.signals.iter() {
+                                if let Some(name) = info.code_names.get(id) {
+                                    ui.label(name);
+                                }
+                            }
+                        }
+                    });
+                egui::CentralPanel::default().show_inside(ui, |ui| ui.label("waves"));
+            });
         });
 
         if let Some(channel) = &self.channel {
