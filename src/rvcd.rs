@@ -11,6 +11,8 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 use tracing::info;
+use crate::frame_history::FrameHistory;
+use crate::run_mode::RunMode;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
@@ -46,6 +48,12 @@ pub struct Rvcd {
     pub view: WaveView,
     #[serde(skip)]
     pub toasts: Toasts,
+    #[serde(skip)]
+    pub repaint_after_seconds: f32,
+    #[serde(skip)]
+    pub run_mode: RunMode,
+    #[serde(skip)]
+    pub frame_history: FrameHistory,
 }
 
 impl Default for Rvcd {
@@ -63,6 +71,9 @@ impl Default for Rvcd {
                 .anchor((480.0, 300.0))
                 .direction(egui::Direction::TopDown)
                 .align_to_end(false),
+            repaint_after_seconds: 1.0,
+            run_mode: Default::default(),
+            frame_history: Default::default(),
         }
     }
 }

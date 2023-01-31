@@ -10,5 +10,7 @@ pub mod utils;
 pub mod wave;
 pub mod server;
 pub mod view;
+pub mod frame_history;
+pub mod run_mode;
 
 pub use rvcd::Rvcd;

@@ -1,4 +1,5 @@
 use crate::message::RvcdMsg;
+use crate::run_mode::RunMode;
 use crate::utils::execute;
 use crate::Rvcd;
 use eframe::emath::Align;
@@ -8,7 +9,21 @@ use tracing::info;
 impl eframe::App for Rvcd {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.frame_history
+            .on_new_frame(ctx.input().time, frame.info().cpu_usage);
+        match self.run_mode {
+            RunMode::Continuous => {
+                // Tell the backend to repaint as soon as possible
+                ctx.request_repaint();
+            }
+            RunMode::Reactive => {
+                // let the computer rest for a bit
+                ctx.request_repaint_after(std::time::Duration::from_secs_f32(
+                    self.repaint_after_seconds,
+                ));
+            }
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
@@ -34,10 +49,15 @@ impl eframe::App for Rvcd {
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
-                        _frame.close();
+                        frame.close();
                     }
                 });
                 self.view.menu(ui);
+                if self.run_mode == RunMode::Continuous {
+                    ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
+                } else {
+                    self.frame_history.ui(ui);
+                }
                 let mut debug_on_hover = ui.ctx().debug_on_hover();
                 ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
                 ui.ctx().set_debug_on_hover(debug_on_hover);
