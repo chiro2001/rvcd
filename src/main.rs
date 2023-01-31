@@ -10,7 +10,7 @@ use rvcd::Rvcd;
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use futures::future::{join, select};
+    use futures::future::select;
     use futures::pin_mut;
     use tonic::transport::Server;
     use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
