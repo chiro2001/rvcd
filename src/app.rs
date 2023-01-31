@@ -66,12 +66,24 @@ impl eframe::App for Rvcd {
                         info!("ui recv info: {}", info);
                         self.wave_info = Some(info);
                         self.signal_leaves.clear();
+                        if let Some(info) = &self.wave_info {
+                            self.view.signals_clean_unavailable(info);
+                        }
                     }
                     RvcdMsg::FileOpen(_path) => {
-                        // self.filepath = path.to_str().unwrap().to_string();
                         #[cfg(not(target_arch = "wasm32"))]
                         {
-                            self.filepath = _path.path().to_str().unwrap().to_string();
+                            let path_new = _path.path().to_str().unwrap().to_string();
+                            if path_new != self.filepath {
+                                // open new file, clear all signals
+                                self.view.signals.clear();
+                            } else {
+                                // open old file, remove unavailable signals
+                                if let Some(info) = &self.wave_info {
+                                    self.view.signals_clean_unavailable(info);
+                                }
+                            }
+                            self.filepath = path_new;
                         }
                         self.signal_leaves.clear();
                     }

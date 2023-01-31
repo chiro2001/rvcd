@@ -4,7 +4,7 @@ use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
 pub enum SignalViewMode {
     Number(Radix),
     Analog,
@@ -23,7 +23,7 @@ pub enum SignalViewAlign {
     Right,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug, Clone)]
 pub struct SignalView {
     pub id: u64,
     pub height: f32,
@@ -61,14 +61,25 @@ impl Default for WaveView {
 }
 
 impl WaveView {
+    pub fn signals_clean_unavailable(&mut self, info: &WaveInfo) {
+        let signals: Vec<SignalView> = self
+            .signals
+            .clone()
+            .into_iter()
+            .filter(|signal| info.code_name_width.contains_key(&signal.id))
+            .collect();
+        self.signals = signals;
+    }
     pub fn view_menu(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
             ui.menu_button(format!("Align: {:?}", self.align), |ui| {
                 use SignalViewAlign::*;
                 let data = [Left, Center, Right];
-                data.into_iter().for_each(|a| if ui.button(format!("{:?}", a)).clicked() {
-                    self.align = a;
-                    ui.close_menu();
+                data.into_iter().for_each(|a| {
+                    if ui.button(format!("{:?}", a)).clicked() {
+                        self.align = a;
+                        ui.close_menu();
+                    }
                 });
             });
             if ui.checkbox(&mut self.background, "Background").clicked() {
