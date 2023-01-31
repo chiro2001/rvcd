@@ -301,6 +301,10 @@ impl WaveView {
                         for signal in self.signals.iter() {
                             self.ui_signal_label(signal, ui);
                         }
+                        // bottom padding
+                        ui.scope(|ui| {
+                            ui.set_height(SIGNAL_HEIGHT_DEFAULT);
+                        });
                     });
                 egui::CentralPanel::default().show_inside(ui, |ui| {
                     if let Some(info) = info {
