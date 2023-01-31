@@ -54,14 +54,14 @@ impl Display for WaveTimescaleUnit {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WaveDataValue {
     /// when vec empty, invalid
-    Comp((Vec<u8>, usize)),
+    Comp(Vec<u8>),
     Raw(Vec<WireValue>),
 }
 
 impl Display for WaveDataValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            WaveDataValue::Comp((v, _width)) => write!(f, "{}", BigUint::from_bytes_le(v).to_str_radix(16)),
+            WaveDataValue::Comp(v) => write!(f, "{}", BigUint::from_bytes_le(v).to_str_radix(16)),
             WaveDataValue::Raw(v) => write!(f, "{}", radix_vector_to_string(Radix::Hex, v)),
         }
     }
@@ -90,7 +90,7 @@ impl Display for WaveDataItem {
 impl WaveDataItem {
     fn compress(self) -> Result<Self> {
         if match &self.value {
-            WaveDataValue::Comp((v, _width)) => v.len(),
+            WaveDataValue::Comp(v) => v.len(),
             WaveDataValue::Raw(v) => v.len(),
         } == 0
         {
@@ -101,7 +101,7 @@ impl WaveDataItem {
             WaveDataValue::Raw(v) => {
                 let ability = !v.iter().any(|i| i == &WireValue::X || i == &WireValue::Z);
                 if ability {
-                    let value = WaveDataValue::Comp((radix_value_big_uint(v).to_bytes_le(), v.len()));
+                    let value = WaveDataValue::Comp(radix_value_big_uint(v).to_bytes_le());
                     Ok(Self { value, ..self })
                 } else {
                     Ok(self)
@@ -141,7 +141,7 @@ pub struct WaveInfo {
     pub timescale: (u64, WaveTimescaleUnit),
     pub range: (u64, u64),
     pub headers: HashMap<String, String>,
-    pub code_names: HashMap<u64, String>,
+    pub code_name_width: HashMap<u64, (String, u64)>,
     pub code_paths: HashMap<u64, Vec<String>>,
     pub tree: Tree<WaveTreeNode>,
 }
@@ -152,7 +152,7 @@ impl WaveInfo {
             timescale: self.timescale,
             range: self.range,
             headers: self.headers.clone(),
-            code_names: self.code_names.clone(),
+            code_name_width: self.code_name_width.clone(),
             code_paths: self.code_paths.clone(),
             tree: self.tree.deep_clone(),
         }
@@ -211,7 +211,7 @@ mod test {
             println!(
                 "code: {}, name: {}, path: {:?}",
                 id,
-                wave.info.code_names.get(id).unwrap(),
+                wave.info.code_name_width.get(id).unwrap(),
                 path
             );
         }

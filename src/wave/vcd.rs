@@ -73,22 +73,24 @@ fn vcd_iterate_path(
     Ok(())
 }
 
-pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, String> {
-    fn add_to_map(m: &mut HashMap<IdCode, String>, it: Iter<'_, ScopeItem>) {
+pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, (String, u64)> {
+    fn add_to_map(m: &mut HashMap<IdCode, (String, u64)>, it: Iter<'_, ScopeItem>) {
         it.for_each(|c| {
-            iterate(c).iter().for_each(|(k, v)| {
-                m.insert(*k, v.to_string());
+            iterate(c).iter().for_each(|(k, (v, w))| {
+                m.insert(*k, (v.to_string(), *w));
             })
         });
     }
-    fn iterate(item: &ScopeItem) -> HashMap<IdCode, String> {
+    fn iterate(item: &ScopeItem) -> HashMap<IdCode, (String, u64)> {
         match item {
             ScopeItem::Scope(scope) => {
-                let mut m: HashMap<IdCode, String> = HashMap::new();
+                let mut m: HashMap<IdCode, (String, u64)> = HashMap::new();
                 add_to_map(&mut m, scope.children.iter());
                 m
             }
-            ScopeItem::Var(var) => HashMap::from([(var.code, var.reference.to_string())]),
+            ScopeItem::Var(var) => {
+                HashMap::from([(var.code, (var.reference.to_string(), var.size as u64))])
+            }
             _ => HashMap::new(),
         }
     }
@@ -294,7 +296,7 @@ impl WaveLoader for Vcd {
                 timescale,
                 range: (time_start, time_stop),
                 headers,
-                code_names,
+                code_name_width: code_names,
                 code_paths,
                 tree,
             },
@@ -328,7 +330,7 @@ mod test {
         for command_result in parser {
             let command = command_result?;
             let get_name = |code: &IdCode| match code_name.get(code) {
-                Some(v) => v,
+                Some((v, _w)) => v,
                 None => "None",
             };
             match &command {

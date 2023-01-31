@@ -49,7 +49,7 @@ impl WaveView {
                 .show_inside(ui, |ui| {
                     if let Some(info) = info {
                         for signal in self.signals.iter() {
-                            if let Some(name) = info.code_names.get(&signal.id) {
+                            if let Some((name, _width)) = info.code_name_width.get(&signal.id) {
                                 ui.scope(|ui| {
                                     ui.set_height(signal.height);
                                     ui.centered_and_justified(|ui| {
@@ -80,7 +80,7 @@ impl WaveView {
                                 let paint_signal =
                                     |item_now: &WaveDataItem, item_next: &WaveDataItem| {
                                         let single: bool = match &item_now.value {
-                                            WaveDataValue::Comp((_v, w)) => *w == 1,
+                                            WaveDataValue::Comp(_) => false,
                                             WaveDataValue::Raw(v) => v.len() == 1,
                                         };
                                         let width = signal_rect.width();
@@ -108,7 +108,7 @@ impl WaveView {
                                         );
                                         if single {
                                             let value = match &item_now.value {
-                                                WaveDataValue::Comp((v, _w)) => {
+                                                WaveDataValue::Comp(v) => {
                                                     match BigUint::from_bytes_le(v).is_one() {
                                                         true => WireValue::V1,
                                                         false => WireValue::V0,
