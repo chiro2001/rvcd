@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
@@ -6,8 +5,9 @@ use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
-use std::sync::mpsc;
 use rfd::FileHandle;
+use std::path::PathBuf;
+use std::sync::mpsc;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
@@ -92,11 +92,14 @@ impl Rvcd {
         } else {
             Default::default()
         };
+        let mut view: WaveView = Default::default();
+        view.set_tx(channel_req_tx.clone());
         Self {
             channel: Some(RvcdChannel {
                 tx: channel_req_tx,
                 rx: channel_resp_rx,
             }),
+            view,
             ..def
         }
     }

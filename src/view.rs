@@ -1,9 +1,11 @@
+use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use eframe::emath::Align;
 use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
+use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
 pub enum SignalViewMode {
@@ -54,6 +56,8 @@ pub struct WaveView {
     pub range: (u64, u64),
     pub align: SignalViewAlign,
     pub background: bool,
+    #[serde(skip)]
+    pub tx: Option<mpsc::Sender<RvcdMsg>>,
 }
 
 impl Default for WaveView {
@@ -63,11 +67,21 @@ impl Default for WaveView {
             range: (0, 0),
             align: Default::default(),
             background: true,
+            tx: None,
         }
     }
 }
 
 impl WaveView {
+    pub fn new(tx: mpsc::Sender<RvcdMsg>) -> Self {
+        Self {
+            tx: Some(tx),
+            ..Default::default()
+        }
+    }
+    pub fn set_tx(&mut self, tx: mpsc::Sender<RvcdMsg>) {
+        self.tx = Some(tx);
+    }
     pub fn signals_clean_unavailable(&mut self, info: &WaveInfo) {
         let signals: Vec<SignalView> = self
             .signals
