@@ -79,7 +79,7 @@ impl Rvcd {
             rx: channel_req_rx,
         });
 
-        let def = if let Some(storage) = cc.storage {
+        let mut def = if let Some(storage) = cc.storage {
             let def: Rvcd = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             // auto open file
             // let filepath = "data/cpu_ila_commit.vcd";
@@ -100,14 +100,12 @@ impl Rvcd {
         } else {
             Default::default()
         };
-        let mut view: WaveView = Default::default();
-        view.set_tx(channel_resp_tx);
+        def.view.set_tx(channel_resp_tx);
         Self {
             channel: Some(RvcdChannel {
                 tx: channel_req_tx,
                 rx: channel_resp_rx,
             }),
-            view,
             ..def
         }
     }
@@ -195,7 +193,7 @@ impl Rvcd {
         self.view.panel(ui, &self.wave_info, &self.wave_data);
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
-        info!("ui handle msg: {:?}", msg);
+        info!("ui handle msg: {:?}; signals: {}", msg, self.view.signals.len());
         match msg {
             RvcdMsg::UpdateInfo(info) => {
                 info!("ui recv info: {}", info);
