@@ -42,7 +42,7 @@ impl TreeView {
                         .map(|n| n.data().clone())
                         .map(|x| match x {
                             WaveTreeNode::WaveVar(x) => {
-                                Some(WaveTreeNode::WaveVar((x.0, x.1.to_string())))
+                                Some(WaveTreeNode::WaveVar(x))
                             }
                             _ => None,
                         })

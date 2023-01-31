@@ -2,7 +2,7 @@ use crate::message::RvcdChannel;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::view::{SignalView, WaveView};
-use crate::wave::{WaveDataItem, WaveInfo, WaveTreeNode};
+use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
 use std::sync::mpsc;
@@ -29,7 +29,7 @@ pub struct Rvcd {
     pub filepath: String,
 
     #[serde(skip)]
-    pub signal_leaves: Vec<(u64, String)>,
+    pub signal_leaves: Vec<WaveSignalInfo>,
 
     #[serde(skip)]
     pub tree: TreeView,
@@ -98,6 +98,13 @@ impl Rvcd {
             ..def
         }
     }
+    fn signal_clicked(&mut self, id: u64) {
+        if !self.view.signals.iter().any(|x| x.s.id == id) {
+            if let Some(info) = &self.wave_info {
+                self.view.signals.push(SignalView::from_id(id, info));
+            }
+        }
+    }
     pub fn sidebar(&mut self, ui: &mut Ui) {
         egui::TopBottomPanel::bottom("signal_leaf")
             // .min_height(100.0)
@@ -108,13 +115,18 @@ impl Rvcd {
                     ui.with_layout(
                         Layout::top_down(Align::LEFT).with_cross_justify(true),
                         |ui| {
-                            for (id, name) in self.signal_leaves.iter() {
-                                let response = ui.add(egui::Label::new(name).sense(Sense::click()));
+                            let mut clicked_id = 0;
+                            let mut clicked = false;
+                            for s in self.signal_leaves.iter() {
+                                let response =
+                                    ui.add(egui::Label::new(s.to_string()).sense(Sense::click()));
                                 if response.double_clicked() {
-                                    if !self.view.signals.iter().any(|x| x.id == *id) {
-                                        self.view.signals.push(SignalView::new(*id));
-                                    }
+                                    clicked_id = s.id;
+                                    clicked = true;
                                 }
+                            }
+                            if clicked {
+                                self.signal_clicked(clicked_id);
                             }
                         },
                     );
@@ -131,9 +143,7 @@ impl Rvcd {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
-                                        if !self.view.signals.iter().any(|x| x.id == d.0) {
-                                            self.view.signals.push(SignalView::new(d.0));
-                                        }
+                                        self.signal_clicked(d.id);
                                     }
                                     _ => {}
                                 },

@@ -1,5 +1,5 @@
 use crate::radix::Radix;
-use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
+use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
@@ -25,15 +25,21 @@ pub enum SignalViewAlign {
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug, Clone)]
 pub struct SignalView {
-    pub id: u64,
+    pub s: WaveSignalInfo,
     pub height: f32,
     pub mode: SignalViewMode,
 }
 pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
 impl SignalView {
-    pub fn new(id: u64) -> Self {
+    pub fn from_id(id: u64, info: &WaveInfo) -> Self {
+        let d = ("unknown".to_string(), 0);
+        let name_width = info.code_name_width.get(&id).unwrap_or(&d).clone();
         Self {
-            id,
+            s: WaveSignalInfo{
+                id,
+                name: name_width.0,
+                width: name_width.1,
+            },
             height: SIGNAL_HEIGHT_DEFAULT,
             mode: Default::default(),
         }
@@ -66,7 +72,7 @@ impl WaveView {
             .signals
             .clone()
             .into_iter()
-            .filter(|signal| info.code_name_width.contains_key(&signal.id))
+            .filter(|signal| info.code_name_width.contains_key(&signal.s.id))
             .collect();
         self.signals = signals;
     }
@@ -101,11 +107,8 @@ impl WaveView {
                 .show_inside(ui, |ui| {
                     if let Some(info) = info {
                         for signal in self.signals.iter() {
-                            if let Some((name, width)) = info.code_name_width.get(&signal.id) {
-                                let text = match width {
-                                    0 | 1 => name.to_string(),
-                                    _ => format!("{}[{}:0]", name, width),
-                                };
+                            if let Some(_) = info.code_name_width.get(&signal.s.id) {
+                                let text = signal.s.to_string();
                                 ui.scope(|ui| {
                                     ui.set_height(signal.height);
                                     ui.centered_and_justified(|ui| {
@@ -126,7 +129,7 @@ impl WaveView {
                                     ui.available_size_before_wrap(),
                                     Sense::hover(),
                                 );
-                                let items = wave_data.iter().filter(|i| i.id == signal.id);
+                                let items = wave_data.iter().filter(|i| i.id == signal.s.id);
                                 let color = ui.visuals().strong_text_color();
                                 let signal_rect = response.rect;
                                 let mut it = items;
@@ -138,7 +141,7 @@ impl WaveView {
                                                 let d = ("".to_string(), 0);
                                                 let (_v, w) = info
                                                     .code_name_width
-                                                    .get(&signal.id)
+                                                    .get(&signal.s.id)
                                                     .unwrap_or(&d);
                                                 *w == 1
                                             }

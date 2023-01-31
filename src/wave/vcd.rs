@@ -1,7 +1,8 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::WaveTreeNode::WaveRoot;
 use crate::wave::{
-    Wave, WaveDataItem, WaveInfo, WaveLoader, WaveTimescaleUnit, WaveTreeNode, WireValue,
+    Wave, WaveDataItem, WaveInfo, WaveLoader, WaveSignalInfo, WaveTimescaleUnit, WaveTreeNode,
+    WireValue,
 };
 use anyhow::{anyhow, Result};
 use queues::{IsQueue, Queue};
@@ -115,10 +116,11 @@ fn vcd_iterate_tree(
             }
             ScopeItem::Var(var) => {
                 let IdCode(id) = var.code;
-                let node = Box::new(Tree::new(WaveTreeNode::WaveVar((
+                let node = Box::new(Tree::new(WaveTreeNode::WaveVar(WaveSignalInfo {
                     id,
-                    var.reference.to_string(),
-                ))));
+                    name: var.reference.to_string(),
+                    width: var.size as u64,
+                })));
                 tree.push_back(on_var(node, var));
             }
             _ => {}

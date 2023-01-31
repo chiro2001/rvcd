@@ -111,12 +111,32 @@ impl WaveDataItem {
     }
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
+pub struct WaveSignalInfo {
+    pub id: u64,
+    pub name: String,
+    pub width: u64,
+}
+impl Display for WaveSignalInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.width {
+                0 | 1 => self.name.to_string(),
+                _ => format!("{}[{}:0]", self.name, self.id - 1),
+            }
+        )
+    }
+}
+
 #[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub enum WaveTreeNode {
     #[default]
     WaveRoot,
     WaveScope(String),
-    WaveVar((u64, String)),
+    // WaveVar((u64, String)),
+    WaveVar(WaveSignalInfo),
     // id only to save space
     WaveId(u64),
 }
@@ -129,7 +149,10 @@ impl Display for WaveTreeNode {
             match self {
                 WaveTreeNode::WaveRoot => "root".to_string(),
                 WaveTreeNode::WaveScope(scope) => scope.to_string(),
-                WaveTreeNode::WaveVar((_i, s)) => s.to_string(),
+                WaveTreeNode::WaveVar(i) => match i.width {
+                    0 | 1 => i.name.to_string(),
+                    _ => format!("{}[{}:0]", i.name, i.width - 1),
+                },
                 WaveTreeNode::WaveId(var) => format!("{}", var),
             }
         )
@@ -171,11 +194,7 @@ impl Display for WaveInfo {
         write!(
             f,
             "Wave {}{} #{}~#{} {:?}",
-            self.timescale.0,
-            self.timescale.1,
-            self.range.0,
-            self.range.1,
-            self.headers
+            self.timescale.0, self.timescale.1, self.range.0, self.range.1, self.headers
         )
     }
 }
@@ -209,7 +228,7 @@ mod test {
         println!("code paths:");
         for (id, path) in wave.info.code_paths.iter() {
             println!(
-                "code: {}, name: {}, path: {:?}",
+                "code: {}, name: {:?}, path: {:?}",
                 id,
                 wave.info.code_name_width.get(id).unwrap(),
                 path
