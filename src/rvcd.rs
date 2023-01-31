@@ -158,6 +158,16 @@ impl Rvcd {
                                         .map(|x| x.unwrap())
                                         .collect();
                                 }
+                                TreeAction::AddSignals(nodes) => {
+                                    for node in nodes {
+                                        match node {
+                                            WaveTreeNode::WaveVar(d) => {
+                                                self.signal_clicked(d.id);
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             ui.centered_and_justified(|ui| ui.label("No file loaded"));

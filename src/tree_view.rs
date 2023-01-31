@@ -1,5 +1,5 @@
 use crate::wave::WaveTreeNode;
-use egui::{CollapsingHeader, Sense, Ui};
+use egui::{CollapsingHeader, PointerButton, Sense, Ui};
 use trees::{Node, Tree};
 
 #[derive(Debug)]
@@ -15,6 +15,7 @@ impl Default for TreeView {
 pub enum TreeAction {
     None,
     AddSignal(WaveTreeNode),
+    AddSignals(Vec<WaveTreeNode>),
     SelectScope(Vec<WaveTreeNode>),
 }
 
@@ -36,27 +37,30 @@ impl TreeView {
                         .map(|child| self.ui(ui, child))
                         .find(|a| *a != TreeAction::None)
                 });
+            let child_signals = || tree.iter()
+                .map(|n| n.data().clone())
+                .map(|x| match x {
+                    WaveTreeNode::WaveVar(x) => {
+                        Some(WaveTreeNode::WaveVar(x))
+                    }
+                    _ => None,
+                })
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap())
+                .collect::<Vec<_>>();
             if scope.header_response.clicked() {
-                TreeAction::SelectScope(
-                    tree.iter()
-                        .map(|n| n.data().clone())
-                        .map(|x| match x {
-                            WaveTreeNode::WaveVar(x) => {
-                                Some(WaveTreeNode::WaveVar(x))
-                            }
-                            _ => None,
-                        })
-                        .filter(|x| x.is_some())
-                        .map(|x| x.unwrap())
-                        .collect(),
-                )
+                TreeAction::SelectScope(child_signals())
             } else {
-                match scope.body_returned {
-                    None => TreeAction::None,
-                    Some(a) => match a {
+                if scope.header_response.clicked_by(PointerButton::Secondary) {
+                    TreeAction::AddSignals(child_signals())
+                } else {
+                    match scope.body_returned {
                         None => TreeAction::None,
-                        Some(a) => a,
-                    },
+                        Some(a) => match a {
+                            None => TreeAction::None,
+                            Some(a) => a,
+                        },
+                    }
                 }
             }
         }
