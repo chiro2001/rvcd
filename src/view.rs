@@ -1,5 +1,7 @@
-use crate::wave::{WaveDataItem, WaveInfo};
+use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
+use num_bigint::BigUint;
+use num_traits::One;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 #[serde(default)]
@@ -35,6 +37,7 @@ impl Default for WaveView {
 
 impl WaveView {
     pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
+        const LINE_WIDTH: f32 = 1.5;
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
                 self.range = info.range;
@@ -76,33 +79,82 @@ impl WaveView {
                                 let mut item_last: Option<&WaveDataItem> = None;
                                 let paint_signal =
                                     |item_now: &WaveDataItem, item_next: &WaveDataItem| {
-                                        let text = item_now.value.to_string();
+                                        let single: bool = match &item_now.value {
+                                            WaveDataValue::Comp((_v, w)) => *w == 1,
+                                            WaveDataValue::Raw(v) => v.len() == 1,
+                                        };
                                         let width = signal_rect.width();
                                         let height = signal_rect.height();
-                                        let percent_rect_left = (item_now.timestamp - info.range.0) as f32
+                                        let percent_rect_left = (item_now.timestamp - info.range.0)
+                                            as f32
                                             / (self.range.1 - self.range.0) as f32;
-                                        let percent_rect_right = (item_next.timestamp - info.range.0) as f32
-                                            / (self.range.1 - self.range.0) as f32;
+                                        let percent_rect_right =
+                                            (item_next.timestamp - info.range.0) as f32
+                                                / (self.range.1 - self.range.0) as f32;
                                         let percent_text =
                                             (((item_now.timestamp + item_next.timestamp) as f32
                                                 / 2.0)
                                                 - info.range.0 as f32)
                                                 / (self.range.1 - self.range.0) as f32;
                                         let rect = Rect::from_min_max(
-                                            pos2(signal_rect.left() + width * percent_rect_left, signal_rect.top()),
-                                            pos2(signal_rect.left() + width * percent_rect_right, signal_rect.top() + height),
+                                            pos2(
+                                                signal_rect.left() + width * percent_rect_left,
+                                                signal_rect.top(),
+                                            ),
+                                            pos2(
+                                                signal_rect.left() + width * percent_rect_right,
+                                                signal_rect.top() + height,
+                                            ),
                                         );
-                                        // info!("parent: {:?}, rect: {:?}", signal_rect, rect);
-                                        painter.rect_stroke(rect, 0.0, (1.2, Color32::GREEN));
-                                        let pos = signal_rect.left_center()
-                                            + vec2(width * percent_text, 0.0);
-                                        painter.text(
-                                            pos,
-                                            Align2::CENTER_CENTER,
-                                            text,
-                                            Default::default(),
-                                            color,
-                                        );
+                                        if single {
+                                            let value = match &item_now.value {
+                                                WaveDataValue::Comp((v, _w)) => {
+                                                    match BigUint::from_bytes_le(v).is_one() {
+                                                        true => WireValue::V1,
+                                                        false => WireValue::V0,
+                                                    }
+                                                }
+                                                WaveDataValue::Raw(v) => v[0],
+                                            };
+                                            match value {
+                                                WireValue::V0 => painter.hline(
+                                                    rect.x_range(),
+                                                    rect.bottom(),
+                                                    (LINE_WIDTH, Color32::GREEN),
+                                                ),
+                                                WireValue::V1 => painter.hline(
+                                                    rect.x_range(),
+                                                    rect.top(),
+                                                    (LINE_WIDTH, Color32::GREEN),
+                                                ),
+                                                WireValue::X => painter.rect_stroke(
+                                                    rect,
+                                                    0.0,
+                                                    (LINE_WIDTH, Color32::RED),
+                                                ),
+                                                WireValue::Z => painter.rect_stroke(
+                                                    rect,
+                                                    0.0,
+                                                    (LINE_WIDTH, Color32::DARK_RED),
+                                                ),
+                                            };
+                                        } else {
+                                            let text = item_now.value.to_string();
+                                            painter.rect_stroke(
+                                                rect,
+                                                0.0,
+                                                (LINE_WIDTH, Color32::GREEN),
+                                            );
+                                            let pos = signal_rect.left_center()
+                                                + vec2(width * percent_text, 0.0);
+                                            painter.text(
+                                                pos,
+                                                Align2::CENTER_CENTER,
+                                                text,
+                                                Default::default(),
+                                                color,
+                                            );
+                                        }
                                     };
                                 while let Some(item) = it.next() {
                                     if let Some(item_last) = item_last {
