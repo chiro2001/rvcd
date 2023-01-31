@@ -10,8 +10,6 @@ use rvcd::Rvcd;
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use futures::future::select;
-    use futures::pin_mut;
     use tonic::transport::Server;
     use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
     use rvcd::server::RvcdRemote;
@@ -36,8 +34,10 @@ async fn main() -> Result<()> {
             .await
             .unwrap();
     };
-    pin_mut!(gui, rpc);
-    let _ = select(gui, rpc).await;
+    // pin_mut!(gui, rpc);
+    // let _ = select(gui, rpc).await;
+    tokio::spawn(rpc);
+    gui.await;
     Ok(())
 }
 
