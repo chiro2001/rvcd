@@ -1,5 +1,6 @@
 use crate::message::RvcdMsg;
 use crate::run_mode::RunMode;
+use crate::rvcd::State;
 use crate::utils::execute;
 use crate::Rvcd;
 use eframe::emath::Align;
@@ -25,10 +26,9 @@ impl eframe::App for Rvcd {
             }
         }
         if self.debug_panel {
-            egui::SidePanel::left("debug_panel")
-                .show(ctx, |ui| {
-                    self.debug_panel(ui);
-                });
+            egui::SidePanel::left("debug_panel").show(ctx, |ui| {
+                self.debug_panel(ui);
+            });
         }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -53,6 +53,11 @@ impl eframe::App for Rvcd {
                         }
                         ui.close_menu();
                     }
+                    ui.add_enabled_ui(self.state == State::Working, |ui| {
+                        if ui.button("Close").clicked() {
+                            self.reset();
+                        }
+                    });
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
                         frame.close();

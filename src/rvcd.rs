@@ -14,7 +14,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 use tracing::info;
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 pub enum State {
     #[default]
     Idle,
@@ -26,7 +26,7 @@ pub enum State {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
-    #[serde(skip)]
+    // #[serde(skip)]
     pub state: State,
     /// ui <- -> service
     #[serde(skip)]
@@ -219,6 +219,7 @@ impl Rvcd {
                 if let Some(info) = &self.wave_info {
                     self.view.signals_clean_unavailable(info);
                 }
+                self.state = State::Working;
             }
             RvcdMsg::FileOpen(_path) => {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -236,6 +237,9 @@ impl Rvcd {
                     self.filepath = path_new;
                 }
                 self.signal_leaves.clear();
+                if self.state == State::Idle {
+                    self.state = State::Loading;
+                }
             }
             RvcdMsg::UpdateData(data) => {
                 self.wave_data = data;
