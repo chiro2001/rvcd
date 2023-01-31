@@ -113,6 +113,22 @@ impl WaveView {
                                                 signal_rect.top() + height,
                                             ),
                                         );
+                                        let bg_multiply = 0.05;
+                                        let paint_x = || {
+                                            painter.rect(
+                                                rect,
+                                                0.0,
+                                                Color32::DARK_RED.linear_multiply(bg_multiply),
+                                                (LINE_WIDTH, Color32::RED),
+                                            )
+                                        };
+                                        let paint_z = || {
+                                            painter.rect_stroke(
+                                                rect,
+                                                0.0,
+                                                (LINE_WIDTH, Color32::DARK_RED),
+                                            )
+                                        };
                                         if single {
                                             let value = match &item_now.value {
                                                 WaveDataValue::Comp(v) => {
@@ -134,24 +150,25 @@ impl WaveView {
                                                     rect.top(),
                                                     (LINE_WIDTH, Color32::GREEN),
                                                 ),
-                                                WireValue::X => painter.rect_stroke(
-                                                    rect,
-                                                    0.0,
-                                                    (LINE_WIDTH, Color32::RED),
-                                                ),
-                                                WireValue::Z => painter.rect_stroke(
-                                                    rect,
-                                                    0.0,
-                                                    (LINE_WIDTH, Color32::DARK_RED),
-                                                ),
+                                                WireValue::X => paint_x(),
+                                                WireValue::Z => paint_z(),
                                             };
                                         } else {
                                             let text = item_now.value.to_string();
-                                            painter.rect_stroke(
-                                                rect,
-                                                0.0,
-                                                (LINE_WIDTH, Color32::GREEN),
-                                            );
+                                            if text.contains('x') {
+                                                paint_x();
+                                            } else {
+                                                if text.contains('z') {
+                                                    paint_z();
+                                                } else {
+                                                    painter.rect(
+                                                        rect,
+                                                        0.0,
+                                                        Color32::GREEN.linear_multiply(bg_multiply),
+                                                        (LINE_WIDTH, Color32::GREEN),
+                                                    );
+                                                }
+                                            }
                                             let pos = signal_rect.left_center()
                                                 + vec2(width * percent_text, 0.0);
                                             painter.text(
