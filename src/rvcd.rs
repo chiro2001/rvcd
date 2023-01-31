@@ -81,9 +81,8 @@ impl Default for Rvcd {
             wave_data: vec![],
             view: Default::default(),
             toasts: Toasts::new()
-                .anchor((480.0, 300.0))
-                .direction(egui::Direction::TopDown)
-                .align_to_end(false),
+                .direction(egui::Direction::BottomUp)
+                .align_to_end(true),
             repaint_after_seconds: 1.0,
             run_mode: Default::default(),
             frame_history: Default::default(),
@@ -350,5 +349,8 @@ impl Rvcd {
         });
         self.view.menu(ui);
         ui.checkbox(&mut self.debug_panel, "Debug Panel");
+        if ui.button("Test Toast").clicked() {
+            self.toasts.info("Test Toast", ToastOptions::default());
+        }
     }
 }

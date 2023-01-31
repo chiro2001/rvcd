@@ -2,7 +2,7 @@ use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::emath::Align;
-use egui::Layout;
+use egui::{Layout, vec2};
 use tracing::info;
 
 impl eframe::App for Rvcd {
@@ -65,7 +65,7 @@ impl eframe::App for Rvcd {
         //         ui.label("You would normally choose either panels OR windows.");
         //     });
         // }
-        self.toasts.show(ctx);
+        self.toasts.show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
     }
 
     /// Called by the frame work to save state before shutdown.

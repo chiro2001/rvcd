@@ -666,7 +666,7 @@ dependencies = [
 [[package]]
 name = "egui-toast"
 version = "0.5.0"
-source = "git+https://github.com/chiro2001/egui-toast?branch=main#af6fd816586679ff203c42c8e62b283f925833a6"
+source = "git+https://github.com/chiro2001/egui-toast?branch=main#aab847ea7ff1511c4ae7509870fef54b0985af58"
 dependencies = [
  "egui",
 ]
