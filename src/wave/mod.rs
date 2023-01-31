@@ -149,10 +149,7 @@ impl Display for WaveTreeNode {
             match self {
                 WaveTreeNode::WaveRoot => "root".to_string(),
                 WaveTreeNode::WaveScope(scope) => scope.to_string(),
-                WaveTreeNode::WaveVar(i) => match i.width {
-                    0 | 1 => i.name.to_string(),
-                    _ => format!("{}[{}:0]", i.name, i.width - 1),
-                },
+                WaveTreeNode::WaveVar(i) => i.to_string(),
                 WaveTreeNode::WaveId(var) => format!("{}", var),
             }
         )
