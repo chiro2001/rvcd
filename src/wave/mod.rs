@@ -124,7 +124,7 @@ impl Display for WaveSignalInfo {
             "{}",
             match self.width {
                 0 | 1 => self.name.to_string(),
-                _ => format!("{}[{}:0]", self.name, self.id - 1),
+                _ => format!("{}[{}:0]", self.name, self.width - 1),
             }
         )
     }
