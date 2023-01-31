@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use crate::server::server::rvcd_rpc_server::RvcdRpc;
 use tonic::{Request, Response, Status};
 use tracing::debug;

@@ -1,19 +1,21 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+#[allow(unused_imports)]
 use anyhow::Result;
-use futures::future::{join, select};
-use futures::pin_mut;
-use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
-use rvcd::server::RvcdRemote;
-use rvcd::Rvcd;
-use tonic::transport::Server;
 use tracing::info;
+use rvcd::Rvcd;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
+    use futures::future::{join, select};
+    use futures::pin_mut;
+    use tonic::transport::Server;
+    use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
+    use rvcd::server::RvcdRemote;
+
     // Log to stdout (if you run with `RUST_LOG=debug`).
     tracing_subscriber::fmt::init();
 
@@ -49,6 +51,8 @@ fn main() {
     tracing_wasm::set_as_global_default();
 
     let web_options = eframe::WebOptions::default();
+
+    info!("starting rvcd");
 
     wasm_bindgen_futures::spawn_local(async {
         eframe::start_web(
