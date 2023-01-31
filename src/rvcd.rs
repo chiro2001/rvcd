@@ -10,6 +10,7 @@ use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
 use egui_toast::Toasts;
 use rfd::FileHandle;
+#[allow(unused_imports)]
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -261,7 +262,7 @@ impl Rvcd {
             }
         };
     }
-    pub fn reload(&self) {
+    pub fn reload(&mut self) {
         info!("reloading file");
         if let Some(channel) = &self.channel {
             let sender = channel.tx.clone();
@@ -275,7 +276,8 @@ impl Rvcd {
             }
             #[cfg(target_arch = "wasm32")]
             {
-                if let Some(file) = self.file {
+                let file = self.file.take();
+                if let Some(file) = file {
                     sender.send(RvcdMsg::FileOpen(file)).ok();
                 }
             }
@@ -305,7 +307,7 @@ impl Rvcd {
         ui.ctx().set_debug_on_hover(debug_on_hover);
         egui::warn_if_debug_build(ui);
     }
-    pub fn menubar(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         egui::widgets::global_dark_light_mode_switch(ui);
         ui.menu_button("File", |ui| {
             // #[cfg(not(target_arch = "wasm32"))]
@@ -334,7 +336,7 @@ impl Rvcd {
             });
             #[cfg(not(target_arch = "wasm32"))]
             if ui.button("Quit").clicked() {
-                frame.close();
+                _frame.close();
             }
         });
         self.view.menu(ui);
