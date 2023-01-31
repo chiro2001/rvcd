@@ -36,14 +36,12 @@ impl eframe::App for Rvcd {
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
-
                 egui::SidePanel::left("side_panel").show_inside(ui, |ui| {
                     ui.with_layout(
                         Layout::top_down(Align::LEFT).with_cross_justify(true),
                         |ui| self.sidebar(ui),
                     );
                 });
-
                 egui::CentralPanel::default().show_inside(ui, |ui| {
                     ui.with_layout(
                         Layout::top_down(Align::LEFT).with_cross_justify(true),

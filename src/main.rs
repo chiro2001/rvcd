@@ -3,21 +3,28 @@
 
 #[allow(unused_imports)]
 use anyhow::Result;
-use tracing::info;
 use rvcd::Rvcd;
+use tracing::info;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use tonic::transport::Server;
     use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
     use rvcd::server::RvcdRemote;
+    use tonic::transport::Server;
 
     // Log to stdout (if you run with `RUST_LOG=debug`).
     tracing_subscriber::fmt::init();
 
-    let native_options = eframe::NativeOptions::default();
+    // let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        drag_and_drop_support: true,
+        initial_window_size: Some([1280.0, 1024.0].into()),
+        // #[cfg(feature = "wgpu")]
+        // renderer: eframe::Renderer::Wgpu,
+        ..Default::default()
+    };
     let gui = async move {
         eframe::run_native(
             "Rvcd",

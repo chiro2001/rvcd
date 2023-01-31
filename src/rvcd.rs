@@ -315,6 +315,7 @@ impl Rvcd {
             }
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if ui.button("Close").clicked() {
+                    ui.close_menu();
                     self.reset();
                 }
             });
