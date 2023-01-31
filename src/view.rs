@@ -141,7 +141,11 @@ impl WaveView {
                                             painter.rect(
                                                 rect,
                                                 0.0,
-                                                Color32::DARK_RED.linear_multiply(bg_multiply),
+                                                if self.background {
+                                                    Color32::DARK_RED.linear_multiply(bg_multiply)
+                                                } else {
+                                                    Color32::TRANSPARENT
+                                                },
                                                 (LINE_WIDTH, Color32::RED),
                                             )
                                         };
@@ -201,7 +205,12 @@ impl WaveView {
                                                     painter.rect(
                                                         rect,
                                                         0.0,
-                                                        Color32::GREEN.linear_multiply(bg_multiply),
+                                                        if self.background {
+                                                            Color32::GREEN
+                                                                .linear_multiply(bg_multiply)
+                                                        } else {
+                                                            Color32::TRANSPARENT
+                                                        },
                                                         (LINE_WIDTH, Color32::GREEN),
                                                     );
                                                 }
