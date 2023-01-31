@@ -294,7 +294,7 @@ impl WaveView {
             .show_inside(ui, |ui| {
                 self.toolbar(ui);
             });
-        let mut table = TableBuilder::new(ui)
+        let table = TableBuilder::new(ui)
             .striped(true)
             .resizable(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
