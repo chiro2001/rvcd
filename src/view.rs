@@ -80,7 +80,14 @@ impl WaveView {
                                 let paint_signal =
                                     |item_now: &WaveDataItem, item_next: &WaveDataItem| {
                                         let single: bool = match &item_now.value {
-                                            WaveDataValue::Comp(_) => false,
+                                            WaveDataValue::Comp(_) => {
+                                                let d = ("".to_string(), 0);
+                                                let (_v, w) = info
+                                                    .code_name_width
+                                                    .get(&signal.id)
+                                                    .unwrap_or(&d);
+                                                *w == 1
+                                            }
                                             WaveDataValue::Raw(v) => v.len() == 1,
                                         };
                                         let width = signal_rect.width();
