@@ -135,7 +135,6 @@ pub enum WaveTreeNode {
     #[default]
     WaveRoot,
     WaveScope(String),
-    // WaveVar((u64, String)),
     WaveVar(WaveSignalInfo),
     // id only to save space
     WaveId(u64),

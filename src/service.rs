@@ -22,6 +22,7 @@ impl Service {
                 info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
                 // let mut file = File::open(path.to_string()).unwrap();
+                // TODO: partly read
                 let data = file.read().await;
                 // if let Ok(w) = Vcd::load(&mut file) {
                 let mut reader = Cursor::new(data);

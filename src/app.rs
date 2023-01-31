@@ -3,7 +3,6 @@ use crate::utils::execute;
 use crate::Rvcd;
 use eframe::emath::Align;
 use egui::Layout;
-use tracing::info;
 
 impl eframe::App for Rvcd {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -61,36 +60,7 @@ impl eframe::App for Rvcd {
 
         if let Some(channel) = &self.channel {
             if let Ok(rx) = channel.rx.try_recv() {
-                match rx {
-                    RvcdMsg::UpdateInfo(info) => {
-                        info!("ui recv info: {}", info);
-                        self.wave_info = Some(info);
-                        self.signal_leaves.clear();
-                        if let Some(info) = &self.wave_info {
-                            self.view.signals_clean_unavailable(info);
-                        }
-                    }
-                    RvcdMsg::FileOpen(_path) => {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            let path_new = _path.path().to_str().unwrap().to_string();
-                            if path_new != self.filepath {
-                                // open new file, clear all signals
-                                self.view.signals.clear();
-                            } else {
-                                // open old file, remove unavailable signals
-                                if let Some(info) = &self.wave_info {
-                                    self.view.signals_clean_unavailable(info);
-                                }
-                            }
-                            self.filepath = path_new;
-                        }
-                        self.signal_leaves.clear();
-                    }
-                    RvcdMsg::UpdateData(data) => {
-                        self.wave_data = data;
-                    }
-                };
+                self.message_handler(rx);
             }
         }
 

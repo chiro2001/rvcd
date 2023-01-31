@@ -1,4 +1,5 @@
-use crate::message::RvcdChannel;
+use std::path::PathBuf;
+use crate::message::{RvcdChannel, RvcdMsg};
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::view::{SignalView, WaveView};
@@ -6,6 +7,7 @@ use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
 use std::sync::mpsc;
+use rfd::FileHandle;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
@@ -180,5 +182,50 @@ impl Rvcd {
     }
     pub fn wave_panel(&mut self, ui: &mut Ui) {
         self.view.view_panel(ui, &self.wave_info, &self.wave_data);
+    }
+    pub fn message_handler(&mut self, rx: RvcdMsg) {
+        match rx {
+            RvcdMsg::UpdateInfo(info) => {
+                info!("ui recv info: {}", info);
+                self.wave_info = Some(info);
+                self.signal_leaves.clear();
+                if let Some(info) = &self.wave_info {
+                    self.view.signals_clean_unavailable(info);
+                }
+            }
+            RvcdMsg::FileOpen(_path) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let path_new = _path.path().to_str().unwrap().to_string();
+                    if path_new != self.filepath {
+                        // open new file, clear all signals
+                        self.view.signals.clear();
+                    } else {
+                        // open old file, remove unavailable signals
+                        if let Some(info) = &self.wave_info {
+                            self.view.signals_clean_unavailable(info);
+                        }
+                    }
+                    self.filepath = path_new;
+                }
+                self.signal_leaves.clear();
+            }
+            RvcdMsg::UpdateData(data) => {
+                self.wave_data = data;
+            }
+            RvcdMsg::Reload => {
+                self.reload();
+            }
+        };
+    }
+    pub fn reload(&self) {
+        if let Some(channel) = &self.channel {
+            let sender = channel.tx.clone();
+            sender
+                .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                    self.filepath.to_string(),
+                ))))
+                .ok();
+        }
     }
 }

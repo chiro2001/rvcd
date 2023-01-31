@@ -5,6 +5,7 @@ use rfd::FileHandle;
 #[derive(Debug)]
 pub enum RvcdMsg {
     FileOpen(FileHandle),
+    Reload,
     UpdateInfo(WaveInfo),
     UpdateData(Vec<WaveDataItem>),
 }
