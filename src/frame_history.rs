@@ -47,7 +47,6 @@ impl FrameHistory {
             "Includes egui layout and tessellation time.\n\
             Does not include GPU usage, nor overhead for sending data to GPU.",
         );
-        egui::warn_if_debug_build(ui);
 
         if !cfg!(target_arch = "wasm32") {
             egui::CollapsingHeader::new("📊 CPU usage history")

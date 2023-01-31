@@ -24,6 +24,12 @@ impl eframe::App for Rvcd {
                 ));
             }
         }
+        if self.debug_panel {
+            egui::SidePanel::left("debug_panel")
+                .show(ctx, |ui| {
+                    self.debug_panel(ui);
+                });
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
@@ -53,15 +59,7 @@ impl eframe::App for Rvcd {
                     }
                 });
                 self.view.menu(ui);
-                if self.run_mode == RunMode::Continuous {
-                    ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
-                } else {
-                    self.frame_history.ui(ui);
-                }
-                let mut debug_on_hover = ui.ctx().debug_on_hover();
-                ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
-                ui.ctx().set_debug_on_hover(debug_on_hover);
-                egui::warn_if_debug_build(ui);
+                ui.checkbox(&mut self.debug_panel, "Debug Panel");
             });
         });
 

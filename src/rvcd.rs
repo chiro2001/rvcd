@@ -1,4 +1,6 @@
+use crate::frame_history::FrameHistory;
 use crate::message::{RvcdChannel, RvcdMsg};
+use crate::run_mode::RunMode;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::view::{SignalView, WaveView};
@@ -11,8 +13,6 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 use tracing::info;
-use crate::frame_history::FrameHistory;
-use crate::run_mode::RunMode;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
@@ -54,6 +54,7 @@ pub struct Rvcd {
     pub run_mode: RunMode,
     #[serde(skip)]
     pub frame_history: FrameHistory,
+    pub debug_panel: bool,
 }
 
 impl Default for Rvcd {
@@ -74,6 +75,7 @@ impl Default for Rvcd {
             repaint_after_seconds: 1.0,
             run_mode: Default::default(),
             frame_history: Default::default(),
+            debug_panel: false,
         }
     }
 }
@@ -204,7 +206,11 @@ impl Rvcd {
         self.view.panel(ui, &self.wave_info, &self.wave_data);
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
-        info!("ui handle msg: {:?}; signals: {}", msg, self.view.signals.len());
+        info!(
+            "ui handle msg: {:?}; signals: {}",
+            msg,
+            self.view.signals.len()
+        );
         match msg {
             RvcdMsg::UpdateInfo(info) => {
                 info!("ui recv info: {}", info);
@@ -263,5 +269,16 @@ impl Rvcd {
         self.filepath.clear();
         self.state = State::Idle;
         self.view.reset();
+    }
+    pub fn debug_panel(&mut self, ui: &mut Ui) {
+        if self.run_mode == RunMode::Continuous {
+            ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
+        } else {
+            self.frame_history.ui(ui);
+        }
+        let mut debug_on_hover = ui.ctx().debug_on_hover();
+        ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
+        ui.ctx().set_debug_on_hover(debug_on_hover);
+        egui::warn_if_debug_build(ui);
     }
 }
