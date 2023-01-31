@@ -140,16 +140,30 @@ impl WaveView {
                                                 WaveDataValue::Raw(v) => v[0],
                                             };
                                             match value {
-                                                WireValue::V0 => painter.hline(
-                                                    rect.x_range(),
-                                                    rect.bottom(),
-                                                    (LINE_WIDTH, Color32::GREEN),
-                                                ),
-                                                WireValue::V1 => painter.hline(
-                                                    rect.x_range(),
-                                                    rect.top(),
-                                                    (LINE_WIDTH, Color32::GREEN),
-                                                ),
+                                                WireValue::V0 => {
+                                                    painter.hline(
+                                                        rect.x_range(),
+                                                        rect.bottom(),
+                                                        (LINE_WIDTH, Color32::GREEN),
+                                                    );
+                                                    painter.vline(
+                                                        rect.left(),
+                                                        rect.y_range(),
+                                                        (LINE_WIDTH, Color32::GREEN),
+                                                    );
+                                                },
+                                                WireValue::V1 => {
+                                                    painter.hline(
+                                                        rect.x_range(),
+                                                        rect.top(),
+                                                        (LINE_WIDTH, Color32::GREEN),
+                                                    );
+                                                    painter.vline(
+                                                        rect.left(),
+                                                        rect.y_range(),
+                                                        (LINE_WIDTH, Color32::GREEN),
+                                                    );
+                                                },
                                                 WireValue::X => paint_x(),
                                                 WireValue::Z => paint_z(),
                                             };
