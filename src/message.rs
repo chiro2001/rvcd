@@ -17,7 +17,10 @@ pub enum RvcdMsg {
 impl Debug for RvcdMsg {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            RvcdMsg::Notification(_toast) => write!(f, "Toast[...]"),
+            RvcdMsg::Notification(_toast) => write!(f, "RvcdMsg: Toast[...]"),
+            RvcdMsg::UpdateInfo(_) => write!(f, "RvcdMsg: UpdateInfo"),
+            RvcdMsg::UpdateData(_) => write!(f, "RvcdMsg: UpdateData"),
+            RvcdMsg::FileOpen(file) => write!(f, "RvcdMsg: FileOpen({:?})", file),
             _ => write!(f, "{:?}", self),
         }
     }

@@ -3,6 +3,7 @@ use crate::utils::execute;
 use crate::Rvcd;
 use eframe::emath::Align;
 use egui::Layout;
+use tracing::info;
 
 impl eframe::App for Rvcd {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -77,6 +78,7 @@ impl eframe::App for Rvcd {
 
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        info!("saving with {} signals loaded", self.view.signals.len());
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 }

@@ -2,12 +2,12 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
+use egui::{pos2, vec2, Align2, Color32, Layout, Rect, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 use std::sync::mpsc;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
 pub enum SignalViewMode {
@@ -91,6 +91,7 @@ impl WaveView {
             .into_iter()
             .filter(|signal| info.code_name_width.contains_key(&signal.s.id))
             .collect();
+        info!("signals: {} => {}", self.signals.len(), signals.len());
         self.signals = signals;
     }
     pub fn menu(&mut self, ui: &mut Ui) {
@@ -324,6 +325,7 @@ impl WaveView {
             });
     }
     pub fn reset(&mut self) {
+        info!("reset");
         self.range = (0, 0);
         self.signals.clear();
     }

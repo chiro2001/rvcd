@@ -95,6 +95,7 @@ impl Rvcd {
                         .unwrap();
                 }
             }
+            info!("last loaded {} signals", def.view.signals.len());
             def
         } else {
             Default::default()
@@ -193,8 +194,9 @@ impl Rvcd {
     pub fn wave_panel(&mut self, ui: &mut Ui) {
         self.view.panel(ui, &self.wave_info, &self.wave_data);
     }
-    pub fn message_handler(&mut self, rx: RvcdMsg) {
-        match rx {
+    pub fn message_handler(&mut self, msg: RvcdMsg) {
+        info!("ui handle msg: {:?}", msg);
+        match msg {
             RvcdMsg::UpdateInfo(info) => {
                 info!("ui recv info: {}", info);
                 self.wave_info = Some(info);
@@ -208,10 +210,10 @@ impl Rvcd {
                 {
                     let path_new = _path.path().to_str().unwrap().to_string();
                     if path_new != self.filepath {
-                        // open new file, clear all signals
+                        info!("open new file, clear all signals");
                         self.view.signals.clear();
                     } else {
-                        // open old file, remove unavailable signals
+                        info!("open old file, remove unavailable signals");
                         if let Some(info) = &self.wave_info {
                             self.view.signals_clean_unavailable(info);
                         }
