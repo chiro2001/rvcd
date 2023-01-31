@@ -8,12 +8,11 @@ use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
-use egui_toast::Toasts;
+use egui_toast::{ToastOptions, Toasts};
 use rfd::FileHandle;
 #[allow(unused_imports)]
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::time::Duration;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
@@ -28,7 +27,10 @@ pub enum State {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
-    // #[serde(skip)]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub state: State,
+    #[cfg(target_arch = "wasm32")]
+    #[serde(skip)]
     pub state: State,
     /// ui <- -> service
     #[serde(skip)]
@@ -49,7 +51,12 @@ pub struct Rvcd {
     #[serde(skip)]
     pub wave_data: Vec<WaveDataItem>,
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub view: WaveView,
+    #[cfg(target_arch = "wasm32")]
+    #[serde(skip)]
+    pub view: WaveView,
+
     #[serde(skip)]
     pub toasts: Toasts,
     #[serde(skip)]
@@ -257,7 +264,9 @@ impl Rvcd {
                 self.toasts.add(toast);
             }
             RvcdMsg::FileOpenFailed => {
-                self.toasts.error("File not found!", Duration::from_secs(5));
+                // self.toasts.error("File not found!", Duration::from_secs(5));
+                self.toasts
+                    .error("File not found!", ToastOptions::default());
                 self.reset();
             }
         };
