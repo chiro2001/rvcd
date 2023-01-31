@@ -53,6 +53,9 @@ web-sys = { version = "0.3.60", features = ["Window"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
+strip = true  # Automatically strip symbols from the binary.
+lto = true
+
 
 # Optimize all dependencies even in debug builds:
 [profile.dev.package."*"]
