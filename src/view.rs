@@ -302,7 +302,8 @@ impl WaveView {
             .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
             .column(Column::auto())
             .column(Column::remainder())
-            .min_scrolled_height(0.0);
+            // .min_scrolled_height(0.0)
+            ;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {

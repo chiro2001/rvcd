@@ -3,6 +3,7 @@ use crate::message::{RvcdChannel, RvcdMsg};
 use crate::run_mode::RunMode;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
+use crate::utils::execute;
 use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
@@ -13,7 +14,6 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 use tracing::info;
-use crate::utils::execute;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 pub enum State {
@@ -34,6 +34,8 @@ pub struct Rvcd {
     pub channel: Option<RvcdChannel>,
 
     pub filepath: String,
+    #[serde(skip)]
+    pub file: Option<FileHandle>,
 
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
@@ -64,6 +66,7 @@ impl Default for Rvcd {
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
+            file: None,
             signal_leaves: vec![],
             tree: Default::default(),
             wave_info: None,
@@ -222,10 +225,10 @@ impl Rvcd {
                 }
                 self.state = State::Working;
             }
-            RvcdMsg::FileOpen(_path) => {
+            RvcdMsg::FileOpen(_file) => {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
-                    let path_new = _path.path().to_str().unwrap().to_string();
+                    let path_new = _file.path().to_str().unwrap().to_string();
                     if path_new != self.filepath {
                         info!("open new file, clear all signals");
                         self.view.signals.clear();
@@ -237,6 +240,7 @@ impl Rvcd {
                     }
                     self.filepath = path_new;
                 }
+                self.file = Some(_file);
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
                     self.state = State::Loading;
@@ -261,11 +265,20 @@ impl Rvcd {
         info!("reloading file");
         if let Some(channel) = &self.channel {
             let sender = channel.tx.clone();
-            sender
-                .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
-                    self.filepath.to_string(),
-                ))))
-                .ok();
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                sender
+                    .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                        self.filepath.to_string(),
+                    ))))
+                    .ok();
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(file) = self.file {
+                    sender.send(RvcdMsg::FileOpen(file)).ok();
+                }
+            }
         }
     }
     pub fn reset(&mut self) {

@@ -22,7 +22,12 @@ impl Service {
                 info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
                 // let mut file = File::open(path.to_string()).unwrap();
-                if file.path().exists() {
+                #[cfg(not(target_arch = "wasm32"))]
+                let exists = file.path().exists();
+                #[cfg(target_arch = "wasm32")]
+                let exists = true;
+
+                if exists {
                     // TODO: partly read
                     let data = file.read().await;
                     // if let Ok(w) = Vcd::load(&mut file) {
@@ -45,6 +50,7 @@ impl Service {
                         // *wave.lock().unwrap() = Some(w);
                     }
                 } else {
+                    #[cfg(not(target_arch = "wasm32"))]
                     if !file.path().to_str().unwrap().is_empty() {
                         self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                     }
