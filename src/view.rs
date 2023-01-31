@@ -89,6 +89,7 @@ impl WaveView {
     }
     pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         const LINE_WIDTH: f32 = 1.5;
+        const MIN_TEXT_WIDTH: f32 = 6.0;
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
                 self.range = info.range;
@@ -241,29 +242,31 @@ impl WaveView {
                                                     );
                                                 }
                                             }
-                                            let pos = match self.align {
-                                                SignalViewAlign::Left => {
-                                                    rect.left_center() + vec2(4.0, 0.0)
-                                                }
-                                                SignalViewAlign::Center => {
-                                                    rect.left_center()
-                                                        + vec2(width * percent_text, 0.0)
-                                                }
-                                                SignalViewAlign::Right => rect.right_center(),
-                                            };
-                                            painter.text(
-                                                pos,
-                                                match self.align {
-                                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                                    SignalViewAlign::Center => {
-                                                        Align2::CENTER_CENTER
+                                            if rect.width() > MIN_TEXT_WIDTH {
+                                                let pos = match self.align {
+                                                    SignalViewAlign::Left => {
+                                                        rect.left_center() + vec2(4.0, 0.0)
                                                     }
-                                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                                                },
-                                                text,
-                                                Default::default(),
-                                                color,
-                                            );
+                                                    SignalViewAlign::Center => {
+                                                        rect.left_center()
+                                                            + vec2(width * percent_text, 0.0)
+                                                    }
+                                                    SignalViewAlign::Right => rect.right_center(),
+                                                };
+                                                painter.text(
+                                                    pos,
+                                                    match self.align {
+                                                        SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                                        SignalViewAlign::Center => {
+                                                            Align2::CENTER_CENTER
+                                                        }
+                                                        SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                                    },
+                                                    text,
+                                                    Default::default(),
+                                                    color,
+                                                );
+                                            }
                                         }
                                     };
                                 while let Some(item) = it.next() {
