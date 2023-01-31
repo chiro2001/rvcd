@@ -156,7 +156,7 @@ impl Rvcd {
             });
         });
     }
-    pub fn wave_panel(&self, ui: &mut Ui) {
+    pub fn wave_panel(&mut self, ui: &mut Ui) {
         self.view.view_panel(ui, &self.wave_info, &self.wave_data);
     }
 }
