@@ -4,7 +4,7 @@ use crate::tree_view::{TreeAction, TreeView};
 use crate::view::WaveView;
 use crate::wave::{WaveDataItem, WaveInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{vec2, Align2, Layout, ScrollArea, Sense, Ui};
+use egui::{Layout, ScrollArea, Sense, Ui};
 use std::sync::mpsc;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -157,56 +157,6 @@ impl Rvcd {
         });
     }
     pub fn wave_panel(&self, ui: &mut Ui) {
-        const SIGNAL_HEIGHT: f32 = 30.0;
-        ScrollArea::vertical().show(ui, |ui| {
-            egui::SidePanel::left("signals")
-                .resizable(true)
-                .show_inside(ui, |ui| {
-                    if let Some(info) = &self.wave_info {
-                        for id in self.view.signals.iter() {
-                            if let Some(name) = info.code_names.get(id) {
-                                ui.scope(|ui| {
-                                    ui.set_height(SIGNAL_HEIGHT);
-                                    ui.centered_and_justified(|ui| {
-                                        ui.add(egui::Label::new(name).wrap(false));
-                                    });
-                                });
-                            }
-                        }
-                    }
-                });
-            egui::CentralPanel::default().show_inside(ui, |ui| {
-                if let Some(info) = &self.wave_info {
-                    for id in self.view.signals.iter() {
-                        ui.scope(|ui| {
-                            ui.set_height(SIGNAL_HEIGHT);
-                            ui.centered_and_justified(|ui| {
-                                let (mut _response, painter) = ui.allocate_painter(
-                                    ui.available_size_before_wrap(),
-                                    Sense::hover(),
-                                );
-                                let items = self.wave_data.iter().filter(|i| i.id == *id); //.collect::<Vec<_>>();
-                                let color = ui.visuals().strong_text_color();
-                                let rect = ui.max_rect();
-                                for item in items {
-                                    let text = item.value.to_string();
-                                    let width = rect.right() - rect.left();
-                                    let percent = ((item.timestamp - info.range.0) as f32)
-                                        / ((info.range.1 - info.range.0) as f32);
-                                    let pos = rect.left_center() + vec2(width * percent, 0.0);
-                                    painter.text(
-                                        pos,
-                                        Align2::CENTER_CENTER,
-                                        text,
-                                        Default::default(),
-                                        color,
-                                    );
-                                }
-                            });
-                        });
-                    }
-                }
-            });
-        });
+        self.view.view_panel(ui, &self.wave_info, &self.wave_data);
     }
 }
