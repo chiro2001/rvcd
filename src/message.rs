@@ -21,7 +21,8 @@ impl Debug for RvcdMsg {
             RvcdMsg::UpdateInfo(_) => write!(f, "RvcdMsg: UpdateInfo"),
             RvcdMsg::UpdateData(_) => write!(f, "RvcdMsg: UpdateData"),
             RvcdMsg::FileOpen(file) => write!(f, "RvcdMsg: FileOpen({:?})", file),
-            _ => write!(f, "{:?}", self),
+            RvcdMsg::FileOpenFailed => write!(f, "RvcdMsg: FileOpenFailed"),
+            RvcdMsg::Reload => write!(f, "RvcdMsg: Reload"),
         }
     }
 }

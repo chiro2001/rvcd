@@ -271,6 +271,12 @@ impl Rvcd {
         self.view.reset();
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
+        let run_mode = &mut self.run_mode;
+        ui.label("Mode:");
+        ui.radio_value(run_mode, RunMode::Reactive, "Reactive")
+            .on_hover_text("Repaint when there are animations or input (e.g. mouse movement)");
+        ui.radio_value(run_mode, RunMode::Continuous, "Continuous")
+            .on_hover_text("Repaint everything each frame");
         if self.run_mode == RunMode::Continuous {
             ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
         } else {
