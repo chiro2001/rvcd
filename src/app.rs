@@ -64,7 +64,7 @@ impl eframe::App for Rvcd {
                     RvcdMsg::UpdateInfo(info) => {
                         info!("ui recv info: {}", info);
                         self.wave_info = Some(info);
-                        self.signals.clear();
+                        self.view.signals.clear();
                         self.signal_leaves.clear();
                     }
                     RvcdMsg::FileOpen(_path) => {
@@ -73,7 +73,7 @@ impl eframe::App for Rvcd {
                         {
                             self.filepath = _path.path().to_str().unwrap().to_string();
                         }
-                        self.signals.clear();
+                        self.view.signals.clear();
                         self.signal_leaves.clear();
                     }
                     RvcdMsg::UpdateData(data) => {

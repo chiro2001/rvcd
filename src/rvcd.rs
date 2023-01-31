@@ -1,6 +1,7 @@
 use crate::message::RvcdChannel;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
+use crate::view::WaveView;
 use crate::wave::{WaveDataItem, WaveInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{vec2, Align2, Layout, ScrollArea, Sense, Ui};
@@ -25,8 +26,6 @@ pub struct Rvcd {
     pub(crate) channel: Option<RvcdChannel>,
 
     pub(crate) filepath: String,
-    #[serde(skip)]
-    pub(crate) signals: Vec<u64>,
 
     #[serde(skip)]
     pub(crate) signal_leaves: Vec<(u64, String)>,
@@ -38,6 +37,8 @@ pub struct Rvcd {
 
     #[serde(skip)]
     pub(crate) wave_data: Vec<WaveDataItem>,
+
+    pub(crate) view: WaveView,
 }
 
 impl Default for Rvcd {
@@ -46,11 +47,11 @@ impl Default for Rvcd {
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
-            signals: vec![],
             signal_leaves: vec![],
             tree: Default::default(),
             wave_info: None,
             wave_data: vec![],
+            view: Default::default(),
         }
     }
 }
@@ -108,8 +109,8 @@ impl Rvcd {
                             for (id, name) in self.signal_leaves.iter() {
                                 let response = ui.add(egui::Label::new(name).sense(Sense::click()));
                                 if response.double_clicked() {
-                                    if !self.signals.contains(id) {
-                                        self.signals.push(*id);
+                                    if !self.view.signals.contains(id) {
+                                        self.view.signals.push(*id);
                                     }
                                 }
                             }
@@ -128,8 +129,8 @@ impl Rvcd {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
-                                        if !self.signals.contains(&d.0) {
-                                            self.signals.push(d.0);
+                                        if !self.view.signals.contains(&d.0) {
+                                            self.view.signals.push(d.0);
                                         }
                                     }
                                     _ => {}
@@ -162,7 +163,7 @@ impl Rvcd {
                 .resizable(true)
                 .show_inside(ui, |ui| {
                     if let Some(info) = &self.wave_info {
-                        for id in self.signals.iter() {
+                        for id in self.view.signals.iter() {
                             if let Some(name) = info.code_names.get(id) {
                                 ui.scope(|ui| {
                                     ui.set_height(SIGNAL_HEIGHT);
@@ -176,7 +177,7 @@ impl Rvcd {
                 });
             egui::CentralPanel::default().show_inside(ui, |ui| {
                 if let Some(info) = &self.wave_info {
-                    for id in self.signals.iter() {
+                    for id in self.view.signals.iter() {
                         ui.scope(|ui| {
                             ui.set_height(SIGNAL_HEIGHT);
                             ui.centered_and_justified(|ui| {
