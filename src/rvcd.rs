@@ -1,7 +1,7 @@
 use crate::message::RvcdChannel;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
-use crate::view::WaveView;
+use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
@@ -109,8 +109,8 @@ impl Rvcd {
                             for (id, name) in self.signal_leaves.iter() {
                                 let response = ui.add(egui::Label::new(name).sense(Sense::click()));
                                 if response.double_clicked() {
-                                    if !self.view.signals.contains(id) {
-                                        self.view.signals.push(*id);
+                                    if !self.view.signals.iter().any(|x| x.id == *id) {
+                                        self.view.signals.push(SignalView::new(*id));
                                     }
                                 }
                             }
@@ -129,8 +129,8 @@ impl Rvcd {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
-                                        if !self.view.signals.contains(&d.0) {
-                                            self.view.signals.push(d.0);
+                                        if !self.view.signals.iter().any(|x| x.id == d.0) {
+                                            self.view.signals.push(SignalView::new(d.0));
                                         }
                                     }
                                     _ => {}

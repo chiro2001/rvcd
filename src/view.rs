@@ -1,10 +1,26 @@
 use crate::wave::{WaveDataItem, WaveInfo};
 use egui::{vec2, Align2, ScrollArea, Sense, Ui};
 
+#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
+#[serde(default)]
+pub struct SignalView {
+    pub id: u64,
+    pub height: f32,
+}
+pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
+impl SignalView {
+    pub fn new(id: u64) -> Self {
+        Self {
+            id,
+            height: SIGNAL_HEIGHT_DEFAULT,
+        }
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct WaveView {
-    pub signals: Vec<u64>,
+    pub signals: Vec<SignalView>,
     pub range: (u64, u64),
 }
 
@@ -24,16 +40,15 @@ impl WaveView {
                 self.range = info.range;
             }
         }
-        const SIGNAL_HEIGHT: f32 = 30.0;
         ScrollArea::vertical().show(ui, |ui| {
             egui::SidePanel::left("signals")
                 .resizable(true)
                 .show_inside(ui, |ui| {
                     if let Some(info) = info {
-                        for id in self.signals.iter() {
-                            if let Some(name) = info.code_names.get(id) {
+                        for signal in self.signals.iter() {
+                            if let Some(name) = info.code_names.get(&signal.id) {
                                 ui.scope(|ui| {
-                                    ui.set_height(SIGNAL_HEIGHT);
+                                    ui.set_height(signal.height);
                                     ui.centered_and_justified(|ui| {
                                         ui.add(egui::Label::new(name).wrap(false));
                                     });
@@ -44,15 +59,15 @@ impl WaveView {
                 });
             egui::CentralPanel::default().show_inside(ui, |ui| {
                 if let Some(info) = info {
-                    for id in self.signals.iter() {
+                    for signal in self.signals.iter() {
                         ui.scope(|ui| {
-                            ui.set_height(SIGNAL_HEIGHT);
+                            ui.set_height(signal.height);
                             ui.centered_and_justified(|ui| {
                                 let (mut _response, painter) = ui.allocate_painter(
                                     ui.available_size_before_wrap(),
                                     Sense::hover(),
                                 );
-                                let items = wave_data.iter().filter(|i| i.id == *id); //.collect::<Vec<_>>();
+                                let items = wave_data.iter().filter(|i| i.id == signal.id);
                                 let color = ui.visuals().strong_text_color();
                                 let rect = ui.max_rect();
                                 let mut it = items;
