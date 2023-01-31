@@ -58,6 +58,15 @@ pub enum WaveDataValue {
     Raw(Vec<WireValue>),
 }
 
+impl Into<Option<BigUint>> for &WaveDataValue {
+    fn into(self) -> Option<BigUint> {
+        match self {
+            WaveDataValue::Comp(v) => Some(BigUint::from_bytes_le(v.as_slice())),
+            _ => None,
+        }
+    }
+}
+
 impl Display for WaveDataValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -4,7 +4,7 @@ use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireVal
 use eframe::emath::Align;
 use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
-use num_traits::One;
+use num_traits::{One, Zero};
 use std::sync::mpsc;
 use tracing::{debug, warn};
 
@@ -262,23 +262,36 @@ impl WaveView {
                                             };
                                         } else {
                                             let text = item_now.value.to_string();
+                                            let number: Option<BigUint> = (&item_now.value).into();
                                             if text.contains('x') {
                                                 paint_x();
                                             } else {
                                                 if text.contains('z') {
                                                     paint_z();
                                                 } else {
-                                                    painter.rect(
-                                                        rect,
-                                                        0.0,
-                                                        if self.background {
-                                                            Color32::GREEN
-                                                                .linear_multiply(bg_multiply)
-                                                        } else {
-                                                            Color32::TRANSPARENT
-                                                        },
-                                                        (LINE_WIDTH, Color32::GREEN),
-                                                    );
+                                                    match number {
+                                                        Some(n) if n.is_zero() => {
+                                                            painter.hline(
+                                                                rect.x_range(),
+                                                                rect.bottom(),
+                                                                (LINE_WIDTH, Color32::GREEN),
+                                                            );
+                                                        }
+                                                        _ => {
+                                                            painter.rect(
+                                                                rect,
+                                                                0.0,
+                                                                if self.background {
+                                                                    Color32::GREEN.linear_multiply(
+                                                                        bg_multiply,
+                                                                    )
+                                                                } else {
+                                                                    Color32::TRANSPARENT
+                                                                },
+                                                                (LINE_WIDTH, Color32::GREEN),
+                                                            );
+                                                        }
+                                                    }
                                                 }
                                             }
                                             if rect.width() > MIN_TEXT_WIDTH {
