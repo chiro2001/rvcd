@@ -2,7 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use anyhow::Result;
-use futures::future::join;
+use futures::future::{join, select};
+use futures::pin_mut;
 use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
 use rvcd::server::RvcdRemote;
 use rvcd::Rvcd;
@@ -33,7 +34,8 @@ async fn main() -> Result<()> {
             .await
             .unwrap();
     };
-    let _ = join(gui, rpc).await;
+    pin_mut!(gui, rpc);
+    let _ = select(gui, rpc).await;
     Ok(())
 }
 
