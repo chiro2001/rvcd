@@ -2,6 +2,7 @@ use crate::wave::WaveTreeNode;
 use egui::{CollapsingHeader, Sense, Ui};
 use trees::{Node, Tree};
 
+#[derive(Debug)]
 pub struct TreeView(Tree<WaveTreeNode>);
 
 impl Default for TreeView {

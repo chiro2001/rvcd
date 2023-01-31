@@ -6,8 +6,9 @@ use crate::wave::{WaveDataItem, WaveInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
 use std::sync::mpsc;
+use tracing::info;
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
 pub enum State {
     #[default]
     Idle,
@@ -16,7 +17,7 @@ pub enum State {
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
     #[serde(skip)]
@@ -75,6 +76,7 @@ impl Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let filepath = &def.filepath;
+                info!("load rvcd: {:?}", def);
                 tracing::info!("last file: {}", filepath);
                 if !filepath.is_empty() {
                     channel_req_tx

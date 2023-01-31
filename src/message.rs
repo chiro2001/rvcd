@@ -11,6 +11,7 @@ pub enum RvcdMsg {
 
 unsafe impl Send for RvcdMsg {}
 
+#[derive(Debug)]
 pub struct RvcdChannel {
     pub tx: mpsc::Sender<RvcdMsg>,
     pub rx: mpsc::Receiver<RvcdMsg>,

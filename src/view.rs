@@ -3,10 +3,8 @@ use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
-use serde::Deserialize;
-use crate::view::SignalViewAlign::Left;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug)]
 pub enum SignalViewMode {
     Number(Radix),
     Analog,
@@ -25,7 +23,7 @@ pub enum SignalViewAlign {
     Right,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
 pub struct SignalView {
     pub id: u64,
     pub height: f32,
@@ -42,7 +40,7 @@ impl SignalView {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
 pub struct WaveView {
     pub signals: Vec<SignalView>,
