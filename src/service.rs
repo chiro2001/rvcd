@@ -5,8 +5,6 @@ use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
-use egui::WidgetText;
-use egui_toast::{Toast, ToastKind};
 use tracing::{debug, error, info};
 
 pub struct Service {
@@ -47,16 +45,9 @@ impl Service {
                         // *wave.lock().unwrap() = Some(w);
                     }
                 } else {
-                    self.channel.tx.send(RvcdMsg::Notification(Toast{
-                        kind: ToastKind::Info,
-                        text: WidgetText::from(format!("File {} not exists", file.path().to_str().unwrap())),
-                        options: Default::default(),
-                    })).unwrap();
-                    self.channel.tx.send(RvcdMsg::Notification(Toast{
-                        kind: ToastKind::Info,
-                        text: WidgetText::from(format!("File {} not exists", file.path().to_str().unwrap())),
-                        options: Default::default(),
-                    })).unwrap();
+                    if !file.path().to_str().unwrap().is_empty() {
+                        self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
+                    }
                 }
             }
             _ => {}

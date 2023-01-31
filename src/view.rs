@@ -335,4 +335,8 @@ impl WaveView {
             });
         });
     }
+    pub fn reset(&mut self) {
+        self.range = (0, 0);
+        self.signals.clear();
+    }
 }

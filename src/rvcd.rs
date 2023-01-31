@@ -9,6 +9,7 @@ use egui_toast::Toasts;
 use rfd::FileHandle;
 use std::path::PathBuf;
 use std::sync::mpsc;
+use std::time::Duration;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -228,6 +229,10 @@ impl Rvcd {
             RvcdMsg::Notification(toast) => {
                 self.toasts.add(toast);
             }
+            RvcdMsg::FileOpenFailed => {
+                self.toasts.error("File not found!", Duration::from_secs(5));
+                self.reset();
+            }
         };
     }
     pub fn reload(&self) {
@@ -240,5 +245,12 @@ impl Rvcd {
                 ))))
                 .ok();
         }
+    }
+    pub fn reset(&mut self) {
+        self.wave_info = None;
+        self.wave_data.clear();
+        self.filepath.clear();
+        self.state = State::Idle;
+        self.view.reset();
     }
 }

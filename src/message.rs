@@ -7,6 +7,7 @@ use std::sync::mpsc;
 // #[derive(Debug)]
 pub enum RvcdMsg {
     FileOpen(FileHandle),
+    FileOpenFailed,
     Reload,
     UpdateInfo(WaveInfo),
     UpdateData(Vec<WaveDataItem>),
