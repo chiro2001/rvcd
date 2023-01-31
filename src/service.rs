@@ -3,9 +3,11 @@ use crate::utils::execute;
 use crate::wave::vcd::Vcd;
 use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
-use tracing::{debug, error, info};
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
+use egui::WidgetText;
+use egui_toast::{Toast, ToastKind};
+use tracing::{debug, error, info};
 
 pub struct Service {
     pub wave: Arc<Mutex<Option<Wave>>>,
@@ -22,26 +24,39 @@ impl Service {
                 info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
                 // let mut file = File::open(path.to_string()).unwrap();
-                // TODO: partly read
-                let data = file.read().await;
-                // if let Ok(w) = Vcd::load(&mut file) {
-                let mut reader = Cursor::new(data);
-                if let Ok(w) = Vcd::load(&mut reader) {
-                    info!("service load wave: {}", w);
-                    if let Ok(mut wave) = self.wave.lock() {
-                        *wave = Some(w);
-                        self.channel
-                            .tx
-                            .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
-                            .unwrap();
-                        self.channel
-                            .tx
-                            .send(RvcdMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
-                            .unwrap();
-                        // send path back
-                        self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
+                if file.path().exists() {
+                    // TODO: partly read
+                    let data = file.read().await;
+                    // if let Ok(w) = Vcd::load(&mut file) {
+                    let mut reader = Cursor::new(data);
+                    if let Ok(w) = Vcd::load(&mut reader) {
+                        info!("service load wave: {}", w);
+                        if let Ok(mut wave) = self.wave.lock() {
+                            *wave = Some(w);
+                            self.channel
+                                .tx
+                                .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
+                                .unwrap();
+                            self.channel
+                                .tx
+                                .send(RvcdMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
+                                .unwrap();
+                            // send path back
+                            self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
+                        }
+                        // *wave.lock().unwrap() = Some(w);
                     }
-                    // *wave.lock().unwrap() = Some(w);
+                } else {
+                    self.channel.tx.send(RvcdMsg::Notification(Toast{
+                        kind: ToastKind::Info,
+                        text: WidgetText::from(format!("File {} not exists", file.path().to_str().unwrap())),
+                        options: Default::default(),
+                    })).unwrap();
+                    self.channel.tx.send(RvcdMsg::Notification(Toast{
+                        kind: ToastKind::Info,
+                        text: WidgetText::from(format!("File {} not exists", file.path().to_str().unwrap())),
+                        options: Default::default(),
+                    })).unwrap();
                 }
             }
             _ => {}

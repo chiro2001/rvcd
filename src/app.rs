@@ -72,6 +72,7 @@ impl eframe::App for Rvcd {
         //         ui.label("You would normally choose either panels OR windows.");
         //     });
         // }
+        self.toasts.show(ctx);
     }
 
     /// Called by the frame work to save state before shutdown.

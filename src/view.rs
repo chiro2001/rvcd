@@ -6,7 +6,7 @@ use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
 use std::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{debug, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
 pub enum SignalViewMode {
@@ -116,7 +116,7 @@ impl WaveView {
             }
             if ui.button("🔄 Refresh").clicked() {
                 if let Some(tx) = &self.tx {
-                    info!("reload msg sent");
+                    debug!("reload msg sent");
                     tx.send(RvcdMsg::Reload).unwrap();
                 } else {
                     warn!("no tx in view!");

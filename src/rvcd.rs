@@ -5,12 +5,13 @@ use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
+use egui_toast::Toasts;
 use rfd::FileHandle;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::info;
 
-#[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Default)]
 pub enum State {
     #[default]
     Idle,
@@ -19,7 +20,7 @@ pub enum State {
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
     #[serde(skip)]
@@ -42,6 +43,8 @@ pub struct Rvcd {
     pub wave_data: Vec<WaveDataItem>,
 
     pub view: WaveView,
+    #[serde(skip)]
+    pub toasts: Toasts,
 }
 
 impl Default for Rvcd {
@@ -55,6 +58,10 @@ impl Default for Rvcd {
             wave_info: None,
             wave_data: vec![],
             view: Default::default(),
+            toasts: Toasts::new()
+                .anchor((480.0, 300.0))
+                .direction(egui::Direction::TopDown)
+                .align_to_end(false),
         }
     }
 }
@@ -78,7 +85,6 @@ impl Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let filepath = &def.filepath;
-                info!("load rvcd: {:?}", def);
                 tracing::info!("last file: {}", filepath);
                 if !filepath.is_empty() {
                     channel_req_tx
@@ -218,6 +224,9 @@ impl Rvcd {
             }
             RvcdMsg::Reload => {
                 self.reload();
+            }
+            RvcdMsg::Notification(toast) => {
+                self.toasts.add(toast);
             }
         };
     }

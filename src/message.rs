@@ -1,13 +1,25 @@
 use crate::wave::{WaveDataItem, WaveInfo};
-use std::sync::mpsc;
+use egui_toast::Toast;
 use rfd::FileHandle;
+use std::fmt::{Debug, Formatter};
+use std::sync::mpsc;
 
-#[derive(Debug)]
+// #[derive(Debug)]
 pub enum RvcdMsg {
     FileOpen(FileHandle),
     Reload,
     UpdateInfo(WaveInfo),
     UpdateData(Vec<WaveDataItem>),
+    Notification(Toast),
+}
+
+impl Debug for RvcdMsg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            RvcdMsg::Notification(_toast) => write!(f, "Toast[...]"),
+            _ => write!(f, "{:?}", self),
+        }
+    }
 }
 
 unsafe impl Send for RvcdMsg {}
