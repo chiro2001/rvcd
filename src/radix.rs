@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 use std::cmp::min;
 use tracing::debug;
 
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Radix {
     Bin,
     Oct,

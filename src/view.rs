@@ -1,13 +1,33 @@
+use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
 
+#[derive(serde::Deserialize, serde::Serialize, PartialEq)]
+pub enum SignalViewMode {
+    Number(Radix),
+    Analog,
+}
+
+impl Default for SignalViewMode {
+    fn default() -> Self {
+        Self::Number(Radix::Hex)
+    }
+}
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Default)]
+pub enum SignalViewAlign {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
-#[serde(default)]
 pub struct SignalView {
     pub id: u64,
     pub height: f32,
+    pub mode: SignalViewMode,
 }
 pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
 impl SignalView {
@@ -15,6 +35,7 @@ impl SignalView {
         Self {
             id,
             height: SIGNAL_HEIGHT_DEFAULT,
+            mode: Default::default(),
         }
     }
 }
@@ -24,6 +45,8 @@ impl SignalView {
 pub struct WaveView {
     pub signals: Vec<SignalView>,
     pub range: (u64, u64),
+    pub align: SignalViewAlign,
+    pub background: bool,
 }
 
 impl Default for WaveView {
@@ -31,6 +54,8 @@ impl Default for WaveView {
         Self {
             signals: vec![],
             range: (0, 0),
+            align: Default::default(),
+            background: true,
         }
     }
 }
@@ -149,7 +174,7 @@ impl WaveView {
                                                         rect.y_range(),
                                                         (LINE_WIDTH, Color32::GREEN),
                                                     );
-                                                },
+                                                }
                                                 WireValue::V1 => {
                                                     painter.hline(
                                                         rect.x_range(),
@@ -161,7 +186,7 @@ impl WaveView {
                                                         rect.y_range(),
                                                         (LINE_WIDTH, Color32::GREEN),
                                                     );
-                                                },
+                                                }
                                                 WireValue::X => paint_x(),
                                                 WireValue::Z => paint_z(),
                                             };
@@ -181,13 +206,25 @@ impl WaveView {
                                                     );
                                                 }
                                             }
-                                            let pos = rect.left_center()
-                                                + vec2(4.0, 0.0)
-                                                // + vec2(width * percent_text, 0.0)
-                                                ;
+                                            let pos = match self.align {
+                                                SignalViewAlign::Left => {
+                                                    rect.left_center() + vec2(4.0, 0.0)
+                                                }
+                                                SignalViewAlign::Center => {
+                                                    rect.left_center()
+                                                        + vec2(width * percent_text, 0.0)
+                                                }
+                                                SignalViewAlign::Right => rect.right_center(),
+                                            };
                                             painter.text(
                                                 pos,
-                                                Align2::LEFT_CENTER,
+                                                match self.align {
+                                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                                    SignalViewAlign::Center => {
+                                                        Align2::CENTER_CENTER
+                                                    }
+                                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                                },
                                                 text,
                                                 Default::default(),
                                                 color,
