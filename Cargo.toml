@@ -9,11 +9,11 @@ rust-version = "1.65"
 [dependencies]
 egui = "0.20.1"
 eframe = { version = "0.20.1", default-features = false, features = [
-    "accesskit", # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
+#    "accesskit", # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow", # Use the glow rendering backend. Alternative: "wgpu".
     "persistence", # Enable restoring app state when restarting the app.
-    "wgpu",
+#    "wgpu",
 ] }
 
 # You only need serde if you want app persistence:
