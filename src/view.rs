@@ -3,6 +3,8 @@ use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
+use serde::Deserialize;
+use crate::view::SignalViewAlign::Left;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq)]
 pub enum SignalViewMode {
@@ -15,7 +17,7 @@ impl Default for SignalViewMode {
         Self::Number(Radix::Hex)
     }
 }
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Default)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Default, Debug)]
 pub enum SignalViewAlign {
     #[default]
     Left,
@@ -61,6 +63,21 @@ impl Default for WaveView {
 }
 
 impl WaveView {
+    pub fn view_menu(&mut self, ui: &mut Ui) {
+        ui.menu_button("View", |ui| {
+            ui.menu_button(format!("Align: {:?}", self.align), |ui| {
+                use SignalViewAlign::*;
+                let data = [Left, Center, Right];
+                data.into_iter().for_each(|a| if ui.button(format!("{:?}", a)).clicked() {
+                    self.align = a;
+                    ui.close_menu();
+                });
+            });
+            if ui.checkbox(&mut self.background, "Background").clicked() {
+                ui.close_menu();
+            }
+        });
+    }
     pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         const LINE_WIDTH: f32 = 1.5;
         if let Some(info) = info {
