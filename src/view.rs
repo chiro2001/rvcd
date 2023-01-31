@@ -72,9 +72,7 @@ impl WaveView {
                                 );
                                 let items = wave_data.iter().filter(|i| i.id == signal.id);
                                 let color = ui.visuals().strong_text_color();
-                                // let signal_rect = ui.max_rect();
                                 let signal_rect = response.rect;
-                                // painter.rect_stroke(signal_rect, 0.0, (2.0, Color32::GREEN));
                                 let mut it = items;
                                 let mut item_last: Option<&WaveDataItem> = None;
                                 let paint_signal =
@@ -183,11 +181,13 @@ impl WaveView {
                                                     );
                                                 }
                                             }
-                                            let pos = signal_rect.left_center()
-                                                + vec2(width * percent_text, 0.0);
+                                            let pos = rect.left_center()
+                                                + vec2(4.0, 0.0)
+                                                // + vec2(width * percent_text, 0.0)
+                                                ;
                                             painter.text(
                                                 pos,
-                                                Align2::CENTER_CENTER,
+                                                Align2::LEFT_CENTER,
                                                 text,
                                                 Default::default(),
                                                 color,
