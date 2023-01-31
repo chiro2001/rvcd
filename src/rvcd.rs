@@ -67,7 +67,7 @@ impl Rvcd {
 
         // launch service
         Service::start(RvcdChannel {
-            tx: channel_resp_tx,
+            tx: channel_resp_tx.clone(),
             rx: channel_req_rx,
         });
 
@@ -93,7 +93,7 @@ impl Rvcd {
             Default::default()
         };
         let mut view: WaveView = Default::default();
-        view.set_tx(channel_req_tx.clone());
+        view.set_tx(channel_resp_tx);
         Self {
             channel: Some(RvcdChannel {
                 tx: channel_req_tx,
@@ -222,6 +222,7 @@ impl Rvcd {
         };
     }
     pub fn reload(&self) {
+        info!("reloading file");
         if let Some(channel) = &self.channel {
             let sender = channel.tx.clone();
             sender

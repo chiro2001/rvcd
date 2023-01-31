@@ -6,6 +6,7 @@ use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
 use std::sync::mpsc;
+use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
 pub enum SignalViewMode {
@@ -110,10 +111,17 @@ impl WaveView {
     }
     pub fn view_toolbar(&mut self, ui: &mut Ui) {
         ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-            if ui.button("⛔Clear").clicked() {
+            if ui.button("⛔ Clear").clicked() {
                 self.signals.clear();
             }
-            if ui.button("🔄Refresh").clicked() {}
+            if ui.button("🔄 Refresh").clicked() {
+                if let Some(tx) = &self.tx {
+                    info!("reload msg sent");
+                    tx.send(RvcdMsg::Reload).unwrap();
+                } else {
+                    warn!("no tx in view!");
+                }
+            }
         });
     }
     pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
