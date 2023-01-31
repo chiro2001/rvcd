@@ -2,7 +2,7 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Layout, Rect, Sense, Ui};
+use egui::{pos2, vec2, Align2, Color32, Layout, Rect, Sense, Ui, Direction};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -91,7 +91,7 @@ impl WaveView {
             .into_iter()
             .filter(|signal| info.code_name_width.contains_key(&signal.s.id))
             .collect();
-        info!("signals: {} => {}", self.signals.len(), signals.len());
+        debug!("signals: {} => {}", self.signals.len(), signals.len());
         self.signals = signals;
     }
     pub fn menu(&mut self, ui: &mut Ui) {
@@ -298,14 +298,20 @@ impl WaveView {
         let table = TableBuilder::new(ui)
             .striped(true)
             .resizable(true)
-            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+            // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+            .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
             .column(Column::auto())
             .column(Column::remainder())
             .min_scrolled_height(0.0);
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
-                    ui.strong("Time");
+                    if let Some(info) = info {
+                        ui.strong(format!(
+                            "Time #{}~#{} {}{}",
+                            info.range.0, info.range.1, info.timescale.0, info.timescale.1
+                        ));
+                    }
                 });
                 header.col(|ui| {
                     ui.strong("Wave");
