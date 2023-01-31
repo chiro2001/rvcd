@@ -1,6 +1,7 @@
 use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
-use egui::{pos2, vec2, Align2, Color32, Rect, ScrollArea, Sense, Ui};
+use eframe::emath::Align;
+use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
 use num_bigint::BigUint;
 use num_traits::One;
 
@@ -35,7 +36,7 @@ impl SignalView {
         let d = ("unknown".to_string(), 0);
         let name_width = info.code_name_width.get(&id).unwrap_or(&d).clone();
         Self {
-            s: WaveSignalInfo{
+            s: WaveSignalInfo {
                 id,
                 name: name_width.0,
                 width: name_width.1,
@@ -93,6 +94,14 @@ impl WaveView {
             }
         });
     }
+    pub fn view_toolbar(&mut self, ui: &mut Ui) {
+        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+            if ui.button("⛔Clear").clicked() {
+                self.signals.clear();
+            }
+            if ui.button("🔄Refresh").clicked() {}
+        });
+    }
     pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         const LINE_WIDTH: f32 = 1.5;
         const MIN_TEXT_WIDTH: f32 = 6.0;
@@ -101,6 +110,7 @@ impl WaveView {
                 self.range = info.range;
             }
         }
+        self.view_toolbar(ui);
         ScrollArea::vertical().show(ui, |ui| {
             egui::SidePanel::left("signals")
                 .resizable(true)
