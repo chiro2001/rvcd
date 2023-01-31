@@ -8,5 +8,6 @@ pub mod service;
 pub mod tree_view;
 pub mod utils;
 pub mod wave;
+pub mod server;
 
 pub use rvcd::Rvcd;

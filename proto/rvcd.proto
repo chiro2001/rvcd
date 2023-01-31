@@ -1,3 +1,9 @@
 syntax = "proto3";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
 package rvcd;
 
+service RvcdRpc {
+    rpc OpenFile(google.protobuf.StringValue) returns (google.protobuf.Empty) {}
+}
