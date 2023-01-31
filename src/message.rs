@@ -3,15 +3,15 @@ use std::sync::mpsc;
 use rfd::FileHandle;
 
 #[derive(Debug)]
-pub enum RVCDMsg {
+pub enum RvcdMsg {
     FileOpen(FileHandle),
     UpdateInfo(WaveInfo),
     UpdateData(Vec<WaveDataItem>),
 }
 
-unsafe impl Send for RVCDMsg {}
+unsafe impl Send for RvcdMsg {}
 
-pub struct RVCDChannel {
-    pub(crate) tx: mpsc::Sender<RVCDMsg>,
-    pub(crate) rx: mpsc::Receiver<RVCDMsg>,
+pub struct RvcdChannel {
+    pub(crate) tx: mpsc::Sender<RvcdMsg>,
+    pub(crate) rx: mpsc::Receiver<RvcdMsg>,
 }

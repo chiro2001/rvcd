@@ -1,4 +1,4 @@
-use crate::message::{RVCDChannel, RVCDMsg};
+use crate::message::{RvcdChannel, RvcdMsg};
 use crate::utils::execute;
 use crate::wave::vcd::Vcd;
 use crate::wave::{Wave, WaveLoader};
@@ -9,16 +9,16 @@ use std::sync::{Arc, Mutex};
 
 pub struct Service {
     pub wave: Arc<Mutex<Option<Wave>>>,
-    pub channel: RVCDChannel,
+    pub channel: RvcdChannel,
 }
 
 unsafe impl Send for Service {}
 
 impl Service {
-    async fn handle_message(&mut self, msg: RVCDMsg) -> Result<()> {
+    async fn handle_message(&mut self, msg: RvcdMsg) -> Result<()> {
         debug!("handle message: {:?}", msg);
         match msg {
-            RVCDMsg::FileOpen(file) => {
+            RvcdMsg::FileOpen(file) => {
                 info!("loading file: {:?}", file);
                 // let mut file = File::open(path.as_os_str().to_str().unwrap()).unwrap();
                 // let mut file = File::open(path.to_string()).unwrap();
@@ -31,14 +31,14 @@ impl Service {
                         *wave = Some(w);
                         self.channel
                             .tx
-                            .send(RVCDMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
+                            .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
                             .unwrap();
                         self.channel
                             .tx
-                            .send(RVCDMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
+                            .send(RvcdMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
                             .unwrap();
                         // send path back
-                        self.channel.tx.send(RVCDMsg::FileOpen(file)).unwrap();
+                        self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
                     }
                     // *wave.lock().unwrap() = Some(w);
                 }
@@ -48,7 +48,7 @@ impl Service {
         Ok(())
     }
 
-    pub fn new(channel: RVCDChannel) -> Self {
+    pub fn new(channel: RvcdChannel) -> Self {
         Self {
             wave: Arc::new(Mutex::new(None)),
             channel,
@@ -89,7 +89,7 @@ impl Service {
         }
     }
 
-    pub fn start(channel: RVCDChannel) {
+    pub fn start(channel: RvcdChannel) {
         info!("starting service...");
         execute(async move {
             run_service(channel).await;
@@ -98,7 +98,7 @@ impl Service {
     }
 }
 
-async fn run_service(channel: RVCDChannel) {
+async fn run_service(channel: RvcdChannel) {
     let mut s = Service::new(channel);
     info!("service starts");
     s.run().await

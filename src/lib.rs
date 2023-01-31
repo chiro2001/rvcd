@@ -9,4 +9,4 @@ pub mod tree_view;
 pub mod utils;
 pub mod wave;
 
-pub use rvcd::RVCD;
+pub use rvcd::Rvcd;

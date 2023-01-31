@@ -1,13 +1,13 @@
-use crate::message::RVCDMsg;
+use crate::message::RvcdMsg;
 use crate::tree_view::TreeAction;
 use crate::utils::execute;
 use crate::wave::WaveTreeNode;
-use crate::RVCD;
+use crate::Rvcd;
 use eframe::emath::Align;
 use egui::{vec2, Align2, Layout, ScrollArea, Sense};
 use tracing::info;
 
-impl eframe::App for RVCD {
+impl eframe::App for Rvcd {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -28,7 +28,7 @@ impl eframe::App for RVCD {
                                 if let Some(file) = file {
                                     // let path = PathBuf::from(file);
                                     // let path = file.path().to_str().unwrap().to_string();
-                                    sender.send(RVCDMsg::FileOpen(file)).ok();
+                                    sender.send(RvcdMsg::FileOpen(file)).ok();
                                 }
                             });
                         }
@@ -178,13 +178,13 @@ impl eframe::App for RVCD {
         if let Some(channel) = &self.channel {
             if let Ok(rx) = channel.rx.try_recv() {
                 match rx {
-                    RVCDMsg::UpdateInfo(info) => {
+                    RvcdMsg::UpdateInfo(info) => {
                         info!("ui recv info: {}", info);
                         self.wave_info = Some(info);
                         self.signals.clear();
                         self.signal_leaves.clear();
                     }
-                    RVCDMsg::FileOpen(_path) => {
+                    RvcdMsg::FileOpen(_path) => {
                         // self.filepath = path.to_str().unwrap().to_string();
                         #[cfg(not(target_arch = "wasm32"))]
                         {
@@ -193,7 +193,7 @@ impl eframe::App for RVCD {
                         self.signals.clear();
                         self.signal_leaves.clear();
                     }
-                    RVCDMsg::UpdateData(data) => {
+                    RvcdMsg::UpdateData(data) => {
                         self.wave_data = data;
                     }
                 };

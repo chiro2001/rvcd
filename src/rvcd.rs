@@ -1,4 +1,4 @@
-use crate::message::RVCDChannel;
+use crate::message::RvcdChannel;
 use crate::service::Service;
 use crate::tree_view::TreeView;
 use crate::wave::{WaveDataItem, WaveInfo};
@@ -15,12 +15,12 @@ pub enum State {
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct RVCD {
+pub struct Rvcd {
     #[serde(skip)]
     pub(crate) state: State,
     /// ui <- -> service
     #[serde(skip)]
-    pub(crate) channel: Option<RVCDChannel>,
+    pub(crate) channel: Option<RvcdChannel>,
 
     pub(crate) filepath: String,
     #[serde(skip)]
@@ -38,7 +38,7 @@ pub struct RVCD {
     pub(crate) wave_data: Vec<WaveDataItem>,
 }
 
-impl Default for RVCD {
+impl Default for Rvcd {
     fn default() -> Self {
         Self {
             state: State::default(),
@@ -53,20 +53,20 @@ impl Default for RVCD {
     }
 }
 
-impl RVCD {
+impl Rvcd {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let (channel_req_tx, channel_req_rx) = mpsc::channel();
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
         // launch service
-        Service::start(RVCDChannel {
+        Service::start(RvcdChannel {
             tx: channel_resp_tx,
             rx: channel_req_rx,
         });
 
         let def = if let Some(storage) = cc.storage {
-            let def: RVCD = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            let def: Rvcd = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             // auto open file
             // let filepath = "data/cpu_ila_commit.vcd";
             #[cfg(not(target_arch = "wasm32"))]
@@ -75,7 +75,7 @@ impl RVCD {
                 tracing::info!("last file: {}", filepath);
                 if !filepath.is_empty() {
                     channel_req_tx
-                        .send(crate::message::RVCDMsg::FileOpen(rfd::FileHandle::from(std::path::PathBuf::from(filepath))))
+                        .send(crate::message::RvcdMsg::FileOpen(rfd::FileHandle::from(std::path::PathBuf::from(filepath))))
                         .unwrap();
                 }
             }
@@ -84,7 +84,7 @@ impl RVCD {
             Default::default()
         };
         Self {
-            channel: Some(RVCDChannel {
+            channel: Some(RvcdChannel {
                 tx: channel_req_tx,
                 rx: channel_resp_rx,
             }),

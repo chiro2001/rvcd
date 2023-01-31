@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use rvcd::RVCD;
+use rvcd::Rvcd;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
@@ -11,9 +11,9 @@ fn main() {
 
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "RVCD",
+        "Rvcd",
         native_options,
-        Box::new(|cc| Box::new(RVCD::new(cc))),
+        Box::new(|cc| Box::new(Rvcd::new(cc))),
     );
 }
 
@@ -32,7 +32,7 @@ fn main() {
         eframe::start_web(
             "the_canvas_id", // hardcode it
             web_options,
-            Box::new(|cc| Box::new(RVCD::new(cc))),
+            Box::new(|cc| Box::new(Rvcd::new(cc))),
         )
         .await
         .expect("failed to start eframe");
