@@ -92,7 +92,7 @@ impl WaveView {
             .collect();
         self.signals = signals;
     }
-    pub fn view_menu(&mut self, ui: &mut Ui) {
+    pub fn menu(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
             ui.menu_button(format!("Align: {:?}", self.align), |ui| {
                 use SignalViewAlign::*;
@@ -109,7 +109,7 @@ impl WaveView {
             }
         });
     }
-    pub fn view_toolbar(&mut self, ui: &mut Ui) {
+    pub fn toolbar(&mut self, ui: &mut Ui) {
         ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
             if ui.button("⛔ Clear").clicked() {
                 self.signals.clear();
@@ -124,7 +124,7 @@ impl WaveView {
             }
         });
     }
-    pub fn view_panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
+    pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         const LINE_WIDTH: f32 = 1.5;
         const MIN_TEXT_WIDTH: f32 = 6.0;
         if let Some(info) = info {
@@ -132,7 +132,7 @@ impl WaveView {
                 self.range = info.range;
             }
         }
-        self.view_toolbar(ui);
+        self.toolbar(ui);
         ScrollArea::vertical().show(ui, |ui| {
             egui::SidePanel::left("signals")
                 .resizable(true)

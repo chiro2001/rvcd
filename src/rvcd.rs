@@ -184,7 +184,7 @@ impl Rvcd {
         });
     }
     pub fn wave_panel(&mut self, ui: &mut Ui) {
-        self.view.view_panel(ui, &self.wave_info, &self.wave_data);
+        self.view.panel(ui, &self.wave_info, &self.wave_data);
     }
     pub fn message_handler(&mut self, rx: RvcdMsg) {
         match rx {

@@ -36,7 +36,7 @@ impl eframe::App for Rvcd {
                         _frame.close();
                     }
                 });
-                self.view.view_menu(ui);
+                self.view.menu(ui);
                 let mut debug_on_hover = ui.ctx().debug_on_hover();
                 ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
                 ui.ctx().set_debug_on_hover(debug_on_hover);
