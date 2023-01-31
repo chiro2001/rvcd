@@ -101,11 +101,15 @@ impl WaveView {
                 .show_inside(ui, |ui| {
                     if let Some(info) = info {
                         for signal in self.signals.iter() {
-                            if let Some((name, _width)) = info.code_name_width.get(&signal.id) {
+                            if let Some((name, width)) = info.code_name_width.get(&signal.id) {
+                                let text = match width {
+                                    0 | 1 => name.to_string(),
+                                    _ => format!("{}[{}:0]", name, width),
+                                };
                                 ui.scope(|ui| {
                                     ui.set_height(signal.height);
                                     ui.centered_and_justified(|ui| {
-                                        ui.add(egui::Label::new(name).wrap(false));
+                                        ui.add(egui::Label::new(text).wrap(false));
                                     });
                                 });
                             }
@@ -256,11 +260,15 @@ impl WaveView {
                                                 painter.text(
                                                     pos,
                                                     match self.align {
-                                                        SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                                        SignalViewAlign::Left => {
+                                                            Align2::LEFT_CENTER
+                                                        }
                                                         SignalViewAlign::Center => {
                                                             Align2::CENTER_CENTER
                                                         }
-                                                        SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                                        SignalViewAlign::Right => {
+                                                            Align2::RIGHT_CENTER
+                                                        }
                                                     },
                                                     text,
                                                     Default::default(),
