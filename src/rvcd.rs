@@ -20,25 +20,25 @@ pub enum State {
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
     #[serde(skip)]
-    pub(crate) state: State,
+    pub state: State,
     /// ui <- -> service
     #[serde(skip)]
-    pub(crate) channel: Option<RvcdChannel>,
+    pub channel: Option<RvcdChannel>,
 
-    pub(crate) filepath: String,
-
-    #[serde(skip)]
-    pub(crate) signal_leaves: Vec<(u64, String)>,
+    pub filepath: String,
 
     #[serde(skip)]
-    pub(crate) tree: TreeView,
-    #[serde(skip)]
-    pub(crate) wave_info: Option<WaveInfo>,
+    pub signal_leaves: Vec<(u64, String)>,
 
     #[serde(skip)]
-    pub(crate) wave_data: Vec<WaveDataItem>,
+    pub tree: TreeView,
+    #[serde(skip)]
+    pub wave_info: Option<WaveInfo>,
 
-    pub(crate) view: WaveView,
+    #[serde(skip)]
+    pub wave_data: Vec<WaveDataItem>,
+
+    pub view: WaveView,
 }
 
 impl Default for Rvcd {
