@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 use tracing::info;
+use crate::utils::execute;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 pub enum State {
@@ -290,5 +291,39 @@ impl Rvcd {
         ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
         ui.ctx().set_debug_on_hover(debug_on_hover);
         egui::warn_if_debug_build(ui);
+    }
+    pub fn menubar(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+        egui::widgets::global_dark_light_mode_switch(ui);
+        ui.menu_button("File", |ui| {
+            // #[cfg(not(target_arch = "wasm32"))]
+            if ui.button("Open").clicked() {
+                if let Some(channel) = &self.channel {
+                    let task = rfd::AsyncFileDialog::new()
+                        .add_filter("VCD File", &["vcd"])
+                        .pick_file();
+                    let sender = channel.tx.clone();
+                    execute(async move {
+                        let file = task.await;
+                        if let Some(file) = file {
+                            // let path = PathBuf::from(file);
+                            // let path = file.path().to_str().unwrap().to_string();
+                            sender.send(RvcdMsg::FileOpen(file)).ok();
+                        }
+                    });
+                }
+                ui.close_menu();
+            }
+            ui.add_enabled_ui(self.state == State::Working, |ui| {
+                if ui.button("Close").clicked() {
+                    self.reset();
+                }
+            });
+            #[cfg(not(target_arch = "wasm32"))]
+            if ui.button("Quit").clicked() {
+                frame.close();
+            }
+        });
+        self.view.menu(ui);
+        ui.checkbox(&mut self.debug_panel, "Debug Panel");
     }
 }
