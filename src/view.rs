@@ -3,6 +3,7 @@ use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use eframe::emath::Align;
 use egui::{pos2, vec2, Align2, Color32, Layout, Rect, ScrollArea, Sense, Ui};
+use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 use std::sync::mpsc;
@@ -293,33 +294,34 @@ impl WaveView {
             .show_inside(ui, |ui| {
                 self.toolbar(ui);
             });
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            ScrollArea::vertical().show(ui, |ui| {
-                egui::SidePanel::left("signals")
-                    .resizable(true)
-                    .show_inside(ui, |ui| {
-                        for signal in self.signals.iter() {
-                            self.ui_signal_label(signal, ui);
-                        }
-                        // bottom padding
-                        ui.scope(|ui| {
-                            ui.set_height(SIGNAL_HEIGHT_DEFAULT);
+        let mut table = TableBuilder::new(ui)
+            .striped(true)
+            .resizable(true)
+            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+            .column(Column::auto())
+            .column(Column::remainder())
+            .min_scrolled_height(0.0);
+        table
+            .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
+                header.col(|ui| {
+                    ui.strong("Time");
+                });
+                header.col(|ui| {
+                    ui.strong("Wave");
+                });
+            })
+            .body(|mut body| {
+                for signal in self.signals.iter() {
+                    body.row(signal.height, |mut row| {
+                        row.col(|ui| self.ui_signal_label(signal, ui));
+                        row.col(|ui| {
+                            if let Some(info) = info {
+                                self.ui_signal_wave(signal, wave_data, info, ui);
+                            }
                         });
                     });
-                egui::CentralPanel::default().show_inside(ui, |ui| {
-                    if let Some(info) = info {
-                        for signal in self.signals.iter() {
-                            ui.scope(|ui| {
-                                ui.set_height(signal.height);
-                                ui.centered_and_justified(|ui| {
-                                    self.ui_signal_wave(signal, wave_data, info, ui);
-                                });
-                            });
-                        }
-                    }
-                });
+                }
             });
-        });
     }
     pub fn reset(&mut self) {
         self.range = (0, 0);
