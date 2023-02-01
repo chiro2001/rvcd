@@ -551,7 +551,26 @@ impl WaveView {
                         }
                         ui.close_menu();
                     }
+                    if let Some(cursor) = self.cursors.iter_mut().find(|x| x.id == id) {
+                        if cursor.valid {
+                            if ui.button("Disable cursor").clicked() {
+                                cursor.valid = false;
+                                ui.close_menu();
+                            }
+                        } else {
+                            if ui.button("Enable cursor").clicked() {
+                                cursor.valid = true;
+                                ui.close_menu();
+                            }
+                        }
+                    }
                 }
+            }
+            if ui.button("Remove all cursor").clicked() {
+                self.cursors.clear();
+                self.marker.valid = false;
+                self.marker_temp.valid = false;
+                ui.close_menu();
             }
         });
     }
@@ -676,7 +695,9 @@ impl WaveView {
         if let Some(info) = info {
             self.paint_span(ui, wave_left, info, pos);
             self.paint_cursor(ui, wave_left, info, &self.marker);
-            self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+            if self.marker_temp.valid {
+                self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+            }
             for cursor in &self.cursors {
                 self.paint_cursor(ui, wave_left, info, cursor);
             }
@@ -725,35 +746,29 @@ impl WaveView {
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();
-        if cursor.valid {
-            let x = self.pos_to_x(cursor.pos) + offset;
-            painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, Color32::YELLOW));
-            let paint_text = |text: String, offset_y: f32| {
-                painter.text(
-                    pos2(x, paint_rect.top() + offset_y),
-                    Align2::LEFT_TOP,
-                    text,
-                    Default::default(),
-                    Color32::BLACK,
-                )
-            };
-            let time = self.pos_to_time(&info.timescale, cursor.pos);
-            let time_rect = paint_text(time.to_string(), 0.0);
-            painter.rect_filled(
-                time_rect,
-                0.0,
-                Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY),
-            );
-            paint_text(time, 0.0);
-            if !cursor.name.is_empty() {
-                let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
-                painter.rect_filled(
-                    name_rect,
-                    0.0,
-                    Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY),
-                );
-                paint_text(cursor.name.to_string(), time_rect.height());
-            }
+        let bg_color = match cursor.valid {
+            true => Color32::YELLOW,
+            false => Color32::BLUE.linear_multiply(TEXT_BG_MULTIPLY),
+        };
+        let x = self.pos_to_x(cursor.pos) + offset;
+        painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, bg_color));
+        let paint_text = |text: String, offset_y: f32| {
+            painter.text(
+                pos2(x, paint_rect.top() + offset_y),
+                Align2::LEFT_TOP,
+                text,
+                Default::default(),
+                Color32::BLACK,
+            )
+        };
+        let time = self.pos_to_time(&info.timescale, cursor.pos);
+        let time_rect = paint_text(time.to_string(), 0.0);
+        painter.rect_filled(time_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
+        paint_text(time, 0.0);
+        if !cursor.name.is_empty() {
+            let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
+            painter.rect_filled(name_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
+            paint_text(cursor.name.to_string(), time_rect.height());
         }
     }
     pub fn reset(&mut self) -> Self {
