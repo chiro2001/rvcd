@@ -7,13 +7,18 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Sense, Ui};
+use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 use std::ops::RangeInclusive;
 use std::sync::mpsc;
 use tracing::{debug, info, warn};
+
+const LINE_WIDTH: f32 = 1.5;
+const MIN_TEXT_WIDTH: f32 = 6.0;
+const MIN_SIGNAL_WIDTH: f32 = 2.0;
+const BG_MULTIPLY: f32 = 0.05;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
@@ -122,13 +127,9 @@ impl WaveView {
         wave_data: &[WaveDataItem],
         info: &WaveInfo,
         ui: &mut Ui,
-    ) {
-        const LINE_WIDTH: f32 = 1.5;
-        const MIN_TEXT_WIDTH: f32 = 6.0;
-        const MIN_SIGNAL_WIDTH: f32 = 2.0;
-        const BG_MULTIPLY: f32 = 0.05;
+    ) -> Response {
         let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), Sense::hover());
+            ui.allocate_painter(ui.available_size_before_wrap(), Sense::click_and_drag());
         let items = wave_data.iter().filter(|i| i.id == signal.s.id);
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
@@ -328,6 +329,7 @@ impl WaveView {
                 },
             )
         }
+        response
     }
     fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) {
         let text = signal.s.to_string();
@@ -350,7 +352,7 @@ impl WaveView {
                 self.toolbar(ui);
             });
         // bugs by: https://github.com/emilk/egui/issues/2430
-        let rect = ui.max_rect();
+        let use_rect = ui.max_rect();
         const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
         let fix_width = f32::max(
             self.signals
@@ -366,10 +368,11 @@ impl WaveView {
             .resizable(false)
             // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
-            .column(Column::exact(fix_width).resizable(true))
-            .column(Column::exact(rect.width() - fix_width).resizable(false));
+            .column(Column::exact(fix_width).resizable(false))
+            .column(Column::exact(use_rect.width() - fix_width).resizable(false));
         // .column(Column::auto())
         // .column(Column::remainder());
+        let mut pos = None;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 let mut width = 0.0;
@@ -394,18 +397,35 @@ impl WaveView {
                         let signal = self.signals.get(row_index);
                         if let Some(signal) = signal {
                             row.col(|ui| self.ui_signal_label(signal, ui));
-                            let (_rect, response) = row.col(|ui| {
+                            row.col(|ui| {
                                 if let Some(info) = info {
-                                    self.ui_signal_wave(signal, wave_data, info, ui);
+                                    let response = self.ui_signal_wave(signal, wave_data, info, ui);
+                                    if let Some(pointer_pos) = response.interact_pointer_pos() {
+                                        // info!("pointer: {:?}", pointer_pos);
+                                        pos = Some(pointer_pos - vec2(fix_width, 0.0));
+                                    }
                                 }
                             });
-                            if let Some(pointer_pos) = response.interact_pointer_pos() {
-                                info!("pointer: {:?}", pointer_pos);
-                            }
                         }
                     },
                 );
             });
+        if let Some(pos) = pos {
+            self.main_cursor.valid = true;
+            self.main_cursor.pos = pos.x as u64;
+        }
+        let paint_rect = Rect::from_min_size(
+            use_rect.min + vec2(fix_width, 0.0),
+            use_rect.size() - vec2(fix_width, 0.0),
+        );
+        let painter = ui.painter_at(paint_rect);
+        if self.main_cursor.valid {
+            painter.vline(
+                self.main_cursor.pos as f32 + fix_width,
+                use_rect.y_range(),
+                (LINE_WIDTH, Color32::YELLOW),
+            );
+        }
     }
     pub fn reset(&mut self) {
         info!("reset");
