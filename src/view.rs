@@ -295,17 +295,27 @@ impl WaveView {
             .show_inside(ui, |ui| {
                 self.toolbar(ui);
             });
+        // bugs by: https://github.com/emilk/egui/issues/2430
         let rect = ui.max_rect();
         const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
+        let fix_width = f32::max(
+            self.signals
+                .iter()
+                .map(|x| x.s.name.len())
+                .max()
+                .unwrap_or(0) as f32
+                * 8.0,
+            DEFAULT_MIN_SIGNAL_WIDTH,
+        );
         let table = TableBuilder::new(ui)
             .striped(true)
             .resizable(false)
             // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
-            .column(Column::exact(DEFAULT_MIN_SIGNAL_WIDTH).resizable(true))
-            .column(Column::exact(rect.width() - DEFAULT_MIN_SIGNAL_WIDTH).resizable(false));
-            // .column(Column::auto())
-            // .column(Column::remainder());
+            .column(Column::exact(fix_width).resizable(true))
+            .column(Column::exact(rect.width() - fix_width).resizable(false));
+        // .column(Column::auto())
+        // .column(Column::remainder());
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 let mut width = 0.0;
