@@ -7,8 +7,7 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::emath::RectTransform;
-use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Pos2, Rect, Response, Sense, Ui};
+use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -442,24 +441,21 @@ impl WaveView {
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();
-        painter.rect_stroke(paint_rect, 0.0, (LINE_WIDTH, Color32::BLUE));
-        painter.text(
-            paint_rect.min,
-            Align2::LEFT_TOP,
-            "paint_rect_min",
-            Default::default(),
-            Color32::YELLOW,
-        );
         if cursor.valid {
             let x = self.pos_to_x(cursor.pos) + offset;
             painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, Color32::YELLOW));
-            painter.text(
-                pos2(x, paint_rect.top()),
-                Align2::LEFT_TOP,
-                self.pos_to_time(&info.timescale, cursor.pos),
-                Default::default(),
-                Color32::YELLOW,
-            );
+            let paint_text = || {
+                painter.text(
+                    pos2(x, paint_rect.top()),
+                    Align2::LEFT_TOP,
+                    self.pos_to_time(&info.timescale, cursor.pos),
+                    Default::default(),
+                    Color32::BLACK,
+                )
+            };
+            let text_rect = paint_text();
+            painter.rect_filled(text_rect, 0.0, Color32::YELLOW);
+            paint_text();
         }
     }
     pub fn reset(&mut self) {
