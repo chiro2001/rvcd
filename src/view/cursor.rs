@@ -14,4 +14,12 @@ impl WaveCursor {
             valid: true,
         }
     }
+    pub fn from_string(name: &str) -> Self {
+        Self {
+            id: 0,
+            pos: 0,
+            name: name.to_string(),
+            valid: false,
+        }
+    }
 }

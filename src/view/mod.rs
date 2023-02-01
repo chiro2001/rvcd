@@ -32,7 +32,9 @@ pub struct WaveView {
     #[serde(skip)]
     pub tx: Option<mpsc::Sender<RvcdMsg>>,
     pub cursors: Vec<WaveCursor>,
-    pub main_cursor: WaveCursor,
+    pub marker: WaveCursor,
+    pub marker_temp: WaveCursor,
+    pub wave_width: f32,
 }
 
 impl Default for WaveView {
@@ -46,12 +48,9 @@ impl Default for WaveView {
             default_radix: Radix::Hex,
             tx: None,
             cursors: vec![],
-            main_cursor: WaveCursor {
-                id: 0,
-                pos: 0,
-                name: "Main Cursor".to_string(),
-                valid: false,
-            },
+            marker: WaveCursor::from_string("Main Cursor"),
+            marker_temp: WaveCursor::from_string(""),
+            wave_width: 100.0,
         }
     }
 }
@@ -340,6 +339,12 @@ impl WaveView {
             });
         });
     }
+    pub fn x_to_pos(&self, x: f32) -> u64 {
+        (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as u64 + self.range.0
+    }
+    pub fn pos_to_x(&self, pos: u64) -> f32 {
+        (pos - self.range.0) as f32 * self.wave_width / (self.range.1 - self.range.0) as f32
+    }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
@@ -363,13 +368,14 @@ impl WaveView {
                 * 8.0,
             DEFAULT_MIN_SIGNAL_WIDTH,
         );
+        self.wave_width = use_rect.width() - fix_width;
         let table = TableBuilder::new(ui)
             .striped(true)
             .resizable(false)
             // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
             .column(Column::exact(fix_width).resizable(false))
-            .column(Column::exact(use_rect.width() - fix_width).resizable(false));
+            .column(Column::exact(self.wave_width).resizable(false));
         // .column(Column::auto())
         // .column(Column::remainder());
         let mut pos = None;
@@ -411,17 +417,17 @@ impl WaveView {
                 );
             });
         if let Some(pos) = pos {
-            self.main_cursor.valid = true;
-            self.main_cursor.pos = pos.x as u64;
+            self.marker.valid = true;
+            self.marker.pos = self.x_to_pos(pos.x);
         }
         let paint_rect = Rect::from_min_size(
             use_rect.min + vec2(fix_width, 0.0),
             use_rect.size() - vec2(fix_width, 0.0),
         );
         let painter = ui.painter_at(paint_rect);
-        if self.main_cursor.valid {
+        if self.marker.valid {
             painter.vline(
-                self.main_cursor.pos as f32 + fix_width,
+                self.pos_to_x(self.marker.pos) + fix_width,
                 use_rect.y_range(),
                 (LINE_WIDTH, Color32::YELLOW),
             );
