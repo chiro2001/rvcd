@@ -1,8 +1,8 @@
-use std::ops::RangeInclusive;
-use egui::*;
 use crate::view::cursor::WaveCursor;
-use crate::view::{BG_MULTIPLY, LINE_WIDTH, WaveView};
+use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH};
 use crate::wave::WaveInfo;
+use egui::*;
+use std::ops::RangeInclusive;
 
 impl WaveView {
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
@@ -26,6 +26,9 @@ impl WaveView {
         let mut step: u64 = (self.range.1 - self.range.0) / 10;
         while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 {
             step /= 10;
+        }
+        if step == 0 {
+            step = 1;
         }
         let range = (self.range.0 / step * step)..(((self.range.1 / step) + 1) * step);
         // paint time stamp labels

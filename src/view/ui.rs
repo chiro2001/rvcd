@@ -105,6 +105,7 @@ impl WaveView {
         let mut drag_by_primary = false;
         let mut drag_by_secondary = false;
         let mut drag_by_middle = false;
+        let mut new_range = self.range.clone();
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
@@ -149,17 +150,42 @@ impl WaveView {
                                 }
                                 // catch mouse wheel events
                                 if ui.rect_contains_pointer(use_rect) {
-                                    let _events = ui.ctx().input().events.iter().filter(|x| match x {
-                                        Event::Scroll(_) => true,
-                                        Event::Zoom(_) => true,
-                                        _ => false,
-                                    }).collect::<Vec<_>>();
+                                    let _scroll = ui
+                                        .ctx()
+                                        .input()
+                                        .events
+                                        .iter()
+                                        .find(|x| match x {
+                                            Event::Scroll(_) => true,
+                                            _ => false,
+                                        })
+                                        .map(|x| match x {
+                                            Event::Scroll(v) => Some(v),
+                                            _ => None,
+                                        }).flatten();
+                                    let zoom = ui
+                                        .ctx()
+                                        .input()
+                                        .events
+                                        .iter()
+                                        .find(|x| match x {
+                                            Event::Zoom(_) => true,
+                                            _ => false,
+                                        })
+                                        .map(|x| match x {
+                                            Event::Zoom(v) => Some(*v),
+                                            _ => None,
+                                        }).flatten();
+                                    if let Some(zoom) = zoom {
+                                        new_range = (self.range.0, (self.range.1 as f32 * zoom) as u64);
+                                    }
                                 }
                             });
                         }
                     },
                 );
             });
+        self.range = new_range;
         // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
         // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
         if let Some(pos) = pos {
