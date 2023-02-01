@@ -7,7 +7,7 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui};
+use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui, PointerButton};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -387,6 +387,9 @@ impl WaveView {
         let mut pos = None;
         let mut drag_started = false;
         let mut drag_release = false;
+        let mut drag_by_primary = false;
+        let mut drag_by_secondary = false;
+        let mut drag_by_middle = false;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 let mut width = 0.0;
@@ -419,6 +422,15 @@ impl WaveView {
                                         pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
                                         drag_started = response.drag_started();
                                         drag_release = response.drag_released();
+                                        if response.dragged_by(PointerButton::Primary) {
+                                            drag_by_primary = true;
+                                        }
+                                        if response.dragged_by(PointerButton::Secondary) {
+                                            drag_by_secondary = true;
+                                        }
+                                        if response.dragged_by(PointerButton::Middle) {
+                                            drag_by_middle = true;
+                                        }
                                     }
                                 }
                             });
@@ -435,9 +447,14 @@ impl WaveView {
                 Default::default(),
                 Color32::YELLOW,
             );
-            self.marker_temp.set_pos_valid(self.x_to_pos(pos.x));
-            if drag_release {
+            if drag_by_primary {
+                self.marker_temp.set_pos_valid(self.x_to_pos(pos.x));
+            }
+            if drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(self.marker_temp.pos);
+            }
+            if !drag_by_primary {
+                self.marker_temp.valid = false;
             }
         }
         if let Some(info) = info {
