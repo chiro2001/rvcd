@@ -19,7 +19,7 @@ use std::sync::mpsc;
 use tracing::{debug, info, warn};
 
 const LINE_WIDTH: f32 = 1.5;
-const MIN_TEXT_WIDTH: f32 = 6.0;
+const TEXT_LEFT_OFFSET: f32 = 4.0;
 const MIN_SIGNAL_WIDTH: f32 = 2.0;
 const BG_MULTIPLY: f32 = 0.05;
 
@@ -277,29 +277,55 @@ impl WaveView {
                             }
                         }
                     }
-                    if self.show_text
-                        && rect.width() > MIN_TEXT_WIDTH
-                        && rect.width() > (text.len() * 8) as f32
-                    {
-                        let pos = match self.align {
-                            SignalViewAlign::Left => rect.left_center() + vec2(4.0, 0.0),
-                            SignalViewAlign::Center => {
-                                rect.left_center() + vec2(width * percent_text, 0.0)
-                            }
-                            SignalViewAlign::Right => rect.right_center(),
-                        };
-                        painter.text(
-                            pos,
-                            match self.align {
-                                SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                            },
-                            text,
-                            // Default::default(),
+                    if self.show_text {
+                        let text_min_rect = painter.text(
+                            Pos2::ZERO,
+                            Align2::RIGHT_BOTTOM,
+                            "+",
                             FontId::monospace(self.signal_font_size),
-                            text_color,
+                            Color32::TRANSPARENT,
                         );
+                        if rect.width() >= text_min_rect.width() + TEXT_LEFT_OFFSET {
+                            let pos = match self.align {
+                                SignalViewAlign::Left => {
+                                    rect.left_center() + vec2(TEXT_LEFT_OFFSET, 0.0)
+                                }
+                                SignalViewAlign::Center => {
+                                    rect.left_center() + vec2(width * percent_text, 0.0)
+                                }
+                                SignalViewAlign::Right => rect.right_center(),
+                            };
+                            // pre-paint to calculate size
+                            let text_rect = painter.text(
+                                pos,
+                                match self.align {
+                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                },
+                                text.as_str(),
+                                FontId::monospace(self.signal_font_size),
+                                Color32::TRANSPARENT,
+                            );
+                            let paint_text = if rect.width() >= text_rect.width() + TEXT_LEFT_OFFSET
+                            {
+                                text
+                            } else {
+                                "+".to_string()
+                            };
+                            painter.text(
+                                pos,
+                                match self.align {
+                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                },
+                                paint_text,
+                                // Default::default(),
+                                FontId::monospace(self.signal_font_size),
+                                text_color,
+                            );
+                        }
                     }
                 }
             } else {
