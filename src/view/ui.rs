@@ -6,7 +6,8 @@ use crate::wave::{WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use std::ops::RangeInclusive;
-use tracing::*;
+use tracing::debug;
+use tracing::log::warn;
 
 impl WaveView {
     pub fn menu(&mut self, ui: &mut Ui) {
@@ -146,6 +147,14 @@ impl WaveView {
                                             drag_by_middle = true;
                                         }
                                     }
+                                }
+                                // catch mouse wheel events
+                                if ui.rect_contains_pointer(use_rect) {
+                                    let _events = ui.ctx().input().events.iter().filter(|x| match x {
+                                        Event::Scroll(_) => true,
+                                        Event::Zoom(_) => true,
+                                        _ => false,
+                                    }).collect::<Vec<_>>();
                                 }
                             });
                         }
