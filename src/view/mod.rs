@@ -712,9 +712,12 @@ impl WaveView {
             }
         }
     }
-    pub fn reset(&mut self) {
-        info!("reset");
-        self.range = (0, 0);
-        self.signals.clear();
+    pub fn reset(&mut self) -> Self {
+        info!("reset view");
+        let tx = self.tx.take();
+        Self {
+            tx,
+            ..Default::default()
+        }
     }
 }

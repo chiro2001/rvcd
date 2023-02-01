@@ -297,7 +297,7 @@ impl Rvcd {
         self.wave_data.clear();
         self.filepath.clear();
         self.state = State::Idle;
-        self.view.reset();
+        self.view = self.view.reset();
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
         let run_mode = &mut self.run_mode;
@@ -314,9 +314,12 @@ impl Rvcd {
         let mut debug_on_hover = ui.ctx().debug_on_hover();
         ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
         ui.ctx().set_debug_on_hover(debug_on_hover);
+        if ui.button("Reset rvcd").clicked() {
+            self.reset();
+        }
         ui.horizontal(|ui| {
             if ui
-                .button("Reset Rvcd")
+                .button("Reset egui")
                 .on_hover_text("Forget scroll, positions, sizes etc")
                 .clicked()
             {
