@@ -11,6 +11,24 @@ use std::sync::mpsc;
 use tracing::{debug, info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
+pub struct WaveCursor {
+    pub id: usize,
+    pub pos: u64,
+    pub name: String,
+    pub valid: bool,
+}
+impl WaveCursor {
+    pub fn new(id: usize, pos: u64) -> Self {
+        Self {
+            id,
+            pos,
+            name: format!("Cursor{}", id),
+            valid: true,
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub enum SignalViewMode {
     #[default]
     Default,
@@ -60,6 +78,8 @@ pub struct WaveView {
     pub default_radix: Radix,
     #[serde(skip)]
     pub tx: Option<mpsc::Sender<RvcdMsg>>,
+    pub cursors: Vec<WaveCursor>,
+    pub main_cursor: WaveCursor,
 }
 
 impl Default for WaveView {
@@ -72,6 +92,13 @@ impl Default for WaveView {
             show_text: true,
             default_radix: Radix::Hex,
             tx: None,
+            cursors: vec![],
+            main_cursor: WaveCursor {
+                id: 0,
+                pos: 0,
+                name: "Main Cursor".to_string(),
+                valid: false,
+            },
         }
     }
 }
@@ -155,7 +182,7 @@ impl WaveView {
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::hover());
         let items = wave_data.iter().filter(|i| i.id == signal.s.id);
-        let color = ui.visuals().strong_text_color();
+        let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
         let mut it = items;
         let mut item_last: Option<&WaveDataItem> = None;
@@ -309,7 +336,7 @@ impl WaveView {
                             },
                             text,
                             Default::default(),
-                            color,
+                            text_color,
                         );
                     }
                 }
