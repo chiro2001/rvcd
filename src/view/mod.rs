@@ -7,7 +7,9 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui, PointerButton};
+use egui::{
+    pos2, vec2, Align2, Color32, Direction, Layout, PointerButton, Rect, Response, Sense, Ui,
+};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -458,8 +460,30 @@ impl WaveView {
             }
         }
         if let Some(info) = info {
+            self.paint_span(ui, wave_left);
             self.paint_cursor(ui, wave_left, info, &self.marker);
             self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+        }
+    }
+    pub fn paint_span(&self, ui: &mut Ui, offset: f32) {
+        let paint_rect = ui.max_rect();
+        let painter = ui.painter();
+        if self.marker.valid && self.marker_temp.valid {
+            let (a, b) = if self.marker.pos < self.marker_temp.pos {
+                (&self.marker, &self.marker_temp)
+            } else {
+                (&self.marker_temp, &self.marker)
+            };
+            let rect = Rect::from_min_max(
+                pos2(self.pos_to_x(a.pos) + offset, paint_rect.min.y),
+                pos2(self.pos_to_x(b.pos) + offset, paint_rect.max.y),
+            );
+            painter.rect(
+                rect,
+                0.0,
+                Color32::BLUE.linear_multiply(BG_MULTIPLY),
+                (LINE_WIDTH, Color32::BLUE),
+            );
         }
     }
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
