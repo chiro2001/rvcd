@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
+use tracing::info;
 use trees::Tree;
 
 pub mod utils;
@@ -93,10 +94,9 @@ impl Into<Option<BigUint>> for &WaveDataValue {
 
 impl WaveDataValue {
     pub fn as_radix(&self, radix: Radix) -> String {
-        let radix = radix.to_number();
         match self {
-            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v).to_str_radix(radix as u32),
-            WaveDataValue::Raw(v) => radix_vector_to_string(Radix::Hex, v),
+            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v).to_str_radix(radix.to_number() as u32),
+            WaveDataValue::Raw(v) => radix_vector_to_string(radix, v),
         }
     }
 }
