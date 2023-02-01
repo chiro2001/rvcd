@@ -25,7 +25,7 @@ const BG_MULTIPLY: f32 = 0.05;
 const TEXT_BG_MULTIPLY: f32 = 0.4;
 const CURSOR_NEAREST: f32 = 20.0;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
 pub struct WaveView {
     pub signals: Vec<SignalView>,
@@ -425,10 +425,39 @@ impl WaveView {
         }
         format!("{}{}", v, u)
     }
+    pub fn find_cursor(&self, x: f32) -> Option<i32> {
+        // info!("pos_new = {}", pos_new);
+        // let x = pos.x - offset;
+        let judge = |c: &WaveCursor| {
+            let cursor_x = self.pos_to_x(c.pos);
+            f32::abs(x - cursor_x)
+        };
+        // find dragging cursor to drag
+        // marker_temp cannot drag
+        match self.dragging_cursor_id {
+            None => self
+                .cursors
+                .iter()
+                .chain([&self.marker /*&self.marker_temp*/])
+                .map(|c| (judge(c), c))
+                .filter(|x| x.0 <= CURSOR_NEAREST)
+                .reduce(|a, b| if a.0 < b.0 { a } else { b })
+                .map(|x| x.1.id),
+            Some(id) => match id {
+                -1 => Some(self.marker.id),
+                // -2 => Some(self.marker_temp.id),
+                id => self.cursors.iter().find(|x| x.id == id).map(|x| x.id),
+            },
+        }
+    }
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
         let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
         let pos = response.interact_pointer_pos();
+        let pos_new = pos.map(|pos| {
+            self.x_to_pos(pos.x - offset)
+                .clamp(self.range.0, self.range.1)
+        });
         // allocate size for text
         let text_rect = painter.text(
             Pos2::ZERO,
@@ -476,51 +505,51 @@ impl WaveView {
                 _ => {}
             };
         }
+        let mut cursor_id: Option<i32> = None;
+        // let find_cursor = |s: Self, pos: Pos2| {
+        //     // info!("pos_new = {}", pos_new);
+        //     let x = pos.x - offset;
+        //     let judge = |c: &WaveCursor| {
+        //         let cursor_x = s.pos_to_x(c.pos);
+        //         f32::abs(x - cursor_x)
+        //     };
+        //     // find dragging cursor to drag
+        //     // marker_temp cannot drag
+        //     match s.dragging_cursor_id {
+        //         None => s
+        //             .cursors
+        //             .iter()
+        //             .chain([&s.marker /*&self.marker_temp*/])
+        //             .map(|c| (judge(c), c))
+        //             .filter(|x| x.0 <= CURSOR_NEAREST)
+        //             .reduce(|a, b| if a.0 < b.0 { a } else { b })
+        //             .map(|x| x.1.id),
+        //         Some(id) => match id {
+        //             -1 => Some(s.marker.id),
+        //             // -2 => Some(self.marker_temp.id),
+        //             id => s.cursors.iter().find(|x| x.id == id).map(|x| x.id),
+        //         },
+        //     }
+        // };
+        if let Some(pos) = pos {
+            cursor_id = self.find_cursor(pos.x - offset);
+        }
         // handle operations to cursors
         // primary drag cursors
         if response.drag_released() {
             self.dragging_cursor_id = None;
         } else {
             if response.dragged_by(PointerButton::Primary) {
-                if let Some(pos) = pos {
-                    let pos_new = self
-                        .x_to_pos(pos.x - offset)
-                        .clamp(self.range.0, self.range.1);
-                    // info!("pos_new = {}", pos_new);
-                    let x = pos.x - offset;
-                    let judge = |c: &WaveCursor| {
-                        let cursor_x = self.pos_to_x(c.pos);
-                        f32::abs(x - cursor_x)
+                if let Some(id) = cursor_id {
+                    let cursor = match id {
+                        -1 => Some(&mut self.marker),
+                        // -2 => &mut self.marker_temp,
+                        id => self.cursors.iter_mut().find(|x| x.id == id),
                     };
-                    // find dragging cursor to drag
-                    // marker_temp cannot drag
-                    let cursor_id: Option<i32> = match self.dragging_cursor_id {
-                        None => self
-                            .cursors
-                            .iter()
-                            .chain([&self.marker /*&self.marker_temp*/])
-                            .map(|c| (judge(c), c))
-                            .filter(|x| x.0 <= CURSOR_NEAREST)
-                            .reduce(|a, b| if a.0 < b.0 { a } else { b })
-                            .map(|x| x.1.id),
-                        Some(id) => match id {
-                            -1 => Some(self.marker.id),
-                            // -2 => Some(self.marker_temp.id),
-                            id => self.cursors.iter().find(|x| x.id == id).map(|x| x.id),
-                        },
-                    };
-                    // info!("cursor_id: {:?}", cursor_id);
-                    let cursor = cursor_id
-                        .map(|id| match id {
-                            -1 => Some(&mut self.marker),
-                            // -2 => &mut self.marker_temp,
-                            id => self.cursors.iter_mut().find(|x| x.id == id),
-                        })
-                        .flatten();
                     if let Some(cursor) = cursor {
                         self.dragging_cursor_id = Some(cursor.id);
                         // cursor.pos = (cursor.pos as i64 + delta_pos) as u64;
-                        cursor.pos = pos_new;
+                        cursor.pos = pos_new.unwrap();
                     }
                 }
             }
@@ -540,6 +569,16 @@ impl WaveView {
                     ui.close_menu();
                 }
             });
+            if let Some(right_click_pos) = self.right_click_pos {
+                if let Some(id) = self.find_cursor(right_click_pos.x - offset) {
+                    if ui.button("Remove cursor").clicked() {
+                        if let Some(index) = self.cursors.iter().position(|x| x.id == id) {
+                            self.cursors.remove(index);
+                        }
+                        ui.close_menu();
+                    }
+                }
+            }
         });
     }
     fn next_cursor_id(&self) -> i32 {

@@ -9,7 +9,7 @@ pub enum SignalViewMode {
     Analog,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Default, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Default, Debug, Clone)]
 pub enum SignalViewAlign {
     #[default]
     Left,
