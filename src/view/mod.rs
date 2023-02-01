@@ -403,9 +403,9 @@ impl WaveView {
     pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
         format!("{}{}", pos * timescale.0, timescale.1)
     }
-    pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo) {
+    pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
-        let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
+        let (_response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
         // allocate size for text
         let text_rect = painter.text(
             Pos2::ZERO,
@@ -414,13 +414,34 @@ impl WaveView {
             Default::default(),
             Color32::TRANSPARENT,
         );
-        painter.hline(
-            rect.x_range(),
-            rect.min.y + text_rect.height(),
-            (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY)),
-        );
+        let line_stroke = (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY));
+        painter.hline(rect.x_range(), rect.min.y + text_rect.height(), line_stroke);
+        let mut step: u64 = (self.range.1 - self.range.0) / 10;
+        while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 {
+            step /= 10;
+        }
+        let range = (self.range.0 / step * step)..(((self.range.1 / step) + 1) * step);
+        for pos in range.step_by(step as usize) {
+            let time = info.timescale.0 * pos;
+            let line_height_max = rect.height() - text_rect.height();
+            let line_height = match time {
+                time if time % (5 * step) == 0 => line_height_max / 2.0,
+                time if time % (10 * step) == 0 => line_height_max,
+                _ => line_height_max / 4.0,
+            };
+            painter.vline(
+                self.pos_to_x(pos) + offset,
+                RangeInclusive::new(
+                    rect.top() + text_rect.height(),
+                    rect.top() + text_rect.height() + line_height,
+                ),
+                // rect.y_range(),
+                line_stroke,
+            );
+        }
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
+        const UI_WIDTH_OFFSET: f32 = 8.0;
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
                 self.range = info.range;
@@ -472,7 +493,7 @@ impl WaveView {
                 });
                 header.col(|ui| {
                     if let Some(info) = info {
-                        self.time_bar(ui, info);
+                        self.time_bar(ui, info, fix_width + use_rect.left() + UI_WIDTH_OFFSET);
                     }
                 });
             })
@@ -507,6 +528,8 @@ impl WaveView {
                     },
                 );
             });
+        // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
+        // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
         if let Some(pos) = pos {
             let painter = ui.painter();
             painter.text(
