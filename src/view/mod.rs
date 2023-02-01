@@ -483,7 +483,9 @@ impl WaveView {
         } else {
             if response.dragged_by(PointerButton::Primary) {
                 if let Some(pos) = pos {
-                    let pos_new = self.x_to_pos(pos.x - offset);
+                    let pos_new = self
+                        .x_to_pos(pos.x - offset)
+                        .clamp(self.range.0, self.range.1);
                     // info!("pos_new = {}", pos_new);
                     let x = pos.x - offset;
                     let judge = |c: &WaveCursor| {
