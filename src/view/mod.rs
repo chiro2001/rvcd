@@ -22,6 +22,7 @@ const LINE_WIDTH: f32 = 1.5;
 const TEXT_ROUND_OFFSET: f32 = 4.0;
 const MIN_SIGNAL_WIDTH: f32 = 2.0;
 const BG_MULTIPLY: f32 = 0.05;
+const TEXT_BG_MULTIPLY: f32 = 0.4;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
@@ -636,11 +637,11 @@ impl WaveView {
             };
             let time = self.pos_to_time(&info.timescale, cursor.pos);
             let time_rect = paint_text(time.to_string(), 0.0);
-            painter.rect_filled(time_rect, 0.0, Color32::YELLOW);
+            painter.rect_filled(time_rect, 0.0, Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY));
             paint_text(time, 0.0);
             if !cursor.name.is_empty() {
                 let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
-                painter.rect_filled(name_rect, 0.0, Color32::YELLOW);
+                painter.rect_filled(name_rect, 0.0, Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY));
                 paint_text(cursor.name.to_string(), time_rect.height());
             }
         }
