@@ -7,9 +7,7 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::{
-    pos2, vec2, Align2, Color32, Direction, Layout, PointerButton, Pos2, Rect, Response, Sense, Ui,
-};
+use egui::{pos2, vec2, Align2, Color32, Direction, FontId, Layout, PointerButton, Pos2, Rect, Response, Sense, Ui, DragValue, Widget};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -37,6 +35,7 @@ pub struct WaveView {
     pub marker: WaveCursor,
     pub marker_temp: WaveCursor,
     pub wave_width: f32,
+    pub signal_font_size: f32,
 }
 
 impl Default for WaveView {
@@ -53,6 +52,7 @@ impl Default for WaveView {
             marker: WaveCursor::from_string("Main Cursor"),
             marker_temp: WaveCursor::from_string(""),
             wave_width: 100.0,
+            signal_font_size: 12.0,
         }
     }
 }
@@ -105,6 +105,14 @@ impl WaveView {
             if ui.checkbox(&mut self.show_text, "Show Text").clicked() {
                 ui.close_menu();
             }
+            ui.horizontal(|ui| {
+                ui.label("Value font size ");
+                DragValue::new(&mut self.signal_font_size)
+                    .clamp_range(10.0..=20.0)
+                    .speed(0.05)
+                    .suffix(" px")
+                    .ui(ui);
+            });
         });
     }
     pub fn toolbar(&mut self, ui: &mut Ui) {
@@ -285,7 +293,8 @@ impl WaveView {
                                 SignalViewAlign::Right => Align2::RIGHT_CENTER,
                             },
                             text,
-                            Default::default(),
+                            // Default::default(),
+                            FontId::monospace(self.signal_font_size),
                             text_color,
                         );
                     }
