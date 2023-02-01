@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
-use tracing::info;
 use trees::Tree;
 
 pub mod utils;
