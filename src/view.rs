@@ -10,17 +10,14 @@ use std::ops::RangeInclusive;
 use std::sync::mpsc;
 use tracing::{debug, info, warn};
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub enum SignalViewMode {
+    #[default]
+    Default,
     Number(Radix),
     Analog,
 }
 
-impl Default for SignalViewMode {
-    fn default() -> Self {
-        Self::Number(Radix::Hex)
-    }
-}
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Default, Debug)]
 pub enum SignalViewAlign {
     #[default]
@@ -59,6 +56,8 @@ pub struct WaveView {
     pub range: (u64, u64),
     pub align: SignalViewAlign,
     pub background: bool,
+    pub show_text: bool,
+    pub default_radix: Radix,
     #[serde(skip)]
     pub tx: Option<mpsc::Sender<RvcdMsg>>,
 }
@@ -70,6 +69,8 @@ impl Default for WaveView {
             range: (0, 0),
             align: Default::default(),
             background: true,
+            show_text: true,
+            default_radix: Radix::Hex,
             tx: None,
         }
     }
@@ -108,6 +109,9 @@ impl WaveView {
                 });
             });
             if ui.checkbox(&mut self.background, "Background").clicked() {
+                ui.close_menu();
+            }
+            if ui.checkbox(&mut self.show_text, "Show Text").clicked() {
                 ui.close_menu();
             }
         });
@@ -270,7 +274,7 @@ impl WaveView {
                             }
                         }
                     }
-                    if rect.width() > MIN_TEXT_WIDTH {
+                    if rect.width() > MIN_TEXT_WIDTH && rect.width() > (text.len() * 8) as f32 {
                         let pos = match self.align {
                             SignalViewAlign::Left => rect.left_center() + vec2(4.0, 0.0),
                             SignalViewAlign::Center => {
@@ -278,17 +282,19 @@ impl WaveView {
                             }
                             SignalViewAlign::Right => rect.right_center(),
                         };
-                        painter.text(
-                            pos,
-                            match self.align {
-                                SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                            },
-                            text,
-                            Default::default(),
-                            color,
-                        );
+                        if self.show_text {
+                            painter.text(
+                                pos,
+                                match self.align {
+                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                                },
+                                text,
+                                Default::default(),
+                                color,
+                            );
+                        }
                     }
                 }
             } else {
