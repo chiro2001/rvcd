@@ -5,9 +5,10 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
-use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
+use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Response, Sense, Ui};
+use egui::emath::RectTransform;
+use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Pos2, Rect, Response, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -341,9 +342,14 @@ impl WaveView {
     }
     pub fn x_to_pos(&self, x: f32) -> u64 {
         (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as u64 + self.range.0
+        // x as u64
     }
     pub fn pos_to_x(&self, pos: u64) -> f32 {
         (pos - self.range.0) as f32 * self.wave_width / (self.range.1 - self.range.0) as f32
+        // pos as f32
+    }
+    pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
+        format!("{}{}", pos * timescale.0, timescale.1)
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         if let Some(info) = info {
@@ -378,6 +384,7 @@ impl WaveView {
             .column(Column::exact(self.wave_width).resizable(false));
         // .column(Column::auto())
         // .column(Column::remainder());
+        let mut wave_left: f32 = 0.0;
         let mut pos = None;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
@@ -406,9 +413,9 @@ impl WaveView {
                             row.col(|ui| {
                                 if let Some(info) = info {
                                     let response = self.ui_signal_wave(signal, wave_data, info, ui);
+                                    wave_left = ui.available_rect_before_wrap().left();
                                     if let Some(pointer_pos) = response.interact_pointer_pos() {
-                                        // info!("pointer: {:?}", pointer_pos);
-                                        pos = Some(pointer_pos - vec2(fix_width, 0.0));
+                                        pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
                                     }
                                 }
                             });
@@ -417,19 +424,41 @@ impl WaveView {
                 );
             });
         if let Some(pos) = pos {
+            let painter = ui.painter();
+            painter.text(
+                pos + vec2(wave_left, 0.0),
+                Align2::RIGHT_BOTTOM,
+                format!("{:?}", pos),
+                Default::default(),
+                Color32::YELLOW,
+            );
             self.marker.valid = true;
             self.marker.pos = self.x_to_pos(pos.x);
         }
-        let paint_rect = Rect::from_min_size(
-            use_rect.min + vec2(fix_width, 0.0),
-            use_rect.size() - vec2(fix_width, 0.0),
+        if let Some(info) = info {
+            self.paint_cursor(ui, wave_left, info, &self.marker);
+        }
+    }
+    pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
+        let paint_rect = ui.max_rect();
+        let painter = ui.painter();
+        painter.rect_stroke(paint_rect, 0.0, (LINE_WIDTH, Color32::BLUE));
+        painter.text(
+            paint_rect.min,
+            Align2::LEFT_TOP,
+            "paint_rect_min",
+            Default::default(),
+            Color32::YELLOW,
         );
-        let painter = ui.painter_at(paint_rect);
-        if self.marker.valid {
-            painter.vline(
-                self.pos_to_x(self.marker.pos) + fix_width,
-                use_rect.y_range(),
-                (LINE_WIDTH, Color32::YELLOW),
+        if cursor.valid {
+            let x = self.pos_to_x(cursor.pos) + offset;
+            painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, Color32::YELLOW));
+            painter.text(
+                pos2(x, paint_rect.top()),
+                Align2::LEFT_TOP,
+                self.pos_to_time(&info.timescale, cursor.pos),
+                Default::default(),
+                Color32::YELLOW,
             );
         }
     }
