@@ -23,6 +23,7 @@ const TEXT_ROUND_OFFSET: f32 = 4.0;
 const MIN_SIGNAL_WIDTH: f32 = 2.0;
 const BG_MULTIPLY: f32 = 0.05;
 const TEXT_BG_MULTIPLY: f32 = 0.4;
+const CURSOR_NEAREST: f32 = 10.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
@@ -38,6 +39,9 @@ pub struct WaveView {
     pub cursors: Vec<WaveCursor>,
     pub marker: WaveCursor,
     pub marker_temp: WaveCursor,
+    #[serde(skip)]
+    pub dragging_cursor_id: Option<i32>,
+    #[serde(skip)]
     pub wave_width: f32,
     pub signal_font_size: f32,
 }
@@ -53,8 +57,9 @@ impl Default for WaveView {
             default_radix: Radix::Hex,
             tx: None,
             cursors: vec![],
-            marker: WaveCursor::from_string("Main Cursor"),
-            marker_temp: WaveCursor::from_string(""),
+            marker: WaveCursor::from_string(-1, "Main Cursor"),
+            marker_temp: WaveCursor::from_string(-2, ""),
+            dragging_cursor_id: None,
             wave_width: 100.0,
             signal_font_size: 12.0,
         }
@@ -397,6 +402,10 @@ impl WaveView {
         (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as u64 + self.range.0
         // x as u64
     }
+    pub fn x_to_pos_delta(&self, x: f32) -> i64 {
+        (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as i64 + self.range.0 as i64
+        // x as u64
+    }
     pub fn pos_to_x(&self, pos: u64) -> f32 {
         (pos - self.range.0) as f32 * self.wave_width / (self.range.1 - self.range.0) as f32
         // pos as f32
@@ -415,7 +424,7 @@ impl WaveView {
     }
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
-        let (_response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
+        let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
         // allocate size for text
         let text_rect = painter.text(
             Pos2::ZERO,
@@ -431,6 +440,7 @@ impl WaveView {
             step /= 10;
         }
         let range = (self.range.0 / step * step)..(((self.range.1 / step) + 1) * step);
+        // paint time stamp labels
         for pos in range.step_by(step as usize) {
             let time = info.timescale.0 * pos;
             let line_height_max = rect.height() - text_rect.height();
@@ -461,6 +471,50 @@ impl WaveView {
                 }
                 _ => {}
             };
+        }
+        // handle operations to cursors
+        // primary drag cursors
+        if response.drag_started() && response.dragged_by(PointerButton::Primary) {
+            if let Some(pos) = response.interact_pointer_pos() {
+                let pos_new = self.x_to_pos(pos.x - offset);
+                // info!("pos_new = {}", pos_new);
+                let x = pos.x - offset;
+                let judge = |c: &WaveCursor| {
+                    let cursor_x = self.pos_to_x(c.pos);
+                    f32::abs(x - cursor_x)
+                };
+                // find dragging cursor to drag
+                let cursor_id: Option<i32> = match self.dragging_cursor_id {
+                    None => self
+                        .cursors
+                        .iter()
+                        .chain([&self.marker, &self.marker_temp])
+                        .map(|c| (judge(c), c))
+                        .filter(|x| x.0 <= CURSOR_NEAREST)
+                        .reduce(|a, b| if a.0 < b.0 { a } else { b })
+                        .map(|x| x.1.id),
+                    Some(id) => match id {
+                        -1 => Some(self.marker.id),
+                        // -2 => Some(self.marker_temp.id),
+                        id => self.cursors.iter().find(|x| x.id == id).map(|x| x.id),
+                    },
+                };
+                let cursor = cursor_id
+                    .map(|id| match id {
+                        -1 => Some(&mut self.marker),
+                        // -2 => &mut self.marker_temp,
+                        id => self.cursors.iter_mut().find(|x| x.id == id),
+                    })
+                    .flatten();
+                if let Some(cursor) = cursor {
+                    self.dragging_cursor_id = Some(cursor.id);
+                    // cursor.pos = (cursor.pos as i64 + delta_pos) as u64;
+                    cursor.pos = pos_new;
+                }
+            }
+        }
+        if response.drag_released() {
+            self.dragging_cursor_id = None;
         }
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
@@ -578,6 +632,9 @@ impl WaveView {
             self.paint_span(ui, wave_left, info, pos);
             self.paint_cursor(ui, wave_left, info, &self.marker);
             self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+            for cursor in &self.cursors {
+                self.paint_cursor(ui, wave_left, info, cursor);
+            }
         }
     }
     pub fn paint_span(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, pos: Option<Pos2>) {
@@ -637,11 +694,19 @@ impl WaveView {
             };
             let time = self.pos_to_time(&info.timescale, cursor.pos);
             let time_rect = paint_text(time.to_string(), 0.0);
-            painter.rect_filled(time_rect, 0.0, Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY));
+            painter.rect_filled(
+                time_rect,
+                0.0,
+                Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY),
+            );
             paint_text(time, 0.0);
             if !cursor.name.is_empty() {
                 let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
-                painter.rect_filled(name_rect, 0.0, Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY));
+                painter.rect_filled(
+                    name_rect,
+                    0.0,
+                    Color32::YELLOW.linear_multiply(TEXT_BG_MULTIPLY),
+                );
                 paint_text(cursor.name.to_string(), time_rect.height());
             }
         }

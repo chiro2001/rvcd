@@ -1,12 +1,12 @@
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub struct WaveCursor {
-    pub id: usize,
+    pub id: i32,
     pub pos: u64,
     pub name: String,
     pub valid: bool,
 }
 impl WaveCursor {
-    pub fn new(id: usize, pos: u64) -> Self {
+    pub fn new(id: i32, pos: u64) -> Self {
         Self {
             id,
             pos,
@@ -14,9 +14,9 @@ impl WaveCursor {
             valid: true,
         }
     }
-    pub fn from_string(name: &str) -> Self {
+    pub fn from_string(id: i32, name: &str) -> Self {
         Self {
-            id: 0,
+            id,
             pos: 0,
             name: name.to_string(),
             valid: false,
