@@ -146,6 +146,7 @@ impl WaveView {
         let mut it = items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
+        let mut ignore_has_x = false;
         let mut paint_signal = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
             let single: bool = match &item_now.value {
                 WaveDataValue::Comp(_) => {
@@ -183,9 +184,14 @@ impl WaveView {
                             rect.y_range(),
                         ),
                         0.0,
-                        Color32::GREEN,
+                        if ignore_has_x {
+                            Color32::DARK_RED
+                        } else {
+                            Color32::GREEN
+                        },
                     );
                     ignore_x_start = -1.0;
+                    ignore_has_x = false;
                 }
                 let paint_x = || {
                     painter.rect(
@@ -290,6 +296,10 @@ impl WaveView {
                 if ignore_x_start < 0.0 {
                     ignore_x_start = rect.left();
                 }
+                let text = item_now.value.to_string();
+                if text.contains('x') || text.contains('z') {
+                    ignore_has_x = true;
+                }
             }
         };
         while let Some(item) = it.next() {
@@ -315,7 +325,11 @@ impl WaveView {
                     signal_rect.y_range(),
                 ),
                 0.0,
-                Color32::GREEN,
+                if ignore_has_x {
+                    Color32::DARK_RED
+                } else {
+                    Color32::GREEN
+                },
             )
         }
     }
