@@ -444,18 +444,24 @@ impl WaveView {
         if cursor.valid {
             let x = self.pos_to_x(cursor.pos) + offset;
             painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, Color32::YELLOW));
-            let paint_text = || {
+            let paint_text = |text: String, offset_y: f32| {
                 painter.text(
-                    pos2(x, paint_rect.top()),
+                    pos2(x, paint_rect.top() + offset_y),
                     Align2::LEFT_TOP,
-                    self.pos_to_time(&info.timescale, cursor.pos),
+                    text,
                     Default::default(),
                     Color32::BLACK,
                 )
             };
-            let text_rect = paint_text();
-            painter.rect_filled(text_rect, 0.0, Color32::YELLOW);
-            paint_text();
+            let time = self.pos_to_time(&info.timescale, cursor.pos);
+            let time_rect = paint_text(time.to_string(), 0.0);
+            painter.rect_filled(time_rect, 0.0, Color32::YELLOW);
+            paint_text(time, 0.0);
+            if !cursor.name.is_empty() {
+                let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
+                painter.rect_filled(name_rect, 0.0, Color32::YELLOW);
+                paint_text(cursor.name.to_string(), time_rect.height());
+            }
         }
     }
     pub fn reset(&mut self) {
