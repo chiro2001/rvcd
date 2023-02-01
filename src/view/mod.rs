@@ -3,6 +3,8 @@ pub mod signal;
 
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
+use crate::view::cursor::WaveCursor;
+use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WireValue};
 use eframe::emath::Align;
 use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Sense, Ui};
@@ -12,8 +14,6 @@ use num_traits::{One, Zero};
 use std::ops::RangeInclusive;
 use std::sync::mpsc;
 use tracing::{debug, info, warn};
-use crate::view::cursor::WaveCursor;
-use crate::view::signal::{SIGNAL_HEIGHT_DEFAULT, SignalView, SignalViewAlign, SignalViewMode};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
@@ -394,11 +394,14 @@ impl WaveView {
                         let signal = self.signals.get(row_index);
                         if let Some(signal) = signal {
                             row.col(|ui| self.ui_signal_label(signal, ui));
-                            row.col(|ui| {
+                            let (_rect, response) = row.col(|ui| {
                                 if let Some(info) = info {
                                     self.ui_signal_wave(signal, wave_data, info, ui);
                                 }
                             });
+                            if let Some(pointer_pos) = response.interact_pointer_pos() {
+                                info!("pointer: {:?}", pointer_pos);
+                            }
                         }
                     },
                 );
