@@ -44,6 +44,8 @@ pub struct WaveView {
     #[serde(skip)]
     pub wave_width: f32,
     pub signal_font_size: f32,
+    #[serde(skip)]
+    pub right_click_pos: Option<Pos2>,
 }
 
 impl Default for WaveView {
@@ -62,6 +64,7 @@ impl Default for WaveView {
             dragging_cursor_id: None,
             wave_width: 100.0,
             signal_font_size: 12.0,
+            right_click_pos: None,
         }
     }
 }
@@ -425,6 +428,7 @@ impl WaveView {
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
         let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
+        let pos = response.interact_pointer_pos();
         // allocate size for text
         let text_rect = painter.text(
             Pos2::ZERO,
@@ -478,7 +482,7 @@ impl WaveView {
             self.dragging_cursor_id = None;
         } else {
             if response.dragged_by(PointerButton::Primary) {
-                if let Some(pos) = response.interact_pointer_pos() {
+                if let Some(pos) = pos {
                     let pos_new = self.x_to_pos(pos.x - offset);
                     // info!("pos_new = {}", pos_new);
                     let x = pos.x - offset;
@@ -519,6 +523,30 @@ impl WaveView {
                 }
             }
         }
+        if response.clicked_by(PointerButton::Secondary)
+            || response.dragged_by(PointerButton::Secondary)
+        {
+            self.right_click_pos = pos;
+        }
+        // pop up cursor menu
+        response.context_menu(|ui| {
+            ui.add_enabled_ui(self.right_click_pos.is_some(), |ui| {
+                if ui.button("Add cursor").clicked() {
+                    let pos_new = self.x_to_pos(self.right_click_pos.unwrap().x - offset);
+                    self.cursors
+                        .push(WaveCursor::new(self.next_cursor_id(), pos_new));
+                    ui.close_menu();
+                }
+            });
+        });
+    }
+    fn next_cursor_id(&self) -> i32 {
+        self.cursors
+            .iter()
+            .map(|x| x.id)
+            .max()
+            .map(|x| x + 1)
+            .unwrap_or(0)
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         const UI_WIDTH_OFFSET: f32 = 8.0;
