@@ -181,6 +181,7 @@ impl WaveView {
                                         if let Some(zoom) = zoom {
                                             let zoom = 1.0 / zoom;
                                             if let Some(_pos) = pos_hover {
+                                                // TODO: zoom from this pos
                                                 new_range = (
                                                     self.range.0,
                                                     ((self.range.1 as f32 * zoom) as u64).clamp(
