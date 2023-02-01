@@ -24,6 +24,7 @@ const MIN_SIGNAL_WIDTH: f32 = 2.0;
 const BG_MULTIPLY: f32 = 0.05;
 const TEXT_BG_MULTIPLY: f32 = 0.4;
 const CURSOR_NEAREST: f32 = 20.0;
+const UI_WIDTH_OFFSET: f32 = 8.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
@@ -426,8 +427,6 @@ impl WaveView {
         format!("{}{}", v, u)
     }
     pub fn find_cursor(&self, x: f32) -> Option<i32> {
-        // info!("pos_new = {}", pos_new);
-        // let x = pos.x - offset;
         let judge = |c: &WaveCursor| {
             let cursor_x = self.pos_to_x(c.pos);
             f32::abs(x - cursor_x)
@@ -506,31 +505,6 @@ impl WaveView {
             };
         }
         let mut cursor_id: Option<i32> = None;
-        // let find_cursor = |s: Self, pos: Pos2| {
-        //     // info!("pos_new = {}", pos_new);
-        //     let x = pos.x - offset;
-        //     let judge = |c: &WaveCursor| {
-        //         let cursor_x = s.pos_to_x(c.pos);
-        //         f32::abs(x - cursor_x)
-        //     };
-        //     // find dragging cursor to drag
-        //     // marker_temp cannot drag
-        //     match s.dragging_cursor_id {
-        //         None => s
-        //             .cursors
-        //             .iter()
-        //             .chain([&s.marker /*&self.marker_temp*/])
-        //             .map(|c| (judge(c), c))
-        //             .filter(|x| x.0 <= CURSOR_NEAREST)
-        //             .reduce(|a, b| if a.0 < b.0 { a } else { b })
-        //             .map(|x| x.1.id),
-        //         Some(id) => match id {
-        //             -1 => Some(s.marker.id),
-        //             // -2 => Some(self.marker_temp.id),
-        //             id => s.cursors.iter().find(|x| x.id == id).map(|x| x.id),
-        //         },
-        //     }
-        // };
         if let Some(pos) = pos {
             cursor_id = self.find_cursor(pos.x - offset);
         }
@@ -590,7 +564,6 @@ impl WaveView {
             .unwrap_or(0)
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
-        const UI_WIDTH_OFFSET: f32 = 8.0;
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
                 self.range = info.range;
@@ -623,7 +596,7 @@ impl WaveView {
             .column(Column::exact(self.wave_width).resizable(false));
         // .column(Column::auto())
         // .column(Column::remainder());
-        let mut wave_left: f32 = 0.0;
+        let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
         let mut pos = None;
         let mut drag_started = false;
         let mut drag_release = false;
@@ -642,7 +615,7 @@ impl WaveView {
                 });
                 header.col(|ui| {
                     if let Some(info) = info {
-                        self.time_bar(ui, info, fix_width + use_rect.left() + UI_WIDTH_OFFSET);
+                        self.time_bar(ui, info, wave_left);
                     }
                 });
             })
