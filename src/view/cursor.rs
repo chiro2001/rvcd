@@ -22,4 +22,8 @@ impl WaveCursor {
             valid: false,
         }
     }
+    pub fn set_pos_valid(&mut self, pos: u64) {
+        self.pos = pos;
+        self.valid = true;
+    }
 }

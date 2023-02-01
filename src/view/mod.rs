@@ -385,6 +385,8 @@ impl WaveView {
         // .column(Column::remainder());
         let mut wave_left: f32 = 0.0;
         let mut pos = None;
+        let mut drag_started = false;
+        let mut drag_release = false;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 let mut width = 0.0;
@@ -415,6 +417,8 @@ impl WaveView {
                                     wave_left = ui.available_rect_before_wrap().left();
                                     if let Some(pointer_pos) = response.interact_pointer_pos() {
                                         pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
+                                        drag_started = response.drag_started();
+                                        drag_release = response.drag_released();
                                     }
                                 }
                             });
@@ -431,11 +435,14 @@ impl WaveView {
                 Default::default(),
                 Color32::YELLOW,
             );
-            self.marker.valid = true;
-            self.marker.pos = self.x_to_pos(pos.x);
+            self.marker_temp.set_pos_valid(self.x_to_pos(pos.x));
+            if drag_release {
+                self.marker.set_pos_valid(self.marker_temp.pos);
+            }
         }
         if let Some(info) = info {
             self.paint_cursor(ui, wave_left, info, &self.marker);
+            self.paint_cursor(ui, wave_left, info, &self.marker_temp);
         }
     }
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
