@@ -179,14 +179,17 @@ impl WaveView {
                                             })
                                             .flatten();
                                         if let Some(zoom) = zoom {
-                                            new_range = (
-                                                self.range.0,
-                                                ((self.range.1 as f32 * zoom) as u64).clamp(
-                                                    info.range.0
-                                                        + (info.range.1 - info.range.0) / 200,
-                                                    info.range.1 * 2,
-                                                ),
-                                            );
+                                            let zoom = 1.0 / zoom;
+                                            if let Some(_pos) = pos_hover {
+                                                new_range = (
+                                                    self.range.0,
+                                                    ((self.range.1 as f32 * zoom) as u64).clamp(
+                                                        info.range.0
+                                                            + (info.range.1 - info.range.0) / 200,
+                                                        info.range.1 * 2,
+                                                    ),
+                                                );
+                                            }
                                         }
                                     }
                                 }
