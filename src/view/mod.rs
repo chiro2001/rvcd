@@ -19,7 +19,7 @@ use std::sync::mpsc;
 use tracing::{debug, info, warn};
 
 const LINE_WIDTH: f32 = 1.5;
-const TEXT_LEFT_OFFSET: f32 = 4.0;
+const TEXT_ROUND_OFFSET: f32 = 4.0;
 const MIN_SIGNAL_WIDTH: f32 = 2.0;
 const BG_MULTIPLY: f32 = 0.05;
 
@@ -285,15 +285,17 @@ impl WaveView {
                             FontId::monospace(self.signal_font_size),
                             Color32::TRANSPARENT,
                         );
-                        if rect.width() >= text_min_rect.width() + TEXT_LEFT_OFFSET {
+                        if rect.width() >= text_min_rect.width() + TEXT_ROUND_OFFSET {
                             let pos = match self.align {
                                 SignalViewAlign::Left => {
-                                    rect.left_center() + vec2(TEXT_LEFT_OFFSET, 0.0)
+                                    rect.left_center() + vec2(TEXT_ROUND_OFFSET, 0.0)
                                 }
                                 SignalViewAlign::Center => {
                                     rect.left_center() + vec2(width * percent_text, 0.0)
                                 }
-                                SignalViewAlign::Right => rect.right_center(),
+                                SignalViewAlign::Right => {
+                                    rect.right_center() - vec2(TEXT_ROUND_OFFSET, 0.0)
+                                }
                             };
                             // pre-paint to calculate size
                             let text_rect = painter.text(
@@ -307,12 +309,12 @@ impl WaveView {
                                 FontId::monospace(self.signal_font_size),
                                 Color32::TRANSPARENT,
                             );
-                            let paint_text = if rect.width() >= text_rect.width() + TEXT_LEFT_OFFSET
-                            {
-                                text
-                            } else {
-                                "+".to_string()
-                            };
+                            let paint_text =
+                                if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
+                                    text
+                                } else {
+                                    "+".to_string()
+                                };
                             painter.text(
                                 pos,
                                 match self.align {
@@ -393,9 +395,17 @@ impl WaveView {
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo) {
         let rect = ui.max_rect();
         let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
+        // allocate size for text
+        let text_rect = painter.text(
+            Pos2::ZERO,
+            Align2::RIGHT_BOTTOM,
+            "0",
+            FontId::monospace(self.signal_font_size),
+            Color32::TRANSPARENT,
+        );
         painter.hline(
             rect.x_range(),
-            rect.min.y + LINE_WIDTH,
+            rect.min.y + text_rect.height(),
             (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY)),
         );
     }
