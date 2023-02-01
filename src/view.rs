@@ -391,17 +391,21 @@ impl WaveView {
                     ui.strong("Wave");
                 });
             })
-            .body(|mut body| {
-                for signal in self.signals.iter() {
-                    body.row(signal.height, |mut row| {
-                        row.col(|ui| self.ui_signal_label(signal, ui));
-                        row.col(|ui| {
-                            if let Some(info) = info {
-                                self.ui_signal_wave(signal, wave_data, info, ui);
-                            }
-                        });
-                    });
-                }
+            .body(|body| {
+                body.heterogeneous_rows(
+                    self.signals.iter().map(|x| x.height),
+                    |row_index, mut row| {
+                        let signal = self.signals.get(row_index);
+                        if let Some(signal) = signal {
+                            row.col(|ui| self.ui_signal_label(signal, ui));
+                            row.col(|ui| {
+                                if let Some(info) = info {
+                                    self.ui_signal_wave(signal, wave_data, info, ui);
+                                }
+                            });
+                        }
+                    },
+                );
             });
     }
     pub fn reset(&mut self) {
