@@ -123,7 +123,7 @@ impl WaveView {
             if ui.button("⛔ Clear").clicked() {
                 self.signals.clear();
             }
-            if ui.button("🔄 Refresh").clicked() {
+            if ui.button("🔄 Reload").clicked() {
                 if let Some(tx) = &self.tx {
                     debug!("reload msg sent");
                     tx.send(RvcdMsg::Reload).unwrap();
@@ -411,7 +411,7 @@ impl WaveView {
             Pos2::ZERO,
             Align2::RIGHT_BOTTOM,
             "0",
-            FontId::monospace(self.signal_font_size),
+            Default::default(),
             Color32::TRANSPARENT,
         );
         painter.hline(
