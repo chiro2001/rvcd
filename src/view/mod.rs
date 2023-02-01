@@ -490,7 +490,7 @@ impl WaveView {
                         .iter()
                         .chain([&self.marker, &self.marker_temp])
                         .map(|c| (judge(c), c))
-                        .filter(|x| x.0 <= CURSOR_NEAREST)
+                        // .filter(|x| x.0 <= CURSOR_NEAREST)
                         .reduce(|a, b| if a.0 < b.0 { a } else { b })
                         .map(|x| x.1.id),
                     Some(id) => match id {
@@ -499,6 +499,7 @@ impl WaveView {
                         id => self.cursors.iter().find(|x| x.id == id).map(|x| x.id),
                     },
                 };
+                info!("cursor_id: {:?}", cursor_id);
                 let cursor = cursor_id
                     .map(|id| match id {
                         -1 => Some(&mut self.marker),

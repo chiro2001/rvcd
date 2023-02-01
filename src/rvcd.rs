@@ -4,6 +4,8 @@ use crate::run_mode::RunMode;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
+use crate::view::signal::SignalView;
+use crate::view::WaveView;
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
@@ -13,8 +15,6 @@ use rfd::FileHandle;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::info;
-use crate::view::signal::SignalView;
-use crate::view::WaveView;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 pub enum State {
@@ -314,6 +314,20 @@ impl Rvcd {
         let mut debug_on_hover = ui.ctx().debug_on_hover();
         ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
         ui.ctx().set_debug_on_hover(debug_on_hover);
+        ui.horizontal(|ui| {
+            if ui
+                .button("Reset Rvcd")
+                .on_hover_text("Forget scroll, positions, sizes etc")
+                .clicked()
+            {
+                *ui.ctx().memory() = Default::default();
+            }
+
+            if ui.button("Reset everything").clicked() {
+                self.state = Default::default();
+                *ui.ctx().memory() = Default::default();
+            }
+        });
         egui::warn_if_debug_build(ui);
     }
     pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
