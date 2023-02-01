@@ -6,8 +6,7 @@ use crate::wave::{WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use std::ops::RangeInclusive;
-use tracing::debug;
-use tracing::log::warn;
+use tracing::{debug, warn};
 
 impl WaveView {
     pub fn menu(&mut self, ui: &mut Ui) {
