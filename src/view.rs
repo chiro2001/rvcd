@@ -2,7 +2,7 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Layout, Rect, Sense, Ui, Direction};
+use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -295,18 +295,22 @@ impl WaveView {
             .show_inside(ui, |ui| {
                 self.toolbar(ui);
             });
+        let rect = ui.max_rect();
+        const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
         let table = TableBuilder::new(ui)
             .striped(true)
-            .resizable(true)
+            .resizable(false)
             // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .cell_layout(egui::Layout::centered_and_justified(Direction::TopDown))
-            .column(Column::auto())
-            .column(Column::remainder())
-            // .min_scrolled_height(0.0)
-            ;
+            .column(Column::exact(DEFAULT_MIN_SIGNAL_WIDTH).resizable(true))
+            .column(Column::exact(rect.width() - DEFAULT_MIN_SIGNAL_WIDTH).resizable(false));
+            // .column(Column::auto())
+            // .column(Column::remainder());
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
+                let mut width = 0.0;
                 header.col(|ui| {
+                    width = ui.available_width();
                     if let Some(info) = info {
                         ui.strong(format!(
                             "Time #{}~#{} {}{}",
@@ -315,6 +319,7 @@ impl WaveView {
                     }
                 });
                 header.col(|ui| {
+                    ui.set_width(width);
                     ui.strong("Wave");
                 });
             })
