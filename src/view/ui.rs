@@ -1,7 +1,7 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
-use crate::view::{WaveView, BG_MULTIPLY, UI_WIDTH_OFFSET, LINE_WIDTH};
+use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET};
 use crate::wave::{WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
@@ -177,7 +177,9 @@ impl WaveView {
         }
         if let Some(info) = info {
             self.paint_span(ui, wave_left, info, pos);
-            self.paint_cursor(ui, wave_left, info, &self.marker);
+            if self.marker.valid {
+                self.paint_cursor(ui, wave_left, info, &self.marker);
+            }
             if self.marker_temp.valid {
                 self.paint_cursor(ui, wave_left, info, &self.marker_temp);
             }
