@@ -274,7 +274,10 @@ impl WaveView {
                             }
                         }
                     }
-                    if rect.width() > MIN_TEXT_WIDTH && rect.width() > (text.len() * 8) as f32 {
+                    if self.show_text
+                        && rect.width() > MIN_TEXT_WIDTH
+                        && rect.width() > (text.len() * 8) as f32
+                    {
                         let pos = match self.align {
                             SignalViewAlign::Left => rect.left_center() + vec2(4.0, 0.0),
                             SignalViewAlign::Center => {
@@ -282,19 +285,17 @@ impl WaveView {
                             }
                             SignalViewAlign::Right => rect.right_center(),
                         };
-                        if self.show_text {
-                            painter.text(
-                                pos,
-                                match self.align {
-                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                                },
-                                text,
-                                Default::default(),
-                                color,
-                            );
-                        }
+                        painter.text(
+                            pos,
+                            match self.align {
+                                SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                            },
+                            text,
+                            Default::default(),
+                            color,
+                        );
                     }
                 }
             } else {
