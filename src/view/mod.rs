@@ -403,6 +403,15 @@ impl WaveView {
     pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
         format!("{}{}", pos * timescale.0, timescale.1)
     }
+    pub fn pos_to_time_fmt(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
+        let mut v = pos * timescale.0;
+        let mut u = timescale.1;
+        while v > 10 && u.larger().is_some() {
+            v = v / 10;
+            u = u.larger().unwrap();
+        }
+        format!("{}{}", v, u)
+    }
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
         let (_response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
@@ -425,19 +434,32 @@ impl WaveView {
             let time = info.timescale.0 * pos;
             let line_height_max = rect.height() - text_rect.height();
             let line_height = match time {
-                time if time % (5 * step) == 0 => line_height_max / 2.0,
                 time if time % (10 * step) == 0 => line_height_max,
+                time if time % (5 * step) == 0 => line_height_max / 2.0,
                 _ => line_height_max / 4.0,
             };
+            let x = self.pos_to_x(pos) + offset;
             painter.vline(
-                self.pos_to_x(pos) + offset,
+                x,
                 RangeInclusive::new(
                     rect.top() + text_rect.height(),
                     rect.top() + text_rect.height() + line_height,
                 ),
-                // rect.y_range(),
                 line_stroke,
             );
+            match time {
+                time if time % (5 * step) == 0 => {
+                    let time_text = self.pos_to_time_fmt(&info.timescale, pos);
+                    painter.text(
+                        pos2(x, rect.top()),
+                        Align2::LEFT_TOP,
+                        time_text,
+                        Default::default(),
+                        ui.visuals().text_color(),
+                    );
+                }
+                _ => {}
+            };
         }
     }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {

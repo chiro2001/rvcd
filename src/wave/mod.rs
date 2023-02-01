@@ -50,6 +50,30 @@ impl Display for WaveTimescaleUnit {
         write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
     }
 }
+impl WaveTimescaleUnit {
+    pub fn smaller(&self) -> Option<Self> {
+        use WaveTimescaleUnit::*;
+        match self {
+            S => Some(MS),
+            MS => Some(US),
+            US => Some(NS),
+            NS => Some(PS),
+            PS => Some(FS),
+            FS => None,
+        }
+    }
+    pub fn larger(&self) -> Option<Self> {
+        use WaveTimescaleUnit::*;
+        match self {
+            S => None,
+            MS => Some(S),
+            US => Some(MS),
+            NS => Some(US),
+            PS => Some(NS),
+            FS => Some(PS),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum WaveDataValue {
