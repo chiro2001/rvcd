@@ -1,6 +1,7 @@
 pub mod cursor;
 pub mod signal;
 pub mod ui;
+pub mod time_bar;
 
 use egui::*;
 use crate::message::RvcdMsg;
@@ -106,29 +107,6 @@ impl WaveView {
             u = u.larger().unwrap();
         }
         format!("{}{}", v, u)
-    }
-    pub fn find_cursor(&self, x: f32) -> Option<i32> {
-        let judge = |c: &WaveCursor| {
-            let cursor_x = self.pos_to_x(c.pos);
-            f32::abs(x - cursor_x)
-        };
-        // find dragging cursor to drag
-        // marker_temp cannot drag
-        match self.dragging_cursor_id {
-            None => self
-                .cursors
-                .iter()
-                .chain([&self.marker /*&self.marker_temp*/])
-                .map(|c| (judge(c), c))
-                .filter(|x| x.0 <= CURSOR_NEAREST)
-                .reduce(|a, b| if a.0 < b.0 { a } else { b })
-                .map(|x| x.1.id),
-            Some(id) => match id {
-                -1 => Some(self.marker.id),
-                // -2 => Some(self.marker_temp.id),
-                id => self.cursors.iter().find(|x| x.id == id).map(|x| x.id),
-            },
-        }
     }
     fn next_cursor_id(&self) -> i32 {
         self.cursors
