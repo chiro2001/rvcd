@@ -8,7 +8,7 @@ use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HE
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
 use egui::{
-    pos2, vec2, Align2, Color32, Direction, Layout, PointerButton, Rect, Response, Sense, Ui,
+    pos2, vec2, Align2, Color32, Direction, Layout, PointerButton, Pos2, Rect, Response, Sense, Ui,
 };
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
@@ -460,12 +460,12 @@ impl WaveView {
             }
         }
         if let Some(info) = info {
-            self.paint_span(ui, wave_left);
+            self.paint_span(ui, wave_left, info, pos);
             self.paint_cursor(ui, wave_left, info, &self.marker);
             self.paint_cursor(ui, wave_left, info, &self.marker_temp);
         }
     }
-    pub fn paint_span(&self, ui: &mut Ui, offset: f32) {
+    pub fn paint_span(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, pos: Option<Pos2>) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();
         if self.marker.valid && self.marker_temp.valid {
@@ -474,15 +474,33 @@ impl WaveView {
             } else {
                 (&self.marker_temp, &self.marker)
             };
+            let (x_a, x_b) = (self.pos_to_x(a.pos), self.pos_to_x(b.pos));
             let rect = Rect::from_min_max(
-                pos2(self.pos_to_x(a.pos) + offset, paint_rect.min.y),
-                pos2(self.pos_to_x(b.pos) + offset, paint_rect.max.y),
+                pos2(x_a + offset, paint_rect.min.y),
+                pos2(x_b + offset, paint_rect.max.y),
             );
             painter.rect(
                 rect,
                 0.0,
                 Color32::BLUE.linear_multiply(BG_MULTIPLY),
                 (LINE_WIDTH, Color32::BLUE),
+            );
+            let y = match pos {
+                None => paint_rect.top(),
+                Some(pos) => pos.y,
+            };
+            painter.hline(
+                RangeInclusive::new(x_a + offset, x_b + offset),
+                y,
+                (LINE_WIDTH, Color32::BLUE),
+            );
+            let time = self.pos_to_time(&info.timescale, b.pos - a.pos);
+            painter.text(
+                pos2((x_a + x_b) / 2.0 + offset, y),
+                Align2::CENTER_BOTTOM,
+                format!("⬅{}➡", time),
+                Default::default(),
+                ui.visuals().strong_text_color(),
             );
         }
     }
