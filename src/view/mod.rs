@@ -564,7 +564,11 @@ impl WaveView {
             painter.text(
                 pos2((x_a + x_b) / 2.0, y),
                 Align2::CENTER_BOTTOM,
-                format!("⬅{}➡", time),
+                if self.marker.pos <= self.marker_temp.pos {
+                    format!("+{}", time)
+                } else {
+                    format!("-{}", time)
+                },
                 Default::default(),
                 ui.visuals().strong_text_color(),
             );
