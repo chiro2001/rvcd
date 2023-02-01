@@ -11,6 +11,17 @@ pub enum Radix {
     Hex,
 }
 
+impl Radix {
+    pub fn to_number(&self) -> usize {
+        match self {
+            Radix::Bin => 2,
+            Radix::Oct => 8,
+            Radix::Dec => 10,
+            Radix::Hex => 16,
+        }
+    }
+}
+
 pub fn radix_vector_to_string(radix: Radix, vec: &Vec<WireValue>) -> String {
     if radix == Radix::Dec {
         radix_vector_dec(vec)

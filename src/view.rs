@@ -98,6 +98,16 @@ impl WaveView {
     }
     pub fn menu(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
+            ui.menu_button(format!("Default Radix: {:?}", self.default_radix), |ui| {
+                use Radix::*;
+                let data = [Hex, Oct, Dec, Bin];
+                data.into_iter().for_each(|r| {
+                    if ui.button(format!("{:?}", r)).clicked() {
+                        self.default_radix = r;
+                        ui.close_menu();
+                    }
+                });
+            });
             ui.menu_button(format!("Align: {:?}", self.align), |ui| {
                 use SignalViewAlign::*;
                 let data = [Left, Center, Right];
@@ -179,6 +189,12 @@ impl WaveView {
                     signal_rect.top() + height,
                 ),
             );
+            let radix = match &signal.mode {
+                SignalViewMode::Default => self.default_radix.clone(),
+                SignalViewMode::Number(r) => r.clone(),
+                SignalViewMode::Analog => Radix::Hex,
+            };
+            let text = item_now.value.as_radix(radix);
             if rect.width() > MIN_SIGNAL_WIDTH {
                 if ignore_x_start >= 0.0 {
                     // paint a rect as ignored data
@@ -243,7 +259,6 @@ impl WaveView {
                         WireValue::Z => paint_z(),
                     };
                 } else {
-                    let text = item_now.value.to_string();
                     let number: Option<BigUint> = (&item_now.value).into();
                     if text.contains('x') {
                         paint_x();
@@ -303,7 +318,6 @@ impl WaveView {
                 if ignore_x_start < 0.0 {
                     ignore_x_start = rect.left();
                 }
-                let text = item_now.value.to_string();
                 if text.contains('x') || text.contains('z') {
                     ignore_has_x = true;
                 }

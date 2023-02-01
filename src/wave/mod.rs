@@ -67,12 +67,19 @@ impl Into<Option<BigUint>> for &WaveDataValue {
     }
 }
 
+impl WaveDataValue {
+    pub fn as_radix(&self, radix: Radix) -> String {
+        let radix = radix.to_number();
+        match self {
+            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v).to_str_radix(radix as u32),
+            WaveDataValue::Raw(v) => radix_vector_to_string(Radix::Hex, v),
+        }
+    }
+}
+
 impl Display for WaveDataValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WaveDataValue::Comp(v) => write!(f, "{}", BigUint::from_bytes_le(v).to_str_radix(16)),
-            WaveDataValue::Raw(v) => write!(f, "{}", radix_vector_to_string(Radix::Hex, v)),
-        }
+        write!(f, "{}", self.as_radix(Radix::Hex))
     }
 }
 
