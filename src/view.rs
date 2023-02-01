@@ -6,6 +6,7 @@ use egui::{pos2, vec2, Align2, Color32, Direction, Layout, Rect, Sense, Ui};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
+use std::ops::RangeInclusive;
 use std::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -135,6 +136,8 @@ impl WaveView {
     ) {
         const LINE_WIDTH: f32 = 1.5;
         const MIN_TEXT_WIDTH: f32 = 6.0;
+        const MIN_SIGNAL_WIDTH: f32 = 2.0;
+        const BG_MULTIPLY: f32 = 0.05;
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::hover());
         let items = wave_data.iter().filter(|i| i.id == signal.s.id);
@@ -142,7 +145,8 @@ impl WaveView {
         let signal_rect = response.rect;
         let mut it = items;
         let mut item_last: Option<&WaveDataItem> = None;
-        let paint_signal = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
+        let mut ignore_x_start = -1.0;
+        let mut paint_signal = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
             let single: bool = match &item_now.value {
                 WaveDataValue::Comp(_) => {
                     let d = ("".to_string(), 0);
@@ -170,91 +174,121 @@ impl WaveView {
                     signal_rect.top() + height,
                 ),
             );
-            let bg_multiply = 0.05;
-            let paint_x = || {
-                painter.rect(
-                    rect,
-                    0.0,
-                    if self.background {
-                        Color32::DARK_RED.linear_multiply(bg_multiply)
-                    } else {
-                        Color32::TRANSPARENT
-                    },
-                    (LINE_WIDTH, Color32::RED),
-                )
-            };
-            let paint_z = || painter.rect_stroke(rect, 0.0, (LINE_WIDTH, Color32::DARK_RED));
-            if single {
-                let value = match &item_now.value {
-                    WaveDataValue::Comp(v) => match BigUint::from_bytes_le(v).is_one() {
-                        true => WireValue::V1,
-                        false => WireValue::V0,
-                    },
-                    WaveDataValue::Raw(v) => v[0],
+            if rect.width() > MIN_SIGNAL_WIDTH {
+                if ignore_x_start >= 0.0 {
+                    // paint a rect as ignored data
+                    painter.rect_filled(
+                        Rect::from_x_y_ranges(
+                            RangeInclusive::new(ignore_x_start, rect.left()),
+                            rect.y_range(),
+                        ),
+                        0.0,
+                        Color32::GREEN,
+                    );
+                    ignore_x_start = -1.0;
+                }
+                let paint_x = || {
+                    painter.rect(
+                        rect,
+                        0.0,
+                        if self.background {
+                            Color32::DARK_RED.linear_multiply(BG_MULTIPLY)
+                        } else {
+                            Color32::TRANSPARENT
+                        },
+                        (LINE_WIDTH, Color32::RED),
+                    )
                 };
-                match value {
-                    WireValue::V0 => {
-                        painter.hline(rect.x_range(), rect.bottom(), (LINE_WIDTH, Color32::GREEN));
-                        painter.vline(rect.left(), rect.y_range(), (LINE_WIDTH, Color32::GREEN));
-                    }
-                    WireValue::V1 => {
-                        painter.hline(rect.x_range(), rect.top(), (LINE_WIDTH, Color32::GREEN));
-                        painter.vline(rect.left(), rect.y_range(), (LINE_WIDTH, Color32::GREEN));
-                    }
-                    WireValue::X => paint_x(),
-                    WireValue::Z => paint_z(),
-                };
-            } else {
-                let text = item_now.value.to_string();
-                let number: Option<BigUint> = (&item_now.value).into();
-                if text.contains('x') {
-                    paint_x();
+                let paint_z = || painter.rect_stroke(rect, 0.0, (LINE_WIDTH, Color32::DARK_RED));
+                if single {
+                    let value = match &item_now.value {
+                        WaveDataValue::Comp(v) => match BigUint::from_bytes_le(v).is_one() {
+                            true => WireValue::V1,
+                            false => WireValue::V0,
+                        },
+                        WaveDataValue::Raw(v) => v[0],
+                    };
+                    match value {
+                        WireValue::V0 => {
+                            painter.hline(
+                                rect.x_range(),
+                                rect.bottom(),
+                                (LINE_WIDTH, Color32::GREEN),
+                            );
+                            painter.vline(
+                                rect.left(),
+                                rect.y_range(),
+                                (LINE_WIDTH, Color32::GREEN),
+                            );
+                        }
+                        WireValue::V1 => {
+                            painter.hline(rect.x_range(), rect.top(), (LINE_WIDTH, Color32::GREEN));
+                            painter.vline(
+                                rect.left(),
+                                rect.y_range(),
+                                (LINE_WIDTH, Color32::GREEN),
+                            );
+                        }
+                        WireValue::X => paint_x(),
+                        WireValue::Z => paint_z(),
+                    };
                 } else {
-                    if text.contains('z') {
-                        paint_z();
+                    let text = item_now.value.to_string();
+                    let number: Option<BigUint> = (&item_now.value).into();
+                    if text.contains('x') {
+                        paint_x();
                     } else {
-                        match number {
-                            Some(n) if n.is_zero() => {
-                                painter.hline(
-                                    rect.x_range(),
-                                    rect.bottom(),
-                                    (LINE_WIDTH, Color32::GREEN),
-                                );
-                            }
-                            _ => {
-                                painter.rect(
-                                    rect,
-                                    0.0,
-                                    if self.background {
-                                        Color32::GREEN.linear_multiply(bg_multiply)
-                                    } else {
-                                        Color32::TRANSPARENT
-                                    },
-                                    (LINE_WIDTH, Color32::GREEN),
-                                );
+                        if text.contains('z') {
+                            paint_z();
+                        } else {
+                            match number {
+                                Some(n) if n.is_zero() => {
+                                    painter.hline(
+                                        rect.x_range(),
+                                        rect.bottom(),
+                                        (LINE_WIDTH, Color32::GREEN),
+                                    );
+                                }
+                                _ => {
+                                    painter.rect(
+                                        rect,
+                                        0.0,
+                                        if self.background {
+                                            Color32::GREEN.linear_multiply(BG_MULTIPLY)
+                                        } else {
+                                            Color32::TRANSPARENT
+                                        },
+                                        (LINE_WIDTH, Color32::GREEN),
+                                    );
+                                }
                             }
                         }
+                    }
+                    if rect.width() > MIN_TEXT_WIDTH {
+                        let pos = match self.align {
+                            SignalViewAlign::Left => rect.left_center() + vec2(4.0, 0.0),
+                            SignalViewAlign::Center => {
+                                rect.left_center() + vec2(width * percent_text, 0.0)
+                            }
+                            SignalViewAlign::Right => rect.right_center(),
+                        };
+                        painter.text(
+                            pos,
+                            match self.align {
+                                SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                            },
+                            text,
+                            Default::default(),
+                            color,
+                        );
                     }
                 }
-                if rect.width() > MIN_TEXT_WIDTH {
-                    let pos = match self.align {
-                        SignalViewAlign::Left => rect.left_center() + vec2(4.0, 0.0),
-                        SignalViewAlign::Center => {
-                            rect.left_center() + vec2(width * percent_text, 0.0)
-                        }
-                        SignalViewAlign::Right => rect.right_center(),
-                    };
-                    painter.text(
-                        pos,
-                        match self.align {
-                            SignalViewAlign::Left => Align2::LEFT_CENTER,
-                            SignalViewAlign::Center => Align2::CENTER_CENTER,
-                            SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                        },
-                        text,
-                        Default::default(),
-                        color,
-                    );
+            } else {
+                // ignore this paint, record start pos
+                if ignore_x_start < 0.0 {
+                    ignore_x_start = rect.left();
                 }
             }
         };
@@ -264,7 +298,6 @@ impl WaveView {
             }
             item_last = Some(item);
         }
-        // draw last
         if let Some(item_last) = item_last {
             paint_signal(
                 item_last,
@@ -273,6 +306,17 @@ impl WaveView {
                     ..WaveDataItem::default()
                 },
             );
+        }
+        // draw last
+        if ignore_x_start >= 0.0 {
+            painter.rect_filled(
+                Rect::from_x_y_ranges(
+                    RangeInclusive::new(ignore_x_start, signal_rect.right()),
+                    signal_rect.y_range(),
+                ),
+                0.0,
+                Color32::GREEN,
+            )
         }
     }
     fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) {
