@@ -4,7 +4,6 @@ use crate::run_mode::RunMode;
 use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
-use crate::view::{SignalView, WaveView};
 use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
@@ -14,6 +13,8 @@ use rfd::FileHandle;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::info;
+use crate::view::signal::SignalView;
+use crate::view::WaveView;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
 pub enum State {
