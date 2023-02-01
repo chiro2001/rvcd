@@ -274,16 +274,19 @@ impl WaveView {
             paint_signal(
                 item_last,
                 &WaveDataItem {
-                    timestamp: info.range.1,
+                    timestamp: u64::min(info.range.1, self.range.1),
                     ..WaveDataItem::default()
                 },
             );
         }
         // draw last
         if ignore_x_start >= 0.0 {
+            let right_pos = self
+                .x_to_pos(signal_rect.right())
+                .clamp(0, u64::min(self.range.1, info.range.1));
             painter.rect_filled(
                 Rect::from_x_y_ranges(
-                    RangeInclusive::new(ignore_x_start, signal_rect.right()),
+                    RangeInclusive::new(ignore_x_start, self.pos_to_x(right_pos)),
                     signal_rect.y_range(),
                 ),
                 0.0,
