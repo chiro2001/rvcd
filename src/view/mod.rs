@@ -450,10 +450,12 @@ impl WaveView {
                 Color32::YELLOW,
             );
             if drag_by_primary {
-                self.marker_temp.set_pos_valid(self.x_to_pos(pos.x));
+                self.marker_temp
+                    .set_pos_valid(self.x_to_pos(pos.x).clamp(self.range.0, self.range.1));
             }
             if drag_release && self.marker_temp.valid {
-                self.marker.set_pos_valid(self.marker_temp.pos);
+                self.marker
+                    .set_pos_valid(self.marker_temp.pos.clamp(self.range.0, self.range.1));
             }
             if !drag_by_primary {
                 self.marker_temp.valid = false;
@@ -474,11 +476,8 @@ impl WaveView {
             } else {
                 (&self.marker_temp, &self.marker)
             };
-            let (x_a, x_b) = (self.pos_to_x(a.pos), self.pos_to_x(b.pos));
-            let rect = Rect::from_min_max(
-                pos2(x_a + offset, paint_rect.min.y),
-                pos2(x_b + offset, paint_rect.max.y),
-            );
+            let (x_a, x_b) = (self.pos_to_x(a.pos) + offset, self.pos_to_x(b.pos) + offset);
+            let rect = Rect::from_min_max(pos2(x_a, paint_rect.min.y), pos2(x_b, paint_rect.max.y));
             painter.rect(
                 rect,
                 0.0,
@@ -490,13 +489,13 @@ impl WaveView {
                 Some(pos) => pos.y,
             };
             painter.hline(
-                RangeInclusive::new(x_a + offset, x_b + offset),
+                RangeInclusive::new(x_a, x_b),
                 y,
                 (LINE_WIDTH, Color32::BLUE),
             );
             let time = self.pos_to_time(&info.timescale, b.pos - a.pos);
             painter.text(
-                pos2((x_a + x_b) / 2.0 + offset, y),
+                pos2((x_a + x_b) / 2.0, y),
                 Align2::CENTER_BOTTOM,
                 format!("⬅{}➡", time),
                 Default::default(),
