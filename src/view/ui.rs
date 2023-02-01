@@ -132,6 +132,7 @@ impl WaveView {
                             row.col(|ui| {
                                 if let Some(info) = info {
                                     let response = self.ui_signal_wave(signal, wave_data, info, ui);
+                                    let pos_hover = response.hover_pos();
                                     wave_left = ui.available_rect_before_wrap().left();
                                     if let Some(pointer_pos) = response.interact_pointer_pos() {
                                         pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
@@ -147,37 +148,46 @@ impl WaveView {
                                             drag_by_middle = true;
                                         }
                                     }
-                                }
-                                // catch mouse wheel events
-                                if ui.rect_contains_pointer(use_rect) {
-                                    let _scroll = ui
-                                        .ctx()
-                                        .input()
-                                        .events
-                                        .iter()
-                                        .find(|x| match x {
-                                            Event::Scroll(_) => true,
-                                            _ => false,
-                                        })
-                                        .map(|x| match x {
-                                            Event::Scroll(v) => Some(v),
-                                            _ => None,
-                                        }).flatten();
-                                    let zoom = ui
-                                        .ctx()
-                                        .input()
-                                        .events
-                                        .iter()
-                                        .find(|x| match x {
-                                            Event::Zoom(_) => true,
-                                            _ => false,
-                                        })
-                                        .map(|x| match x {
-                                            Event::Zoom(v) => Some(*v),
-                                            _ => None,
-                                        }).flatten();
-                                    if let Some(zoom) = zoom {
-                                        new_range = (self.range.0, (self.range.1 as f32 * zoom) as u64);
+                                    // catch mouse wheel events
+                                    if ui.rect_contains_pointer(use_rect) {
+                                        let _scroll = ui
+                                            .ctx()
+                                            .input()
+                                            .events
+                                            .iter()
+                                            .find(|x| match x {
+                                                Event::Scroll(_) => true,
+                                                _ => false,
+                                            })
+                                            .map(|x| match x {
+                                                Event::Scroll(v) => Some(v),
+                                                _ => None,
+                                            })
+                                            .flatten();
+                                        let zoom = ui
+                                            .ctx()
+                                            .input()
+                                            .events
+                                            .iter()
+                                            .find(|x| match x {
+                                                Event::Zoom(_) => true,
+                                                _ => false,
+                                            })
+                                            .map(|x| match x {
+                                                Event::Zoom(v) => Some(*v),
+                                                _ => None,
+                                            })
+                                            .flatten();
+                                        if let Some(zoom) = zoom {
+                                            new_range = (
+                                                self.range.0,
+                                                ((self.range.1 as f32 * zoom) as u64).clamp(
+                                                    info.range.0
+                                                        + (info.range.1 - info.range.0) / 200,
+                                                    info.range.1 * 2,
+                                                ),
+                                            );
+                                        }
                                     }
                                 }
                             });
