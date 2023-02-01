@@ -7,7 +7,10 @@ use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign, SignalViewMode, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveTimescaleUnit, WireValue};
 use eframe::emath::Align;
-use egui::{pos2, vec2, Align2, Color32, Direction, FontId, Layout, PointerButton, Pos2, Rect, Response, Sense, Ui, DragValue, Widget};
+use egui::{
+    pos2, vec2, Align2, Color32, Direction, DragValue, FontId, Layout, PointerButton, Pos2, Rect,
+    Response, Sense, Ui, Widget,
+};
 use egui_extras::{Column, TableBuilder};
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
@@ -361,6 +364,15 @@ impl WaveView {
     pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
         format!("{}{}", pos * timescale.0, timescale.1)
     }
+    pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo) {
+        let rect = ui.max_rect();
+        let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
+        painter.hline(
+            rect.x_range(),
+            rect.min.y + LINE_WIDTH,
+            (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY)),
+        );
+    }
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
@@ -403,9 +415,7 @@ impl WaveView {
         let mut drag_by_middle = false;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
-                let mut width = 0.0;
                 header.col(|ui| {
-                    width = ui.available_width();
                     if let Some(info) = info {
                         ui.strong(format!(
                             "Time #{}~#{} {}{}",
@@ -414,8 +424,9 @@ impl WaveView {
                     }
                 });
                 header.col(|ui| {
-                    ui.set_width(width);
-                    ui.strong("Wave");
+                    if let Some(info) = info {
+                        self.time_bar(ui, info);
+                    }
                 });
             })
             .body(|body| {
