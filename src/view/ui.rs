@@ -10,7 +10,7 @@ use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 impl WaveView {
     /// Paint view menu
@@ -332,7 +332,8 @@ impl WaveView {
             if let Some(right_drag_start_pos) = self.right_drag_start_pos {
                 if let Some(right_drag_pos) = right_drag_pos {
                     let delta = right_drag_pos - right_drag_start_pos;
-                    let delta = delta.y;
+                    // natural direction
+                    let delta = -delta.y;
                     // TODO: here we cannot get real `first_paint_row_index`, only to get from last
                     // simply use last paint index
                     if let Some(first_paint_row_index) = last_paint_row_index {
