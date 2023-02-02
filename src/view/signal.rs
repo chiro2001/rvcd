@@ -338,17 +338,30 @@ impl WaveView {
         response
     }
     /// Paint signal label
-    pub(crate) fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) {
+    pub(crate) fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) -> Option<SignalView> {
+        let mut signal_new = signal.clone();
         let text = signal.s.to_string();
         ui.scope(|ui| {
             ui.set_height(signal.height);
             ui.centered_and_justified(|ui| {
                 let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
                 // TODO: drag signal order
-                if response.clicked() {
-                    ui.scroll_to_rect(response.rect, None);
-                }
+                response.context_menu(|ui| {
+                    if ui.button("Remove").clicked() {
+                        ui.close_menu();
+                    }
+                    DragValue::new(&mut signal_new.height)
+                        .clamp_range((SIGNAL_HEIGHT_DEFAULT / 2.0)..=(SIGNAL_HEIGHT_DEFAULT * 4.0))
+                        .speed(1.0)
+                        .suffix("px")
+                        .ui(ui);
+                });
             });
         });
+        if signal_new != *signal {
+            Some(signal_new)
+        } else {
+            None
+        }
     }
 }

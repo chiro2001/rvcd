@@ -174,6 +174,7 @@ impl WaveView {
         let mut right_drag_start_pos = None;
         let mut right_drag_pos = None;
         let mut last_paint_row_index = None;
+        let mut new_signals = vec![];
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
@@ -193,7 +194,11 @@ impl WaveView {
                         let signal = self.signals.get(row_index);
                         last_paint_row_index = Some(row_index);
                         if let Some(signal) = signal {
-                            row.col(|ui| self.ui_signal_label(signal, ui));
+                            row.col(|ui| {
+                                if let Some(signal_new) = self.ui_signal_label(signal, ui) {
+                                    new_signals.push(signal_new);
+                                }
+                            });
                             row.col(|ui| {
                                 let response = self.ui_signal_wave(signal, wave_data, info, ui);
                                 let pos_hover = response.hover_pos();
@@ -292,6 +297,17 @@ impl WaveView {
                     },
                 );
             });
+        // update signal information
+        let signals_updated = self
+            .signals
+            .iter()
+            .map(|x| x.clone())
+            .map(|x| match new_signals.iter().find(|c| c.s.id == x.s.id) {
+                None => x,
+                Some(c) => c.clone(),
+            })
+            .collect();
+        self.signals = signals_updated;
         if (self.edit_range_from == "0" && self.edit_range_to == "0") || new_range != self.range {
             self.edit_range_from = (new_range.0 as i64).to_string();
             self.edit_range_to = (new_range.1 as i64).to_string();
