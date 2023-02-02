@@ -52,6 +52,12 @@ impl WaveView {
             {
                 ui.close_menu();
             }
+            if ui
+                .checkbox(&mut self.use_top_margin, "Wave Panel Top Margin")
+                .clicked()
+            {
+                ui.close_menu();
+            }
             ui.horizontal(|ui| {
                 ui.label("Value font size ");
                 DragValue::new(&mut self.signal_font_size)
@@ -100,7 +106,9 @@ impl WaveView {
                 )
                 .ui(ui);
         });
-        ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
+        if self.use_top_margin {
+            ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
+        }
     }
     /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
@@ -434,7 +442,15 @@ impl WaveView {
     ) {
         let paint_rect = ui.max_rect();
         let paint_rect = Rect::from_min_max(
-            paint_rect.min + vec2(0.0, WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2),
+            paint_rect.min
+                + vec2(
+                    0.0,
+                    if self.use_top_margin {
+                        WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2
+                    } else {
+                        0.0
+                    },
+                ),
             paint_rect.max,
         );
         let painter = ui.painter();

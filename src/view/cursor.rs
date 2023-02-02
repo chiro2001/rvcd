@@ -69,7 +69,15 @@ impl WaveView {
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
         let paint_rect = Rect::from_min_max(
-            paint_rect.min + vec2(0.0, WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2),
+            paint_rect.min
+                + vec2(
+                    0.0,
+                    if self.use_top_margin {
+                        WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2
+                    } else {
+                        0.0
+                    },
+                ),
             paint_rect.max,
         );
         let painter = ui.painter();
