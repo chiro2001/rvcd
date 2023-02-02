@@ -57,6 +57,10 @@ pub struct WaveView {
     /// Temporally use to store right click position
     #[serde(skip)]
     pub right_click_pos: Option<Pos2>,
+    #[serde(skip)]
+    pub edit_range_from: String,
+    #[serde(skip)]
+    pub edit_range_to: String,
 }
 
 impl Default for WaveView {
@@ -77,6 +81,8 @@ impl Default for WaveView {
             wave_width: 100.0,
             signal_font_size: 12.0,
             right_click_pos: None,
+            edit_range_from: "0".to_string(),
+            edit_range_to: "0".to_string(),
         }
     }
 }

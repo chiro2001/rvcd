@@ -77,33 +77,39 @@ impl WaveView {
             ));
             const EDIT_WIDTH: f32 = 100.0;
             ui.label("From:");
-            let mut from_text = format!("{}", self.range.0 as i64);
+            // let mut from_text = format!("{}", self.range.0 as i64);
             ui.with_layout(Layout::default(), |ui| {
                 ui.set_width(EDIT_WIDTH);
-                ui.text_edit_singleline(&mut from_text);
+                ui.text_edit_singleline(&mut self.edit_range_from);
             });
             ui.label("To:");
-            let mut to_text = format!("{}", self.range.1 as i64);
+            // let mut to_text = format!("{}", self.range.1 as i64);
             ui.with_layout(Layout::default(), |ui| {
                 ui.set_width(EDIT_WIDTH);
-                ui.text_edit_singleline(&mut to_text);
+                ui.text_edit_singleline(&mut self.edit_range_to);
             });
-            if let Ok(value) = from_text.parse::<u64>() {
-                let value = value as f32;
-                let d = self.range.1 - value;
-                if d > ZOOM_SIZE_MIN
-                    && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
-                {
-                    self.range.0 = value;
+            if ui.button("🆗 Set").clicked() {
+                if let Ok(value) = self.edit_range_from.parse::<u64>() {
+                    let value = value as f32;
+                    let d = self.range.1 - value;
+                    if d > ZOOM_SIZE_MIN
+                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                    {
+                        self.range.0 = value;
+                    }
+                } else {
+                    self.edit_range_from = (self.range.0 as i64).to_string();
                 }
-            }
-            if let Ok(value) = to_text.parse::<u64>() {
-                let value = value as f32;
-                let d = value - self.range.0;
-                if d > ZOOM_SIZE_MIN
-                    && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
-                {
-                    self.range.1 = value;
+                if let Ok(value) = self.edit_range_to.parse::<u64>() {
+                    let value = value as f32;
+                    let d = value - self.range.0;
+                    if d > ZOOM_SIZE_MIN
+                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                    {
+                        self.range.1 = value;
+                    }
+                } else {
+                    self.edit_range_to = (self.range.1 as i64).to_string();
                 }
             }
         });
@@ -263,6 +269,10 @@ impl WaveView {
                     },
                 );
             });
+        if (self.edit_range_from == "0" && self.edit_range_to == "0") || new_range != self.range {
+            self.edit_range_from = (new_range.0 as i64).to_string();
+            self.edit_range_to = (new_range.1 as i64).to_string();
+        }
         self.range = new_range;
         // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
         // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
