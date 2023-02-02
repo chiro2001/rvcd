@@ -127,6 +127,7 @@ impl WaveView {
                                 ui.close_menu();
                             }
                         }
+                        let mut linked_cursors = vec![];
                         ui.menu_button("Spans", |ui| {
                             let mut span_to_remove = None;
                             for span in self
@@ -139,6 +140,11 @@ impl WaveView {
                                     if let Some(a) = self.cursors_get(span.0) {
                                         if let Some(b) = self.cursors_get(span.1) {
                                             let mut linked = true;
+                                            if a.id == cursor_id {
+                                                linked_cursors.push(b.id);
+                                            } else {
+                                                linked_cursors.push(a.id);
+                                            }
                                             if ui
                                                 .checkbox(
                                                     &mut linked,
@@ -158,32 +164,20 @@ impl WaveView {
                                     }
                                 }
                             }
-                            let cursors_unlinked = self
-                                .spans
+                            let mut cursors_unlinked = self
+                                .cursors
                                 .iter()
-                                .filter(|x| x.0 != cursor_id && x.1 != cursor_id)
-                                .map(|x| x.clone())
-                                .collect::<Vec<_>>();
-                            let tuple: (Vec<i32>, Vec<i32>) = cursors_unlinked.into_iter().unzip();
-                            let mut cursors_unlinked = tuple
-                                .0
-                                .into_iter()
-                                .chain(tuple.1.into_iter())
+                                .filter(|x| x.id != cursor_id && !linked_cursors.contains(&x.id))
                                 .collect::<Vec<_>>();
                             cursors_unlinked.sort();
                             for a in cursors_unlinked {
-                                if let Some(a) = self.cursors_get(a) {
-                                    let mut linked = false;
-                                    if ui
-                                        .checkbox(
-                                            &mut linked,
-                                            format!("{}-{}", cursor_name, a.name),
-                                        )
-                                        .clicked()
-                                    {
-                                        span_to_add = Some((cursor_id, a.id));
-                                        ui.close_menu();
-                                    }
+                                let mut linked = false;
+                                if ui
+                                    .checkbox(&mut linked, format!("{}-{}", cursor_name, a.name))
+                                    .clicked()
+                                {
+                                    span_to_add = Some((cursor_id, a.id));
+                                    ui.close_menu();
                                 }
                             }
                             if let Some(span) = span_to_remove {

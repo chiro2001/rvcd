@@ -2,7 +2,7 @@ use crate::view::{WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY};
 use crate::wave::WaveInfo;
 use egui::*;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default, Ord, PartialOrd, Eq)]
 pub struct WaveCursor {
     pub id: i32,
     /// Wave position
