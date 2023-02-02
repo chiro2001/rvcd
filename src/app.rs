@@ -4,6 +4,7 @@ use crate::Rvcd;
 use eframe::emath::Align;
 use egui::{Layout, vec2};
 use tracing::info;
+use crate::files::preview_files_being_dropped;
 
 impl eframe::App for Rvcd {
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -66,6 +67,8 @@ impl eframe::App for Rvcd {
         //     });
         // }
         self.toasts.show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
+
+        preview_files_being_dropped(ctx);
     }
 
     /// Called by the frame work to save state before shutdown.

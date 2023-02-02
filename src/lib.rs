@@ -12,5 +12,6 @@ pub mod server;
 pub mod view;
 pub mod frame_history;
 pub mod run_mode;
+pub mod files;
 
 pub use crate::rvcd::Rvcd;

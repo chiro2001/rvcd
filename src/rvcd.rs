@@ -8,12 +8,12 @@ use crate::view::signal::SignalView;
 use crate::view::WaveView;
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{Layout, ScrollArea, Sense, Ui};
+use egui::{DroppedFile, Layout, ScrollArea, Sense, Ui};
 use egui_toast::{ToastOptions, Toasts};
 use rfd::FileHandle;
 #[allow(unused_imports)]
 use std::path::PathBuf;
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
@@ -48,7 +48,7 @@ pub struct Rvcd {
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
     #[serde(skip)]
-    pub wave: Option<Arc<Wave>>,
+    pub wave: Option<Wave>,
     #[cfg(not(target_arch = "wasm32"))]
     pub view: WaveView,
     #[cfg(target_arch = "wasm32")]
@@ -267,6 +267,7 @@ impl Rvcd {
                     .error("File not found!", ToastOptions::default());
                 self.reset();
             }
+            RvcdMsg::FileOpenData(_) => {}
         };
     }
     pub fn reload(&mut self) {
@@ -366,6 +367,22 @@ impl Rvcd {
         ui.checkbox(&mut self.debug_panel, "Debug Panel");
         if ui.button("Test Toast").clicked() {
             self.toasts.info("Test Toast", ToastOptions::default());
+        }
+    }
+    pub fn handle_dropping_file(&mut self, ui: &mut Ui) {
+        // Collect dropped files:
+        if !ui.ctx().input().raw.dropped_files.is_empty() {
+            let dropped_files: Vec<DroppedFile> = ui.ctx().input().raw.dropped_files.clone();
+            dropped_files.first().map(|dropped_file| {
+                if let Some(path) = &dropped_file.path {
+                    let file = FileHandle::from(path.clone());
+                    self.message_handler(RvcdMsg::FileOpen(file));
+                } else {
+                    if let Some(data) = &dropped_file.bytes {
+                        self.message_handler(RvcdMsg::FileOpenData(data.clone()));
+                    }
+                }
+            });
         }
     }
 }

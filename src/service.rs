@@ -3,8 +3,7 @@ use crate::utils::execute;
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::WaveLoader;
 use anyhow::Result;
-use std::io::Cursor;
-use std::sync::Arc;
+use std::io::{Cursor, Read};
 use tracing::{debug, error, info};
 
 pub struct Service {
@@ -14,6 +13,15 @@ pub struct Service {
 unsafe impl Send for Service {}
 
 impl Service {
+    fn load_data_send(&self, reader: &mut dyn Read) -> bool {
+        if let Ok(wave) = Vcd::load(reader) {
+            info!("service load wave: {}", wave);
+            self.channel.tx.send(RvcdMsg::UpdateWave(wave)).unwrap();
+            true
+        } else {
+            false
+        }
+    }
     async fn handle_message(&mut self, msg: RvcdMsg) -> Result<()> {
         debug!("handle message: {:?}", msg);
         match msg {
@@ -31,20 +39,24 @@ impl Service {
                     let data = file.read().await;
                     // if let Ok(w) = Vcd::load(&mut file) {
                     let mut reader = Cursor::new(data);
-                    if let Ok(wave) = Vcd::load(&mut reader) {
-                        info!("service load wave: {}", wave);
-                        self.channel
-                            .tx
-                            .send(RvcdMsg::UpdateWave(Arc::new(wave)))
-                            .unwrap();
+                    if self.load_data_send(&mut reader) {
                         // send path back
                         self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
+                    } else {
+                        self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                     }
                 } else {
                     #[cfg(not(target_arch = "wasm32"))]
                     if !file.path().to_str().unwrap().is_empty() {
                         self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                     }
+                }
+            }
+            RvcdMsg::FileOpenData(data) => {
+                // TODO: reduce this data clone
+                let mut reader: Cursor<Vec<_>> = Cursor::new(data.to_vec());
+                if !self.load_data_send(&mut reader) {
+                    self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                 }
             }
             _ => {}
