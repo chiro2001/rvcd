@@ -67,12 +67,13 @@ impl Service {
                                 let total_sz = file.metadata().unwrap().len();
                                 let mut reader = BufReader::new(file);
                                 if total_sz != 0 {
-                                    // const BUF_SIZE: usize = 1024 * 256;
-                                    const BUF_SIZE: usize = 8;
+                                    const BUF_SIZE: usize = 1024 * 256;
+                                    // const BUF_SIZE: usize = 8;
                                     let mut data = vec![0u8; total_sz as usize];
                                     let mut buf = [0u8; BUF_SIZE];
                                     let mut count = 0;
                                     let mut canceled = false;
+                                    info!("start reading file");
                                     while let Ok(sz) = reader.read(&mut buf) {
                                         if sz == 0 {
                                             break;
@@ -98,7 +99,16 @@ impl Service {
                                                 error!("{}", _e);
                                             }
                                         }
+                                        // TODO: it's mpsc and cannot clone recv, so no msg recv here
+                                        if let Ok(r) = self.channel.rx.try_recv() {
+                                            match r {
+                                                RvcdMsg::FileLoadCancel => canceled = true,
+                                                _ => {}
+                                            }
+                                        }
+                                        // sleep_ms(1000).await;
                                     }
+                                    info!("stop reading file");
                                     if !canceled {
                                         data
                                     } else {
@@ -113,11 +123,13 @@ impl Service {
                             }
                         }
                     };
+                    info!("start parsing data");
                     // if let Ok(w) = Vcd::load(&mut file) {
                     let mut reader = Cursor::new(data);
                     if !self.load_data_send(&mut reader) {
                         self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                     }
+                    info!("stop parsing data");
                 } else {
                     #[cfg(not(target_arch = "wasm32"))]
                     if !file.path().to_str().unwrap().is_empty() {
