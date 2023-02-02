@@ -21,6 +21,8 @@ const CURSOR_NEAREST: f32 = 20.0;
 const UI_WIDTH_OFFSET: f32 = 8.0;
 const ZOOM_SIZE_MIN: f32 = 12.0;
 const ZOOM_SIZE_MAX_SCALE: f32 = 5.0;
+const WAVE_MARGIN_TOP: f32 = 32.0;
+const WAVE_MARGIN_TOP2: f32 = -6.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]

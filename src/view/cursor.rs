@@ -1,4 +1,6 @@
-use crate::view::{WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY};
+use crate::view::{
+    WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
+};
 use crate::wave::WaveInfo;
 use egui::*;
 
@@ -66,6 +68,10 @@ impl WaveView {
     /// * `offset`: wave panel ui left + signal width + padding(`UI_WIDTH_OFFSET`)
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
+        let paint_rect = Rect::from_min_max(
+            paint_rect.min + vec2(0.0, WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2),
+            paint_rect.max,
+        );
         let painter = ui.painter();
         let bg_color = match cursor.valid {
             true => Color32::YELLOW,

@@ -3,7 +3,8 @@ use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
 use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
 use crate::view::{
-    WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
+    WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
+    ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
 };
 use crate::wave::{Wave, WaveDataItem, WaveInfo};
 use egui::*;
@@ -99,6 +100,7 @@ impl WaveView {
                 )
                 .ui(ui);
         });
+        ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
     }
     /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
@@ -431,6 +433,10 @@ impl WaveView {
         b: &WaveCursor,
     ) {
         let paint_rect = ui.max_rect();
+        let paint_rect = Rect::from_min_max(
+            paint_rect.min + vec2(0.0, WAVE_MARGIN_TOP + WAVE_MARGIN_TOP2),
+            paint_rect.max,
+        );
         let painter = ui.painter();
         if a.valid && b.valid {
             let (a, b) = if a.pos < b.pos { (a, b) } else { (b, a) };
