@@ -222,6 +222,21 @@ impl WaveView {
             }
         }
         self.paint_span(ui, wave_left, info, pos, &self.marker, &self.marker_temp);
+        // remove unavailable spans
+        let exists_id = |id: i32| self.cursors.iter().any(|c| c.id == id);
+        self.spans = self
+            .spans
+            .iter()
+            .map(|x| x.clone())
+            .filter(|s| exists_id(s.0) && exists_id(s.1))
+            .collect();
+        for span in &self.spans {
+            if let Some(a) = self.cursors.iter().find(|c| c.id == span.0) {
+                if let Some(b) = self.cursors.iter().find(|c| c.id == span.1) {
+                    self.paint_span(ui, wave_left, info, None, a, b);
+                }
+            }
+        }
         if self.marker.valid {
             self.paint_cursor(ui, wave_left, info, &self.marker);
         }

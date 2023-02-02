@@ -1,16 +1,16 @@
 pub mod cursor;
 pub mod signal;
-pub mod ui;
 pub mod time_bar;
+pub mod ui;
 
-use egui::*;
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
-use std::sync::mpsc;
-use tracing::*;
 use crate::view::signal::{SignalView, SignalViewAlign};
 use crate::wave::{WaveInfo, WaveTimescaleUnit};
+use egui::*;
+use std::sync::mpsc;
+use tracing::*;
 
 const LINE_WIDTH: f32 = 1.5;
 const TEXT_ROUND_OFFSET: f32 = 4.0;
@@ -42,6 +42,8 @@ pub struct WaveView {
     pub marker: WaveCursor,
     /// Valid when dragging
     pub marker_temp: WaveCursor,
+    /// Available spans
+    pub spans: Vec<(i32, i32)>,
     /// Temporally use to store id
     #[serde(skip)]
     pub dragging_cursor_id: Option<i32>,
@@ -68,6 +70,7 @@ impl Default for WaveView {
             cursors: vec![],
             marker: WaveCursor::from_string(-1, "Main Cursor"),
             marker_temp: WaveCursor::from_string(-2, ""),
+            spans: vec![],
             dragging_cursor_id: None,
             wave_width: 100.0,
             signal_font_size: 12.0,
