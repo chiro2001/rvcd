@@ -10,7 +10,7 @@ use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 impl WaveView {
     /// Paint view menu
@@ -151,6 +151,16 @@ impl WaveView {
             .column(Column::exact(self.wave_width).resizable(false))
             .min_scrolled_height(0.0)
             .max_scroll_height(f32::infinity());
+        let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
+            table.scroll_to_row(scrolling_last_index, Some(Align::TOP))
+        } else {
+            table
+        };
+        let table = if let Some(scrolling_next_index) = self.scrolling_next_index.take() {
+            table.scroll_to_row(scrolling_next_index, Some(Align::BOTTOM))
+        } else {
+            table
+        };
         // .column(Column::auto())
         // .column(Column::remainder());
         let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
@@ -162,6 +172,8 @@ impl WaveView {
         let mut drag_by_middle = false;
         let mut new_range = self.range.clone();
         let mut middle_click_pos = None;
+        let mut middle_drag_pos = None;
+        let mut last_paint_row_index = None;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
@@ -179,6 +191,7 @@ impl WaveView {
                     self.signals.iter().map(|x| x.height),
                     |row_index, mut row| {
                         let signal = self.signals.get(row_index);
+                        last_paint_row_index = Some(row_index);
                         if let Some(signal) = signal {
                             row.col(|ui| self.ui_signal_label(signal, ui));
                             row.col(|ui| {
@@ -199,12 +212,16 @@ impl WaveView {
                                         drag_by_middle = true;
                                     }
                                 }
-                                if response.clicked_by(PointerButton::Middle)
-                                    || response.dragged_by(PointerButton::Middle)
-                                {
-                                    middle_click_pos = response
+                                if response.dragged_by(PointerButton::Middle) {
+                                    let p = response
                                         .interact_pointer_pos()
                                         .map(|p| pos2(p.x - wave_left, p.y));
+                                    middle_drag_pos = p;
+                                    // info!("drag middle: {:?}", p);
+                                    // if response.clicked_by(PointerButton::Middle) {
+                                    //     info!("click middle: {:?}", p);
+                                    middle_click_pos = p;
+                                    // }
                                 }
                                 // catch mouse wheel events
                                 if ui.rect_contains_pointer(use_rect) {
@@ -310,19 +327,42 @@ impl WaveView {
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if drag_by_middle {
-                if let Some(p1) = middle_click_pos {
-                    if let Some(p2) = self.middle_click_pos {
-                        let d = p1 - p2;
-                        ui.scroll_with_delta(d);
-                    }
-                }
-            }
-            if middle_click_pos.is_some() {
+            if middle_click_pos.is_some() && self.middle_click_pos.is_none() {
                 self.middle_click_pos = middle_click_pos;
             }
             if drag_release {
                 self.middle_click_pos = None;
+            }
+            if let Some(middle_click_pos) = self.middle_click_pos {
+                if let Some(middle_drag_pos) = middle_drag_pos {
+                    let delta = middle_drag_pos - middle_click_pos;
+                    let delta = delta.y;
+                    // TODO: here we cannot get real `first_paint_row_index`, only to get from last
+                    // simply use last paint index
+                    if let Some(first_paint_row_index) = last_paint_row_index {
+                        debug!("first_paint_row_index: {}", first_paint_row_index);
+                        if let Some(signal) = self.signals.get(first_paint_row_index) {
+                            if delta < -signal.height {
+                                debug!("to last signal");
+                                self.scrolling_next_index =
+                                    Some(i64::max(first_paint_row_index as i64 - 1, 0) as usize);
+                                self.middle_click_pos = Some(middle_drag_pos);
+                            }
+                        }
+                    }
+                    if let Some(last_paint_row_index) = last_paint_row_index {
+                        if let Some(signal) = self.signals.get(last_paint_row_index) {
+                            if delta > signal.height {
+                                debug!("to next signal");
+                                self.scrolling_next_index = Some(usize::min(
+                                    last_paint_row_index + 1,
+                                    self.signals.len() - 1,
+                                ));
+                                self.middle_click_pos = Some(middle_drag_pos);
+                            }
+                        }
+                    }
+                }
             }
             if drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(
