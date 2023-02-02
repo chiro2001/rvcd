@@ -13,17 +13,45 @@ use num_traits::Float;
 use std::ops::RangeInclusive;
 use tracing::{debug, warn};
 
-#[derive(Default)]
-pub struct ResponseHandleState {
+#[derive(Default, Debug)]
+pub struct ResponsePointerState {
     pub drag_started: bool,
     pub drag_release: bool,
     pub drag_by_primary: bool,
     pub drag_by_secondary: bool,
     pub drag_by_middle: bool,
-    pub new_range: (f32, f32),
     pub right_drag_start_pos: Option<Pos2>,
     pub right_drag_pos: Option<Pos2>,
-    pub pos: Option<Pos2>,
+}
+impl ResponsePointerState {
+    pub fn handle_pointer_response(&mut self, response: &Response, wave_left: f32) {
+        if let Some(_pointer_pos) = response.interact_pointer_pos() {
+            self.drag_started = response.drag_started();
+            self.drag_release = response.drag_released();
+            if response.dragged_by(PointerButton::Primary) {
+                self.drag_by_primary = true;
+            }
+            if response.dragged_by(PointerButton::Secondary) {
+                self.drag_by_secondary = true;
+            }
+            if response.dragged_by(PointerButton::Middle) {
+                self.drag_by_middle = true;
+            }
+        }
+        if response.dragged_by(PointerButton::Secondary) {
+            let p = response
+                .interact_pointer_pos()
+                .map(|p| pos2(p.x - wave_left, p.y));
+            self.right_drag_pos = p;
+            self.right_drag_start_pos = p;
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct ResponseHandleState {
+    pub pointer: ResponsePointerState,
+    pub new_range: (f32, f32),
 }
 impl ResponseHandleState {
     pub fn new(old_range: (f32, f32)) -> Self {
@@ -134,33 +162,12 @@ impl WaveView {
     pub fn handle_response(
         &self,
         ui: &mut Ui,
-        response: Response,
+        response: &Response,
         wave_left: f32,
         info: &WaveInfo,
         old_range: (f32, f32),
     ) -> ResponseHandleState {
         let mut state = ResponseHandleState::new(old_range);
-        if let Some(pointer_pos) = response.interact_pointer_pos() {
-            state.pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
-            state.drag_started = response.drag_started();
-            state.drag_release = response.drag_released();
-            if response.dragged_by(PointerButton::Primary) {
-                state.drag_by_primary = true;
-            }
-            if response.dragged_by(PointerButton::Secondary) {
-                state.drag_by_secondary = true;
-            }
-            if response.dragged_by(PointerButton::Middle) {
-                state.drag_by_middle = true;
-            }
-        }
-        if response.dragged_by(PointerButton::Secondary) {
-            let p = response
-                .interact_pointer_pos()
-                .map(|p| pos2(p.x - wave_left, p.y));
-            state.right_drag_pos = p;
-            state.right_drag_start_pos = p;
-        }
         // catch mouse wheel events
         if ui.rect_contains_pointer(response.rect) {
             let scroll = ui
@@ -255,6 +262,8 @@ impl WaveView {
         let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
         let mut new_signals = vec![];
         let mut last_paint_row_index = None;
+        let mut dragging_pos = None;
+        let mut pointer_state = ResponsePointerState::default();
 
         let max_rect = ui.max_rect();
         let inner_response = ui.allocate_ui(max_rect.size(), |ui| {
@@ -304,9 +313,12 @@ impl WaveView {
                                     }
                                 });
                                 row.col(|ui| {
-                                    let _response =
-                                        self.ui_signal_wave(signal, wave_data, info, ui);
+                                    let response = self.ui_signal_wave(signal, wave_data, info, ui);
+                                    if let Some(pos) = response.interact_pointer_pos() {
+                                        dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                                    }
                                     wave_left = ui.available_rect_before_wrap().left();
+                                    pointer_state.handle_pointer_response(&response, wave_left);
                                 });
                             }
                         },
@@ -316,7 +328,7 @@ impl WaveView {
         let global_response = inner_response.response;
         let state = self.handle_response(
             ui,
-            global_response,
+            &global_response,
             wave_left,
             &wave.info,
             self.range.clone(),
@@ -341,7 +353,7 @@ impl WaveView {
         self.range = state.new_range;
         // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
         // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
-        if let Some(pos) = state.pos {
+        if let Some(pos) = dragging_pos {
             let painter = ui.painter();
             painter.text(
                 pos + vec2(wave_left, 0.0),
@@ -350,20 +362,20 @@ impl WaveView {
                 Default::default(),
                 Color32::YELLOW,
             );
-            if state.drag_by_primary {
+            if pointer_state.drag_by_primary {
                 self.marker_temp.set_pos_valid(
                     self.x_to_pos(pos.x)
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if state.right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
-                self.right_drag_start_pos = state.right_drag_start_pos;
+            if pointer_state.right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
+                self.right_drag_start_pos = pointer_state.right_drag_start_pos;
             }
-            if state.drag_release {
+            if pointer_state.drag_release {
                 self.right_drag_start_pos = None;
             }
             if let Some(right_drag_start_pos) = self.right_drag_start_pos {
-                if let Some(right_drag_pos) = state.right_drag_pos {
+                if let Some(right_drag_pos) = pointer_state.right_drag_pos {
                     let delta = right_drag_pos - right_drag_start_pos;
                     if let Some(right_drag_last_pos) = self.right_drag_last_pos {
                         // Handle drag move
@@ -391,20 +403,20 @@ impl WaveView {
                     }
                 }
             }
-            if state.right_drag_pos.is_some() {
-                self.right_drag_last_pos = state.right_drag_pos;
+            if pointer_state.right_drag_pos.is_some() {
+                self.right_drag_last_pos = pointer_state.right_drag_pos;
             }
-            if state.drag_release {
+            if pointer_state.drag_release {
                 self.right_drag_last_pos = None;
             }
-            if state.drag_release && self.marker_temp.valid {
+            if pointer_state.drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(
                     self.marker_temp
                         .pos
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if !state.drag_by_primary {
+            if !pointer_state.drag_by_primary {
                 self.marker_temp.valid = false;
             }
         }
@@ -412,7 +424,7 @@ impl WaveView {
             ui,
             wave_left,
             info,
-            state.pos,
+            dragging_pos,
             &self.marker,
             &self.marker_temp,
         );
