@@ -266,9 +266,12 @@ impl Rvcd {
             }
             RvcdMsg::FileOpenFailed => {
                 let text = "Open file failed!";
-                if cfg!(not(target_arch = "wasm32")) {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
                     self.toasts.error(text, std::time::Duration::from_secs(5));
-                } else {
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
                     self.toasts.error(text, ToastOptions::default());
                 }
                 self.reset();
@@ -392,6 +395,7 @@ impl Rvcd {
             let dropped_files: Vec<DroppedFile> = ctx.input().raw.dropped_files.clone();
             info!("drag {} files!", dropped_files.len());
             dropped_files.first().map(|dropped_file| {
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(path) = &dropped_file.path {
                     if path.is_file() {
                         let file = FileHandle::from(path.clone());
@@ -403,6 +407,10 @@ impl Rvcd {
                     if let Some(data) = &dropped_file.bytes {
                         self.message_handler(RvcdMsg::FileOpenData(data.clone()));
                     }
+                }
+                #[cfg(target_arch = "wasm32")]
+                if let Some(data) = &dropped_file.bytes {
+                    self.message_handler(RvcdMsg::FileOpenData(data.clone()));
                 }
             });
         }
