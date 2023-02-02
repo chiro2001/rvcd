@@ -25,21 +25,33 @@ impl WaveView {
         );
         let line_stroke = (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY));
         painter.hline(rect.x_range(), rect.min.y + text_rect.height(), line_stroke);
-        let mut step: u64 = (self.range.1 - self.range.0) as u64 / 10;
-        while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 {
+        // let mut step: u64 = (self.range.1 - self.range.0) as u64 / 10;
+        let total_range = (self.range.1 - self.range.0) as i32;
+        let (mut step, mut unit) = if total_range > 0 {
+            let level = total_range.ilog10();
+            let step = u64::pow(10, level + 1);
+            let unit = u64::pow(10, level) * 5;
+            (step, unit)
+        } else {
+            (1, 1)
+        };
+        while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 && step > 1 {
             step /= 10;
+            unit /= 10;
         }
-        if step == 0 {
+        if step == 0 || unit == 0 {
             step = 1;
+            unit = 1;
         }
-        let range = (self.range.0 as u64 / step * step)..(((self.range.1 as u64 / step) + 1) * step);
+        let range =
+            (self.range.0 as u64 / step * step)..(((self.range.1 as u64 / step) + 1) * step);
         // paint time stamp labels
         for pos in range.step_by(step as usize) {
             let time = info.timescale.0 * pos;
             let line_height_max = rect.height() - text_rect.height();
             let line_height = match time {
-                time if time % (10 * step) == 0 => line_height_max,
-                time if time % (5 * step) == 0 => line_height_max / 2.0,
+                time if time % (unit * 5) == 0 => line_height_max,
+                time if time % (unit) == 0 => line_height_max / 2.0,
                 _ => line_height_max / 4.0,
             };
             let x = self.pos_to_x(pos) + offset;
