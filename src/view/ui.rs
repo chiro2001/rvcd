@@ -2,7 +2,9 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
 use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
-use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET};
+use crate::view::{
+    WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
+};
 use crate::wave::{Wave, WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
@@ -205,8 +207,15 @@ impl WaveView {
                                             );
                                             let left = (center_pos - self.range.0) * zoom;
                                             let right = (self.range.1 - center_pos) * zoom;
-                                            // new_range = (self.range.0, self.range.1 * zoom);
-                                            new_range = (center_pos - left, center_pos + right);
+                                            let new_range_check =
+                                                (center_pos - left, center_pos + right);
+                                            let d = new_range_check.1 - new_range_check.0;
+                                            if d > ZOOM_SIZE_MIN
+                                                && d < ZOOM_SIZE_MAX_SCALE
+                                                    * (info.range.1 - info.range.0) as f32
+                                            {
+                                                new_range = new_range_check;
+                                            }
                                         }
                                     }
                                 }
