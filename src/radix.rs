@@ -22,6 +22,7 @@ impl Radix {
     }
 }
 
+/// Convert [Vec<WireValue>] to string in radix
 pub fn radix_vector_to_string(radix: Radix, vec: &Vec<WireValue>) -> String {
     if radix == Radix::Dec {
         radix_vector_dec(vec)
@@ -51,6 +52,9 @@ fn value_map_val(v: &WireValue) -> u8 {
     }
 }
 
+/// Convert [Vec<WireValue>] to BigUInt
+/// 
+/// **Warning: all [WireValue::Z] and [WireValue::X] will be replaced by [WireValue::V1]**
 pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
     let bits = vec.iter().map(value_map_val);
     let mut bytes: Vec<u8> = vec![];
@@ -128,6 +132,8 @@ pub fn radix_vector_to_string_n(vec: &Vec<WireValue>, n: usize) -> String {
     str
 }
 
+/// For radix dec, cannot display [WireValue::Z] and [WireValue::X] in especially position,
+/// so will be all `xxx` or `zzz`
 pub fn radix_vector_dec(vec: &Vec<WireValue>) -> String {
     let val = radix_value_big_uint(vec);
     let str = val.to_str_radix(10);

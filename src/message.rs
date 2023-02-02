@@ -27,8 +27,10 @@ impl Debug for RvcdMsg {
     }
 }
 
+/// We must assert all data in [RvcdMsg] are safe to send
 unsafe impl Send for RvcdMsg {}
 
+/// [RvcdMsg] tx-rx pair
 #[derive(Debug)]
 pub struct RvcdChannel {
     pub tx: mpsc::Sender<RvcdMsg>,

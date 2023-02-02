@@ -28,6 +28,7 @@ pub enum State {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
+    /// File loading state
     #[cfg(not(target_arch = "wasm32"))]
     pub state: State,
     #[cfg(target_arch = "wasm32")]
@@ -36,16 +37,16 @@ pub struct Rvcd {
     /// ui <- -> service
     #[serde(skip)]
     pub channel: Option<RvcdChannel>,
-
+    /// Loaded file path.
+    ///
+    /// **Only available on native**
     pub filepath: String,
+    /// Loaded file reader
     #[serde(skip)]
     pub file: Option<FileHandle>,
-
+    /// Displaying signals in the tree leaves
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
-
-    #[serde(skip)]
-    pub tree: TreeView,
     #[serde(skip)]
     pub wave_info: Option<WaveInfo>,
 
@@ -77,7 +78,6 @@ impl Default for Rvcd {
             filepath: "".to_string(),
             file: None,
             signal_leaves: vec![],
-            tree: Default::default(),
             wave_info: None,
             wave_data: vec![],
             view: Default::default(),
@@ -175,7 +175,7 @@ impl Rvcd {
                     |ui| {
                         // ScrollArea::vertical().show(ui, |ui| {
                         if let Some(info) = &self.wave_info {
-                            match self.tree.ui(ui, info.tree.root()) {
+                            match TreeView::default().ui(ui, info.tree.root()) {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
