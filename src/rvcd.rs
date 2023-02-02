@@ -106,10 +106,10 @@ impl Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let filepath = &def.filepath;
-                tracing::info!("last file: {}", filepath);
+                info!("last file: {}", filepath);
                 if !filepath.is_empty() {
                     channel_req_tx
-                        .send(crate::message::RvcdMsg::FileOpen(rfd::FileHandle::from(
+                        .send(RvcdMsg::FileOpen(rfd::FileHandle::from(
                             std::path::PathBuf::from(filepath),
                         )))
                         .unwrap();
@@ -267,7 +267,18 @@ impl Rvcd {
                     .error("File not found!", ToastOptions::default());
                 self.reset();
             }
-            RvcdMsg::FileOpenData(_) => {}
+            RvcdMsg::FileOpenData(data) => {
+                // re-direct this to service side
+                if let Some(channel) = &self.channel {
+                    channel.tx.send(RvcdMsg::FileOpenData(data)).unwrap();
+                }
+            }
+            RvcdMsg::FileDrag(file) => {
+                // re-direct this to service side
+                if let Some(channel) = &self.channel {
+                    channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
+                }
+            }
         };
     }
     pub fn reload(&mut self) {
@@ -369,14 +380,15 @@ impl Rvcd {
             self.toasts.info("Test Toast", ToastOptions::default());
         }
     }
-    pub fn handle_dropping_file(&mut self, ui: &mut Ui) {
+    pub fn handle_dropping_file(&mut self, ctx: &egui::Context) {
         // Collect dropped files:
-        if !ui.ctx().input().raw.dropped_files.is_empty() {
-            let dropped_files: Vec<DroppedFile> = ui.ctx().input().raw.dropped_files.clone();
+        if !ctx.input().raw.dropped_files.is_empty() {
+            let dropped_files: Vec<DroppedFile> = ctx.input().raw.dropped_files.clone();
+            info!("drag {} files!", dropped_files.len());
             dropped_files.first().map(|dropped_file| {
                 if let Some(path) = &dropped_file.path {
                     let file = FileHandle::from(path.clone());
-                    self.message_handler(RvcdMsg::FileOpen(file));
+                    self.message_handler(RvcdMsg::FileDrag(file));
                 } else {
                     if let Some(data) = &dropped_file.bytes {
                         self.message_handler(RvcdMsg::FileOpenData(data.clone()));

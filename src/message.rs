@@ -2,11 +2,12 @@ use crate::wave::Wave;
 use egui_toast::Toast;
 use rfd::FileHandle;
 use std::fmt::{Debug, Formatter};
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc, Arc};
 
 // #[derive(Debug)]
 pub enum RvcdMsg {
     FileOpen(FileHandle),
+    FileDrag(FileHandle),
     FileOpenData(Arc<[u8]>),
     FileOpenFailed,
     Reload,
@@ -23,6 +24,7 @@ impl Debug for RvcdMsg {
             RvcdMsg::Reload => write!(f, "RvcdMsg: Reload"),
             RvcdMsg::UpdateWave(_) => write!(f, "RvcdMsg: UpdateWave"),
             RvcdMsg::FileOpenData(v) => write!(f, "RvcdMsg: FileOpenData({} bytes)", v.len()),
+            RvcdMsg::FileDrag(_) => write!(f, "RvcdMsg: FileDrag"),
         }
     }
 }
