@@ -23,7 +23,7 @@ const UI_WIDTH_OFFSET: f32 = 8.0;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
 pub struct WaveView {
-    /// Signals added to viewer. TODO: repetitive signals
+    /// Signals added to viewer
     pub signals: Vec<SignalView>,
     /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
     pub range: (u64, u64),

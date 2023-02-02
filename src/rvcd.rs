@@ -129,8 +129,11 @@ impl Rvcd {
             ..def
         }
     }
-    fn signal_clicked(&mut self, id: u64) {
-        if !self.view.signals.iter().any(|x| x.s.id == id) {
+    /// Add signal to view.
+    ///
+    /// * `repetitive`: is allow repetitive
+    fn signal_clicked(&mut self, id: u64, repetitive: bool) {
+        if repetitive || !self.view.signals.iter().any(|x| x.s.id == id) {
             if let Some(wave) = &self.wave {
                 self.view.signals.push(SignalView::from_id(id, &wave.info));
             }
@@ -157,7 +160,7 @@ impl Rvcd {
                                 }
                             }
                             if clicked {
-                                self.signal_clicked(clicked_id);
+                                self.signal_clicked(clicked_id, true);
                             }
                         },
                     );
@@ -174,7 +177,7 @@ impl Rvcd {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
-                                        self.signal_clicked(d.id);
+                                        self.signal_clicked(d.id, true);
                                     }
                                     _ => {}
                                 },
@@ -193,7 +196,7 @@ impl Rvcd {
                                     for node in nodes {
                                         match node {
                                             WaveTreeNode::WaveVar(d) => {
-                                                self.signal_clicked(d.id);
+                                                self.signal_clicked(d.id, false);
                                             }
                                             _ => {}
                                         }
