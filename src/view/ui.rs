@@ -13,6 +13,27 @@ use num_traits::Float;
 use std::ops::RangeInclusive;
 use tracing::{debug, warn};
 
+#[derive(Default)]
+pub struct ResponseHandleState {
+    pub drag_started: bool,
+    pub drag_release: bool,
+    pub drag_by_primary: bool,
+    pub drag_by_secondary: bool,
+    pub drag_by_middle: bool,
+    pub new_range: (f32, f32),
+    pub right_drag_start_pos: Option<Pos2>,
+    pub right_drag_pos: Option<Pos2>,
+    pub pos: Option<Pos2>,
+}
+impl ResponseHandleState {
+    pub fn new(old_range: (f32, f32)) -> Self {
+        Self {
+            new_range: old_range,
+            ..Default::default()
+        }
+    }
+}
+
 impl WaveView {
     /// Paint view menu
     pub fn menu(&mut self, ui: &mut Ui) {
@@ -110,6 +131,102 @@ impl WaveView {
             ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
         }
     }
+    pub fn handle_response(
+        &self,
+        ui: &mut Ui,
+        response: Response,
+        wave_left: f32,
+        info: &WaveInfo,
+        old_range: (f32, f32),
+    ) -> ResponseHandleState {
+        let mut state = ResponseHandleState::new(old_range);
+        if let Some(pointer_pos) = response.interact_pointer_pos() {
+            state.pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
+            state.drag_started = response.drag_started();
+            state.drag_release = response.drag_released();
+            if response.dragged_by(PointerButton::Primary) {
+                state.drag_by_primary = true;
+            }
+            if response.dragged_by(PointerButton::Secondary) {
+                state.drag_by_secondary = true;
+            }
+            if response.dragged_by(PointerButton::Middle) {
+                state.drag_by_middle = true;
+            }
+        }
+        if response.dragged_by(PointerButton::Secondary) {
+            let p = response
+                .interact_pointer_pos()
+                .map(|p| pos2(p.x - wave_left, p.y));
+            state.right_drag_pos = p;
+            state.right_drag_start_pos = p;
+        }
+        // catch mouse wheel events
+        if ui.rect_contains_pointer(response.rect) {
+            let scroll = ui
+                .ctx()
+                .input()
+                .events
+                .iter()
+                .find(|x| match x {
+                    Event::Scroll(_) => true,
+                    _ => false,
+                })
+                .map(|x| match x {
+                    Event::Scroll(v) => Some(*v),
+                    _ => None,
+                })
+                .flatten();
+            let zoom = ui
+                .ctx()
+                .input()
+                .events
+                .iter()
+                .find(|x| match x {
+                    Event::Zoom(_) => true,
+                    _ => false,
+                })
+                .map(|x| match x {
+                    Event::Zoom(v) => Some(*v),
+                    _ => None,
+                })
+                .flatten();
+            if let Some(zoom) = zoom {
+                let zoom = 1.0 / zoom;
+                if let Some(pos) = response.hover_pos() {
+                    let painter = ui.painter();
+                    let pos = pos2(pos.x - wave_left, pos.y);
+                    // zoom from this pos
+                    let center_pos = (pos.x * (self.range.1 - self.range.0) / self.wave_width
+                        + self.range.0)
+                        .clamp(info.range.0 as f32, info.range.1 as f32);
+                    painter.debug_rect(
+                        Rect::from_center_size(
+                            pos2(self.fpos_to_x(center_pos) + wave_left, pos.y),
+                            vec2(4.0, 4.0),
+                        ),
+                        Color32::RED,
+                        "Center",
+                    );
+                    let left = (center_pos - self.range.0) * zoom;
+                    let right = (self.range.1 - center_pos) * zoom;
+                    let new_range_check = (center_pos - left, center_pos + right);
+                    let d = new_range_check.1 - new_range_check.0;
+                    if d > ZOOM_SIZE_MIN
+                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                    {
+                        state.new_range = new_range_check;
+                    }
+                }
+            } else if let Some(scroll) = scroll {
+                state.new_range = self.move_horizontal(-scroll.x);
+            }
+        }
+        if self.limit_range_left && state.new_range.0 < 0.0 {
+            state.new_range.0 = 0.0;
+        }
+        state
+    }
     /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
         let info: &WaveInfo = &wave.info;
@@ -135,163 +252,75 @@ impl WaveView {
             DEFAULT_MIN_SIGNAL_WIDTH,
         );
         self.wave_width = use_rect.width() - fix_width;
-        let table = TableBuilder::new(ui)
-            .striped(true)
-            .resizable(false)
-            // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .cell_layout(Layout::centered_and_justified(Direction::TopDown))
-            .column(Column::exact(fix_width).resizable(false))
-            .column(Column::exact(self.wave_width).resizable(false))
-            .min_scrolled_height(0.0)
-            .max_scroll_height(f32::infinity());
-        let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
-            table.scroll_to_row(scrolling_last_index, Some(Align::TOP))
-        } else {
-            table
-        };
-        let table = if let Some(scrolling_next_index) = self.scrolling_next_index.take() {
-            table.scroll_to_row(scrolling_next_index, Some(Align::BOTTOM))
-        } else {
-            table
-        };
-        // .column(Column::auto())
-        // .column(Column::remainder());
         let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
-        let mut pos = None;
-        let mut drag_started = false;
-        let mut drag_release = false;
-        let mut drag_by_primary = false;
-        let mut drag_by_secondary = false;
-        let mut drag_by_middle = false;
-        let mut new_range = self.range.clone();
-        let mut right_drag_start_pos = None;
-        let mut right_drag_pos = None;
-        let mut last_paint_row_index = None;
         let mut new_signals = vec![];
-        table
-            .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
-                header.col(|ui| {
-                    ui.strong(format!(
-                        "Time #{}~#{} {}{}",
-                        info.range.0, info.range.1, info.timescale.0, info.timescale.1
-                    ));
+        let mut last_paint_row_index = None;
+
+        let max_rect = ui.max_rect();
+        let inner_response = ui.allocate_ui(max_rect.size(), |ui| {
+            let table = TableBuilder::new(ui)
+                .striped(true)
+                .resizable(false)
+                // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .cell_layout(Layout::centered_and_justified(Direction::TopDown))
+                .column(Column::exact(fix_width).resizable(false))
+                .column(Column::exact(self.wave_width).resizable(false))
+                .min_scrolled_height(0.0)
+                .max_scroll_height(f32::infinity());
+            let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
+                table.scroll_to_row(scrolling_last_index, Some(Align::TOP))
+            } else {
+                table
+            };
+            let table = if let Some(scrolling_next_index) = self.scrolling_next_index.take() {
+                table.scroll_to_row(scrolling_next_index, Some(Align::BOTTOM))
+            } else {
+                table
+            };
+            table
+                .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
+                    header.col(|ui| {
+                        ui.strong(format!(
+                            "Time #{}~#{} {}{}",
+                            info.range.0, info.range.1, info.timescale.0, info.timescale.1
+                        ));
+                    });
+                    header.col(|ui| {
+                        self.time_bar(ui, info, wave_left);
+                    });
+                })
+                .body(|body| {
+                    body.heterogeneous_rows(
+                        self.signals.iter().map(|x| x.height),
+                        |row_index, mut row| {
+                            let signal = self.signals.get(row_index);
+                            last_paint_row_index = Some(row_index);
+                            if let Some(signal) = signal {
+                                row.col(|ui| {
+                                    if let Some(signal_new) =
+                                        self.ui_signal_label(signal, row_index, ui)
+                                    {
+                                        new_signals.push(signal_new);
+                                    }
+                                });
+                                row.col(|ui| {
+                                    let _response =
+                                        self.ui_signal_wave(signal, wave_data, info, ui);
+                                    wave_left = ui.available_rect_before_wrap().left();
+                                });
+                            }
+                        },
+                    );
                 });
-                header.col(|ui| {
-                    self.time_bar(ui, info, wave_left);
-                });
-            })
-            .body(|body| {
-                body.heterogeneous_rows(
-                    self.signals.iter().map(|x| x.height),
-                    |row_index, mut row| {
-                        let signal = self.signals.get(row_index);
-                        last_paint_row_index = Some(row_index);
-                        if let Some(signal) = signal {
-                            row.col(|ui| {
-                                if let Some(signal_new) =
-                                    self.ui_signal_label(signal, row_index, ui)
-                                {
-                                    new_signals.push(signal_new);
-                                }
-                            });
-                            row.col(|ui| {
-                                let response = self.ui_signal_wave(signal, wave_data, info, ui);
-                                let pos_hover = response.hover_pos();
-                                wave_left = ui.available_rect_before_wrap().left();
-                                if let Some(pointer_pos) = response.interact_pointer_pos() {
-                                    pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
-                                    drag_started = response.drag_started();
-                                    drag_release = response.drag_released();
-                                    if response.dragged_by(PointerButton::Primary) {
-                                        drag_by_primary = true;
-                                    }
-                                    if response.dragged_by(PointerButton::Secondary) {
-                                        drag_by_secondary = true;
-                                    }
-                                    if response.dragged_by(PointerButton::Middle) {
-                                        drag_by_middle = true;
-                                    }
-                                }
-                                if response.dragged_by(PointerButton::Secondary) {
-                                    let p = response
-                                        .interact_pointer_pos()
-                                        .map(|p| pos2(p.x - wave_left, p.y));
-                                    right_drag_pos = p;
-                                    right_drag_start_pos = p;
-                                }
-                                // catch mouse wheel events
-                                if ui.rect_contains_pointer(use_rect) {
-                                    let scroll = ui
-                                        .ctx()
-                                        .input()
-                                        .events
-                                        .iter()
-                                        .find(|x| match x {
-                                            Event::Scroll(_) => true,
-                                            _ => false,
-                                        })
-                                        .map(|x| match x {
-                                            Event::Scroll(v) => Some(*v),
-                                            _ => None,
-                                        })
-                                        .flatten();
-                                    let zoom = ui
-                                        .ctx()
-                                        .input()
-                                        .events
-                                        .iter()
-                                        .find(|x| match x {
-                                            Event::Zoom(_) => true,
-                                            _ => false,
-                                        })
-                                        .map(|x| match x {
-                                            Event::Zoom(v) => Some(*v),
-                                            _ => None,
-                                        })
-                                        .flatten();
-                                    if let Some(zoom) = zoom {
-                                        let zoom = 1.0 / zoom;
-                                        if let Some(pos) = pos_hover {
-                                            let painter = ui.painter();
-                                            let pos = pos2(pos.x - wave_left, pos.y);
-                                            // zoom from this pos
-                                            let center_pos = (pos.x
-                                                * (self.range.1 - self.range.0)
-                                                / self.wave_width
-                                                + self.range.0)
-                                                .clamp(info.range.0 as f32, info.range.1 as f32);
-                                            painter.debug_rect(
-                                                Rect::from_center_size(
-                                                    pos2(
-                                                        self.fpos_to_x(center_pos) + wave_left,
-                                                        pos.y,
-                                                    ),
-                                                    vec2(4.0, 4.0),
-                                                ),
-                                                Color32::RED,
-                                                "Center",
-                                            );
-                                            let left = (center_pos - self.range.0) * zoom;
-                                            let right = (self.range.1 - center_pos) * zoom;
-                                            let new_range_check =
-                                                (center_pos - left, center_pos + right);
-                                            let d = new_range_check.1 - new_range_check.0;
-                                            if d > ZOOM_SIZE_MIN
-                                                && d < ZOOM_SIZE_MAX_SCALE
-                                                    * (info.range.1 - info.range.0) as f32
-                                            {
-                                                new_range = new_range_check;
-                                            }
-                                        }
-                                    } else if let Some(scroll) = scroll {
-                                        new_range = self.move_horizontal(-scroll.x);
-                                    }
-                                }
-                            });
-                        }
-                    },
-                );
-            });
+        });
+        let global_response = inner_response.response;
+        let state = self.handle_response(
+            ui,
+            global_response,
+            wave_left,
+            &wave.info,
+            self.range.clone(),
+        );
         // update signal information
         let signals_updated = self
             .signals
@@ -309,13 +338,10 @@ impl WaveView {
             .map(|x| x.unwrap())
             .collect();
         self.signals = signals_updated;
-        if self.limit_range_left && new_range.0 < 0.0 {
-            new_range.0 = 0.0;
-        }
-        self.range = new_range;
+        self.range = state.new_range;
         // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
         // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
-        if let Some(pos) = pos {
+        if let Some(pos) = state.pos {
             let painter = ui.painter();
             painter.text(
                 pos + vec2(wave_left, 0.0),
@@ -324,20 +350,20 @@ impl WaveView {
                 Default::default(),
                 Color32::YELLOW,
             );
-            if drag_by_primary {
+            if state.drag_by_primary {
                 self.marker_temp.set_pos_valid(
                     self.x_to_pos(pos.x)
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
-                self.right_drag_start_pos = right_drag_start_pos;
+            if state.right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
+                self.right_drag_start_pos = state.right_drag_start_pos;
             }
-            if drag_release {
+            if state.drag_release {
                 self.right_drag_start_pos = None;
             }
             if let Some(right_drag_start_pos) = self.right_drag_start_pos {
-                if let Some(right_drag_pos) = right_drag_pos {
+                if let Some(right_drag_pos) = state.right_drag_pos {
                     let delta = right_drag_pos - right_drag_start_pos;
                     if let Some(right_drag_last_pos) = self.right_drag_last_pos {
                         // Handle drag move
@@ -348,51 +374,48 @@ impl WaveView {
                     // natural direction
                     let dy = -delta.y;
                     // Handle right drag
-                    // TODO: here we cannot get real `first_paint_row_index`, only to get from last
-                    // simply use last paint index
-                    if let Some(first_paint_row_index) = last_paint_row_index {
-                        debug!("first_paint_row_index: {}", first_paint_row_index);
-                        if let Some(signal) = self.signals.get(first_paint_row_index) {
-                            if dy < -signal.height {
-                                debug!("to last signal");
-                                self.scrolling_next_index =
-                                    Some(i64::max(first_paint_row_index as i64 - 1, 0) as usize);
-                                self.right_drag_start_pos = Some(right_drag_pos);
-                            }
-                        }
-                    }
                     if let Some(last_paint_row_index) = last_paint_row_index {
-                        if let Some(signal) = self.signals.get(last_paint_row_index) {
-                            if dy > signal.height {
-                                debug!("to next signal");
-                                self.scrolling_next_index = Some(usize::min(
-                                    last_paint_row_index + 1,
-                                    self.signals.len() - 1,
-                                ));
-                                self.right_drag_start_pos = Some(right_drag_pos);
-                            }
+                        // simply use const
+                        if dy < -SIGNAL_HEIGHT_DEFAULT {
+                            debug!("to last signal");
+                            self.scrolling_next_index =
+                                Some(i64::max(last_paint_row_index as i64 - 1, 0) as usize);
+                            self.right_drag_start_pos = Some(right_drag_pos);
+                        }
+                        if dy > SIGNAL_HEIGHT_DEFAULT {
+                            debug!("to next signal");
+                            self.scrolling_next_index =
+                                Some(usize::min(last_paint_row_index + 1, self.signals.len() - 1));
+                            self.right_drag_start_pos = Some(right_drag_pos);
                         }
                     }
                 }
             }
-            if right_drag_pos.is_some() {
-                self.right_drag_last_pos = right_drag_pos;
+            if state.right_drag_pos.is_some() {
+                self.right_drag_last_pos = state.right_drag_pos;
             }
-            if drag_release {
+            if state.drag_release {
                 self.right_drag_last_pos = None;
             }
-            if drag_release && self.marker_temp.valid {
+            if state.drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(
                     self.marker_temp
                         .pos
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if !drag_by_primary {
+            if !state.drag_by_primary {
                 self.marker_temp.valid = false;
             }
         }
-        self.paint_span(ui, wave_left, info, pos, &self.marker, &self.marker_temp);
+        self.paint_span(
+            ui,
+            wave_left,
+            info,
+            state.pos,
+            &self.marker,
+            &self.marker_temp,
+        );
         // remove unavailable spans
         self.spans = self
             .spans
