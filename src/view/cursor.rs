@@ -2,7 +2,9 @@ use crate::view::{WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY};
 use crate::wave::WaveInfo;
 use egui::*;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default, Ord, PartialOrd, Eq)]
+#[derive(
+    serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default, Ord, PartialOrd, Eq,
+)]
 pub struct WaveCursor {
     pub id: i32,
     /// Wave position
@@ -69,11 +71,27 @@ impl WaveView {
             true => Color32::YELLOW,
             false => Color32::BLUE.linear_multiply(TEXT_BG_MULTIPLY),
         };
+        let get_text_size = |text: &str| {
+            painter
+                .text(
+                    Pos2::ZERO,
+                    Align2::RIGHT_BOTTOM,
+                    text,
+                    Default::default(),
+                    Color32::TRANSPARENT,
+                )
+                .size()
+        };
         let x = self.pos_to_x(cursor.pos) + offset;
-        painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, bg_color));
-        let paint_text = |text: String, offset_y: f32| {
+        if x >= offset && x <= offset + self.wave_width {
+            painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, bg_color));
+        }
+        let paint_text = |text: String, offset_y: f32, expect_width: f32| {
             painter.text(
-                pos2(x, paint_rect.top() + offset_y),
+                pos2(
+                    x.clamp(offset, offset + self.wave_width - expect_width),
+                    paint_rect.top() + offset_y,
+                ),
                 Align2::LEFT_TOP,
                 text,
                 Default::default(),
@@ -81,13 +99,21 @@ impl WaveView {
             )
         };
         let time = self.pos_to_time(&info.timescale, cursor.pos);
-        let time_rect = paint_text(time.to_string(), 0.0);
+        let time_rect = paint_text(time.to_string(), 0.0, get_text_size(&time).x);
         painter.rect_filled(time_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
-        paint_text(time, 0.0);
+        paint_text(time.to_string(), 0.0, get_text_size(&time).x);
         if !cursor.name.is_empty() {
-            let name_rect = paint_text(cursor.name.to_string(), time_rect.height());
+            let name_rect = paint_text(
+                cursor.name.to_string(),
+                time_rect.height(),
+                get_text_size(&cursor.name).x,
+            );
             painter.rect_filled(name_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
-            paint_text(cursor.name.to_string(), time_rect.height());
+            paint_text(
+                cursor.name.to_string(),
+                time_rect.height(),
+                get_text_size(&cursor.name).x,
+            );
         }
     }
     pub fn cursors_exists_id(&self, id: i32) -> bool {
