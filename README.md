@@ -4,7 +4,11 @@ VCD wave file viewer written in Rust.
 
 With egui, rvcd can be compiled to win/linux/web.
 
-## Get started
+## Usage
+
+TODO
+
+## Compile
 
 ### Windows / Linux
 
