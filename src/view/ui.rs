@@ -171,8 +171,8 @@ impl WaveView {
         let mut drag_by_secondary = false;
         let mut drag_by_middle = false;
         let mut new_range = self.range.clone();
-        let mut middle_click_pos = None;
-        let mut middle_drag_pos = None;
+        let mut right_drag_start_pos = None;
+        let mut right_drag_pos = None;
         let mut last_paint_row_index = None;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
@@ -212,16 +212,12 @@ impl WaveView {
                                         drag_by_middle = true;
                                     }
                                 }
-                                if response.dragged_by(PointerButton::Middle) {
+                                if response.dragged_by(PointerButton::Secondary) {
                                     let p = response
                                         .interact_pointer_pos()
                                         .map(|p| pos2(p.x - wave_left, p.y));
-                                    middle_drag_pos = p;
-                                    // info!("drag middle: {:?}", p);
-                                    // if response.clicked_by(PointerButton::Middle) {
-                                    //     info!("click middle: {:?}", p);
-                                    middle_click_pos = p;
-                                    // }
+                                    right_drag_pos = p;
+                                    right_drag_start_pos = p;
                                 }
                                 // catch mouse wheel events
                                 if ui.rect_contains_pointer(use_rect) {
@@ -327,15 +323,15 @@ impl WaveView {
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if middle_click_pos.is_some() && self.middle_click_pos.is_none() {
-                self.middle_click_pos = middle_click_pos;
+            if right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
+                self.right_drag_start_pos = right_drag_start_pos;
             }
             if drag_release {
-                self.middle_click_pos = None;
+                self.right_drag_start_pos = None;
             }
-            if let Some(middle_click_pos) = self.middle_click_pos {
-                if let Some(middle_drag_pos) = middle_drag_pos {
-                    let delta = middle_drag_pos - middle_click_pos;
+            if let Some(right_drag_start_pos) = self.right_drag_start_pos {
+                if let Some(right_drag_pos) = right_drag_pos {
+                    let delta = right_drag_pos - right_drag_start_pos;
                     let delta = delta.y;
                     // TODO: here we cannot get real `first_paint_row_index`, only to get from last
                     // simply use last paint index
@@ -346,7 +342,7 @@ impl WaveView {
                                 debug!("to last signal");
                                 self.scrolling_next_index =
                                     Some(i64::max(first_paint_row_index as i64 - 1, 0) as usize);
-                                self.middle_click_pos = Some(middle_drag_pos);
+                                self.right_drag_start_pos = Some(right_drag_pos);
                             }
                         }
                     }
@@ -358,7 +354,7 @@ impl WaveView {
                                     last_paint_row_index + 1,
                                     self.signals.len() - 1,
                                 ));
-                                self.middle_click_pos = Some(middle_drag_pos);
+                                self.right_drag_start_pos = Some(right_drag_pos);
                             }
                         }
                     }

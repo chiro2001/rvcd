@@ -56,9 +56,9 @@ pub struct WaveView {
     pub signal_font_size: f32,
     /// Temporally use to store right click position
     #[serde(skip)]
-    pub right_click_pos: Option<Pos2>,
+    pub right_click_time_bar_pos: Option<Pos2>,
     #[serde(skip)]
-    pub middle_click_pos: Option<Pos2>,
+    pub right_drag_start_pos: Option<Pos2>,
     #[serde(skip)]
     pub scrolling_next_index: Option<usize>,
     #[serde(skip)]
@@ -89,8 +89,8 @@ impl Default for WaveView {
             dragging_cursor_id: None,
             wave_width: 100.0,
             signal_font_size: 12.0,
-            right_click_pos: None,
-            middle_click_pos: None,
+            right_click_time_bar_pos: None,
+            right_drag_start_pos: None,
             scrolling_next_index: None,
             scrolling_last_index: None,
             scroll_end: false,

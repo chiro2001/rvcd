@@ -105,19 +105,19 @@ impl WaveView {
         if response.clicked_by(PointerButton::Secondary)
             || response.dragged_by(PointerButton::Secondary)
         {
-            self.right_click_pos = pos;
+            self.right_click_time_bar_pos = pos;
         }
         // pop up cursor menu
         response.context_menu(|ui| {
-            ui.add_enabled_ui(self.right_click_pos.is_some(), |ui| {
+            ui.add_enabled_ui(self.right_click_time_bar_pos.is_some(), |ui| {
                 if ui.button("Add cursor").clicked() {
-                    let pos_new = self.x_to_pos(self.right_click_pos.unwrap().x - offset);
+                    let pos_new = self.x_to_pos(self.right_click_time_bar_pos.unwrap().x - offset);
                     self.cursors
                         .push(WaveCursor::new(self.next_cursor_id(), pos_new));
                     ui.close_menu();
                 }
             });
-            if let Some(right_click_pos) = self.right_click_pos {
+            if let Some(right_click_pos) = self.right_click_time_bar_pos {
                 if let Some(id) = self.find_cursor(right_click_pos.x - offset) {
                     if ui.button("Remove cursor").clicked() {
                         if let Some(index) = self.cursors.iter().position(|x| x.id == id) {
