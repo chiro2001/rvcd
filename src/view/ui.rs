@@ -284,13 +284,7 @@ impl WaveView {
                                             }
                                         }
                                     } else if let Some(scroll) = scroll {
-                                        let x_delta = -scroll.x;
-                                        let pos_delta = self.x_to_fpos(x_delta) - self.range.0;
-                                        let new_range_check =
-                                            (self.range.0 + pos_delta, self.range.1 + pos_delta);
-                                        if !(self.limit_range_left && new_range_check.0 < 0.0) {
-                                            new_range = new_range_check;
-                                        }
+                                        new_range = self.move_horizontal(-scroll.x);
                                     }
                                 }
                             });
@@ -332,14 +326,21 @@ impl WaveView {
             if let Some(right_drag_start_pos) = self.right_drag_start_pos {
                 if let Some(right_drag_pos) = right_drag_pos {
                     let delta = right_drag_pos - right_drag_start_pos;
+                    if let Some(right_drag_last_pos) = self.right_drag_last_pos {
+                        // Handle drag move
+                        let delta = right_drag_pos - right_drag_last_pos;
+                        let dx = -delta.x;
+                        self.range = self.move_horizontal(dx);
+                    }
                     // natural direction
-                    let delta = -delta.y;
+                    let dy = -delta.y;
+                    // Handle right drag
                     // TODO: here we cannot get real `first_paint_row_index`, only to get from last
                     // simply use last paint index
                     if let Some(first_paint_row_index) = last_paint_row_index {
                         debug!("first_paint_row_index: {}", first_paint_row_index);
                         if let Some(signal) = self.signals.get(first_paint_row_index) {
-                            if delta < -signal.height {
+                            if dy < -signal.height {
                                 debug!("to last signal");
                                 self.scrolling_next_index =
                                     Some(i64::max(first_paint_row_index as i64 - 1, 0) as usize);
@@ -349,7 +350,7 @@ impl WaveView {
                     }
                     if let Some(last_paint_row_index) = last_paint_row_index {
                         if let Some(signal) = self.signals.get(last_paint_row_index) {
-                            if delta > signal.height {
+                            if dy > signal.height {
                                 debug!("to next signal");
                                 self.scrolling_next_index = Some(usize::min(
                                     last_paint_row_index + 1,
@@ -360,6 +361,12 @@ impl WaveView {
                         }
                     }
                 }
+            }
+            if right_drag_pos.is_some() {
+                self.right_drag_last_pos = right_drag_pos;
+            }
+            if drag_release {
+                self.right_drag_last_pos = None;
             }
             if drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(
@@ -395,6 +402,19 @@ impl WaveView {
         }
         for cursor in &self.cursors {
             self.paint_cursor(ui, wave_left, info, cursor);
+        }
+    }
+    pub fn move_horizontal(&self, dx: f32) -> (f32, f32) {
+        let pos_delta = self.x_to_fpos(dx) - self.range.0;
+        let new_range_check = (self.range.0 + pos_delta, self.range.1 + pos_delta);
+        if new_range_check.0 < 0.0 {
+            if self.limit_range_left {
+                (0.0, new_range_check.1 - new_range_check.0)
+            } else {
+                new_range_check
+            }
+        } else {
+            new_range_check
         }
     }
     /// Paint span between two cursors

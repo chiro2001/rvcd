@@ -60,6 +60,8 @@ pub struct WaveView {
     #[serde(skip)]
     pub right_drag_start_pos: Option<Pos2>,
     #[serde(skip)]
+    pub right_drag_last_pos: Option<Pos2>,
+    #[serde(skip)]
     pub scrolling_next_index: Option<usize>,
     #[serde(skip)]
     pub scrolling_last_index: Option<usize>,
@@ -91,6 +93,7 @@ impl Default for WaveView {
             signal_font_size: 12.0,
             right_click_time_bar_pos: None,
             right_drag_start_pos: None,
+            right_drag_last_pos: None,
             scrolling_next_index: None,
             scrolling_last_index: None,
             scroll_end: false,
