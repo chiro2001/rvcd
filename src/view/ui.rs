@@ -499,23 +499,19 @@ impl WaveView {
         let painter = ui.painter();
         if a.valid && b.valid {
             let (a, b) = if a.pos < b.pos { (a, b) } else { (b, a) };
-            let (x_a, x_b) = (self.pos_to_x(a.pos) + offset, self.pos_to_x(b.pos) + offset);
-            let rect = Rect::from_min_max(pos2(x_a, paint_rect.min.y), pos2(x_b, paint_rect.max.y));
-            painter.rect(
-                rect,
-                0.0,
-                Color32::BLUE.linear_multiply(BG_MULTIPLY),
-                (LINE_WIDTH, Color32::BLUE),
+            let (x_a, x_b) = (
+                self.pos_to_x(a.pos).clamp(0.0, self.wave_width) + offset,
+                self.pos_to_x(b.pos).clamp(0.0, self.wave_width) + offset,
             );
+            let rect = Rect::from_min_max(pos2(x_a, paint_rect.min.y), pos2(x_b, paint_rect.max.y));
+            let color_bg = Color32::BLUE.linear_multiply(BG_MULTIPLY);
+            // painter.rect(rect, 0.0, color_bg, (LINE_WIDTH, Color32::BLUE));
+            painter.rect_filled(rect, 0.0, color_bg);
             let y = match pos {
                 None => paint_rect.top(),
                 Some(pos) => pos.y,
             };
-            painter.hline(
-                RangeInclusive::new(x_a, x_b),
-                y,
-                (LINE_WIDTH, Color32::BLUE),
-            );
+            painter.hline(RangeInclusive::new(x_a, x_b), y, (LINE_WIDTH, color_bg));
             let time = self.pos_to_time(&info.timescale, b.pos - a.pos);
             painter.text(
                 pos2((x_a + x_b) / 2.0, y),
