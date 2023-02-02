@@ -119,11 +119,30 @@ impl WaveView {
             });
             if let Some(right_click_pos) = self.right_click_time_bar_pos {
                 if let Some(id) = self.find_cursor(right_click_pos.x - offset) {
-                    if ui.button("Remove cursor").clicked() {
-                        if let Some(index) = self.cursors.iter().position(|x| x.id == id) {
-                            self.cursors.remove(index);
+                    if id >= 0 {
+                        if ui.button("Remove cursor").clicked() {
+                            if let Some(index) = self.cursors.iter().position(|x| x.id == id) {
+                                self.cursors.remove(index);
+                            }
+                            ui.close_menu();
                         }
-                        ui.close_menu();
+                    } else {
+                        if let Some(cursor) = match id {
+                            -1 => Some(&mut self.marker),
+                            _ => None,
+                        } {
+                            if ui
+                                .button(if cursor.valid {
+                                    "Disable cursor"
+                                } else {
+                                    "Enable cursor"
+                                })
+                                .clicked()
+                            {
+                                cursor.valid = !cursor.valid;
+                                ui.close_menu();
+                            }
+                        }
                     }
                     let mut span_to_add = None;
                     if let Some(cursor) = self.cursors.iter_mut().find(|x| x.id == id) {
