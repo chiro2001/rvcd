@@ -4,7 +4,7 @@ use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::emath::Align;
-use egui::{vec2, Direction, Layout, ProgressBar, Widget};
+use egui::{vec2, Layout, ProgressBar, Widget};
 use tracing::info;
 
 impl eframe::App for Rvcd {
@@ -60,23 +60,23 @@ impl eframe::App for Rvcd {
         }
 
         if self.state == State::Loading {
-            egui::Window::new("Loading").show(ctx, |ui| {
-                ui.label(format!(
-                    "Loading Progress: {:.1}%",
-                    self.load_progress * 100.0
-                ));
-                ProgressBar::new(self.load_progress).ui(ui);
-                ui.with_layout(
-                    Layout::centered_and_justified(Direction::TopDown).with_cross_justify(true),
-                    |ui| {
+            egui::Window::new("Loading")
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label(format!(
+                        "Loading Progress: {:.1}%",
+                        self.load_progress * 100.0
+                    ));
+                    ProgressBar::new(self.load_progress).ui(ui);
+                    ui.centered_and_justified(|ui| {
                         if ui.button("Cancel").clicked() {
                             if let Some(channel) = &self.channel {
+                                info!("sent FileLoadCancel");
                                 channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
                             }
                         }
-                    },
-                );
-            });
+                    });
+                });
             ctx.request_repaint();
         }
         self.toasts

@@ -5,10 +5,12 @@ use crate::wave::WaveLoader;
 use anyhow::Result;
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read};
-use tracing::{debug, error, info};
+use std::sync::{Arc, Mutex};
+use tracing::{error, info};
 
 pub struct Service {
     pub channel: RvcdChannel,
+    pub cancel: Arc<Mutex<bool>>,
 }
 
 unsafe impl Send for Service {}
@@ -24,7 +26,7 @@ impl Service {
         }
     }
     async fn handle_message(&mut self, msg: RvcdMsg) -> Result<()> {
-        debug!("handle message: {:?}", msg);
+        info!("service handle msg: {:?}", msg);
         match msg {
             RvcdMsg::FileOpen(file) => {
                 info!("loading file: {:?}", file);
@@ -82,18 +84,19 @@ impl Service {
                                             .tx
                                             .send(RvcdMsg::LoadingProgress(progress))
                                             .unwrap();
-                                        match self.channel.rx.try_recv() {
-                                            Ok(msg) => {
-                                                info!("service recv msg when loading: {:?}", msg);
-                                                match msg {
-                                                    RvcdMsg::FileLoadCancel => canceled = true,
-                                                    _ => {}
+                                        match self.cancel.lock() {
+                                            Ok(mut r) => {
+                                                if *r {
+                                                    info!("cancel flag detected, false");
+                                                    canceled = true;
+                                                    *r = false;
+                                                    break;
                                                 }
                                             }
-                                            Err(_) => {}
-                                        }
-                                        if canceled {
-                                            break;
+                                            Err(_e) => {
+                                                canceled = true;
+                                                error!("{}", _e);
+                                            }
                                         }
                                     }
                                     if !canceled {
@@ -129,13 +132,24 @@ impl Service {
                     self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                 }
             }
+            RvcdMsg::FileLoadCancel => {
+                if let Ok(mut r) = self.cancel.lock() {
+                    if !*r {
+                        *r = true;
+                        info!("set cancel flag true");
+                    }
+                }
+            }
             _ => {}
         }
         Ok(())
     }
 
     pub fn new(channel: RvcdChannel) -> Self {
-        Self { channel }
+        Self {
+            channel,
+            cancel: Arc::new(Mutex::new(false)),
+        }
     }
 
     pub async fn run(&mut self) {
