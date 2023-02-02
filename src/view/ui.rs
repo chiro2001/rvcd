@@ -155,7 +155,7 @@ impl WaveView {
                                 }
                                 // catch mouse wheel events
                                 if ui.rect_contains_pointer(use_rect) {
-                                    let _scroll = ui
+                                    let scroll = ui
                                         .ctx()
                                         .input()
                                         .events
@@ -165,7 +165,7 @@ impl WaveView {
                                             _ => false,
                                         })
                                         .map(|x| match x {
-                                            Event::Scroll(v) => Some(v),
+                                            Event::Scroll(v) => Some(*v),
                                             _ => None,
                                         })
                                         .flatten();
@@ -217,6 +217,11 @@ impl WaveView {
                                                 new_range = new_range_check;
                                             }
                                         }
+                                    } else if let Some(scroll) = scroll {
+                                        let x_delta = -scroll.x;
+                                        let pos_delta = self.x_to_fpos(x_delta) - self.range.0;
+                                        new_range =
+                                            (self.range.0 + pos_delta, self.range.1 + pos_delta);
                                     }
                                 }
                             });
