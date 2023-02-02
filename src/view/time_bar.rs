@@ -5,6 +5,8 @@ use egui::*;
 use std::ops::RangeInclusive;
 
 impl WaveView {
+    /// Paint time bar above the wave panel
+    /// * `offset`: painting rect left
     pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
         let rect = ui.max_rect();
         let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());

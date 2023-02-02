@@ -5,6 +5,7 @@ use egui::*;
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub struct WaveCursor {
     pub id: i32,
+    /// Wave position
     pub pos: u64,
     pub name: String,
     pub valid: bool,
@@ -26,6 +27,7 @@ impl WaveCursor {
             valid: false,
         }
     }
+    /// Set position and set valid
     pub fn set_pos_valid(&mut self, pos: u64) {
         self.pos = pos;
         self.valid = true;
@@ -33,6 +35,8 @@ impl WaveCursor {
 }
 
 impl WaveView {
+    /// Find nearest cursor according to panel x position
+    /// Will ignore `self.marker_temp` and distance larger than `CURSOR_NEAREST`
     pub fn find_cursor(&self, x: f32) -> Option<i32> {
         let judge = |c: &WaveCursor| {
             let cursor_x = self.pos_to_x(c.pos);
@@ -56,6 +60,8 @@ impl WaveView {
             },
         }
     }
+    /// Paint a cursor.
+    /// * `offset`: wave panel ui left + signal width + padding(`UI_WIDTH_OFFSET`)
     pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();

@@ -46,6 +46,7 @@ impl SignalView {
 }
 
 impl WaveView {
+    /// Paint a signal wave, return this response
     pub(crate) fn ui_signal_wave(
         &self,
         signal: &SignalView,
@@ -299,6 +300,7 @@ impl WaveView {
         }
         response
     }
+    /// Paint signal label
     pub(crate) fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) {
         let text = signal.s.to_string();
         ui.scope(|ui| {

@@ -23,22 +23,34 @@ const UI_WIDTH_OFFSET: f32 = 8.0;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
 pub struct WaveView {
+    /// Signals added to viewer. TODO: repetitive signals
     pub signals: Vec<SignalView>,
+    /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
     pub range: (u64, u64),
+    /// Text alignment, TODO: fix center position error
     pub align: SignalViewAlign,
+    /// Whether to show background in signals
     pub background: bool,
+    /// Whether to show value text
     pub show_text: bool,
     pub default_radix: Radix,
+    /// Message sender to main ui app
     #[serde(skip)]
     pub tx: Option<mpsc::Sender<RvcdMsg>>,
     pub cursors: Vec<WaveCursor>,
+    /// Valid after dragging released
     pub marker: WaveCursor,
+    /// Valid when dragging
     pub marker_temp: WaveCursor,
+    /// Temporally use to store id
     #[serde(skip)]
     pub dragging_cursor_id: Option<i32>,
+    /// remember display width to calculate position
     #[serde(skip)]
     pub wave_width: f32,
+    /// Value text size
     pub signal_font_size: f32,
+    /// Temporally use to store right click position
     #[serde(skip)]
     pub right_click_pos: Option<Pos2>,
 }
@@ -65,6 +77,7 @@ impl Default for WaveView {
 }
 
 impl WaveView {
+    /// * `tx`: mpsc message sender from parent
     pub fn new(tx: mpsc::Sender<RvcdMsg>) -> Self {
         Self {
             tx: Some(tx),
@@ -74,6 +87,7 @@ impl WaveView {
     pub fn set_tx(&mut self, tx: mpsc::Sender<RvcdMsg>) {
         self.tx = Some(tx);
     }
+    /// Remove signals that not defined in wave info, used in `reload()`
     pub fn signals_clean_unavailable(&mut self, info: &WaveInfo) {
         let signals: Vec<SignalView> = self
             .signals
@@ -84,21 +98,26 @@ impl WaveView {
         debug!("signals: {} => {}", self.signals.len(), signals.len());
         self.signals = signals;
     }
+    /// Convert paint pos to wave position
+    /// * `x`: x position to wave panel
     pub fn x_to_pos(&self, x: f32) -> u64 {
         (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as u64 + self.range.0
-        // x as u64
     }
     pub fn x_to_pos_delta(&self, x: f32) -> i64 {
         (x * (self.range.1 - self.range.0) as f32 / self.wave_width) as i64 + self.range.0 as i64
         // x as u64
     }
+    /// Convert wave position to paint pos
+    /// * `pos`: wave position defined in wave info
     pub fn pos_to_x(&self, pos: u64) -> f32 {
         (pos - self.range.0) as f32 * self.wave_width / (self.range.1 - self.range.0) as f32
         // pos as f32
     }
+    /// Stringify wave position
     pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
         format!("{}{}", pos * timescale.0, timescale.1)
     }
+    /// Stringify wave position, normalized
     pub fn pos_to_time_fmt(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {
         let mut v = pos * timescale.0;
         let mut u = timescale.1;
@@ -108,6 +127,7 @@ impl WaveView {
         }
         format!("{}{}", v, u)
     }
+    /// Get new id for cursor
     fn next_cursor_id(&self) -> i32 {
         self.cursors
             .iter()
@@ -116,6 +136,15 @@ impl WaveView {
             .map(|x| x + 1)
             .unwrap_or(0)
     }
+    /// Reset this view, return new view
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rvcd::view::WaveView;
+    /// let mut view: WaveView = Default::default();
+    /// let view = view.reset();
+    /// ```
     pub fn reset(&mut self) -> Self {
         info!("reset view");
         let tx = self.tx.take();

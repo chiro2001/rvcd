@@ -9,6 +9,7 @@ use std::ops::RangeInclusive;
 use tracing::{debug, warn};
 
 impl WaveView {
+    /// Paint view menu
     pub fn menu(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
             ui.menu_button(format!("Default Radix: {:?}", self.default_radix), |ui| {
@@ -50,6 +51,7 @@ impl WaveView {
             });
         });
     }
+    /// Paint toolbar above wave panel
     pub fn toolbar(&mut self, ui: &mut Ui) {
         ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
             if ui.button("⛔ Clear").clicked() {
@@ -65,6 +67,7 @@ impl WaveView {
             }
         });
     }
+    /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
         if let Some(info) = info {
             if self.range.0 == 0 && self.range.1 == 0 {
@@ -236,6 +239,8 @@ impl WaveView {
             }
         }
     }
+    /// Paint span between `self.marker` and `self.marker_temp`
+    /// TODO: paint span between any cursors
     pub fn paint_span(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, pos: Option<Pos2>) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();
