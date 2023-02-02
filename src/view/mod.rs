@@ -71,6 +71,7 @@ pub struct WaveView {
     pub scroll_end: bool,
     pub limit_range_left: bool,
     pub use_top_margin: bool,
+    pub round_pointer: bool,
 }
 
 impl Default for WaveView {
@@ -98,6 +99,7 @@ impl Default for WaveView {
             scroll_end: false,
             limit_range_left: true,
             use_top_margin: true,
+            round_pointer: true,
         }
     }
 }

@@ -107,6 +107,12 @@ impl WaveView {
             {
                 ui.close_menu();
             }
+            if ui
+                .checkbox(&mut self.round_pointer, "Round Pointer")
+                .clicked()
+            {
+                ui.close_menu();
+            }
             ui.horizontal(|ui| {
                 ui.label("Value font size ");
                 DragValue::new(&mut self.signal_font_size)
@@ -371,10 +377,14 @@ impl WaveView {
                 Color32::YELLOW,
             );
             if pointer_state.drag_by_primary {
-                self.marker_temp.set_pos_valid(
-                    self.x_to_pos(pos.x)
-                        .clamp(self.range.0 as u64, self.range.1 as u64),
-                );
+                let fpos = self.x_to_fpos(pos.x);
+                let p = if self.round_pointer {
+                    fpos.round() as u64
+                } else {
+                    fpos as u64
+                }
+                .clamp(self.range.0 as u64, self.range.1 as u64);
+                self.marker_temp.set_pos_valid(p);
             }
             if pointer_state.right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
                 self.right_drag_start_pos = pointer_state.right_drag_start_pos;
