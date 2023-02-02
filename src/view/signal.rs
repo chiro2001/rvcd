@@ -341,8 +341,9 @@ impl WaveView {
     pub(crate) fn ui_signal_label(
         &self,
         signal: &SignalView,
+        index: usize,
         ui: &mut Ui,
-    ) -> Option<(SignalView, bool)> {
+    ) -> Option<(SignalView, usize, bool)> {
         let mut signal_new = signal.clone();
         let text = signal.s.to_string();
         let mut to_remove = false;
@@ -370,7 +371,7 @@ impl WaveView {
             });
         });
         if to_remove || signal_new != *signal {
-            Some((signal_new, to_remove))
+            Some((signal_new, index, to_remove))
         } else {
             None
         }

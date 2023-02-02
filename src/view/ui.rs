@@ -178,7 +178,9 @@ impl WaveView {
                         last_paint_row_index = Some(row_index);
                         if let Some(signal) = signal {
                             row.col(|ui| {
-                                if let Some(signal_new) = self.ui_signal_label(signal, ui) {
+                                if let Some(signal_new) =
+                                    self.ui_signal_label(signal, row_index, ui)
+                                {
                                     new_signals.push(signal_new);
                                 }
                             });
@@ -285,9 +287,10 @@ impl WaveView {
             .signals
             .iter()
             .map(|x| x.clone())
-            .map(|x| match new_signals.iter().find(|c| c.0.s.id == x.s.id) {
-                None => Some(x),
-                Some(c) => match c.1 {
+            .enumerate()
+            .map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
+                None => Some(x.1),
+                Some(c) => match c.2 {
                     true => None,
                     false => Some(c.0.clone()),
                 },
