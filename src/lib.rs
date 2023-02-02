@@ -13,4 +13,4 @@ pub mod view;
 pub mod frame_history;
 pub mod run_mode;
 
-pub use rvcd::Rvcd;
+pub use crate::rvcd::Rvcd;

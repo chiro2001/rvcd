@@ -150,6 +150,7 @@ mod test {
     use crate::wave::WireValue;
     use crate::wave::WireValue::*;
     use anyhow::Result;
+    use tracing::debug;
 
     #[test]
     fn test_vector_string() -> Result<()> {
