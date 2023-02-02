@@ -112,7 +112,10 @@ impl WaveView {
                         }
                         ui.close_menu();
                     }
+                    let mut span_to_add = None;
                     if let Some(cursor) = self.cursors.iter_mut().find(|x| x.id == id) {
+                        let cursor_id = cursor.id;
+                        let cursor_name = cursor.name.to_string();
                         if cursor.valid {
                             if ui.button("Disable cursor").clicked() {
                                 cursor.valid = false;
@@ -124,6 +127,78 @@ impl WaveView {
                                 ui.close_menu();
                             }
                         }
+                        ui.menu_button("Spans", |ui| {
+                            let mut span_to_remove = None;
+                            for span in self
+                                .spans
+                                .iter()
+                                .filter(|x| x.0 == cursor_id || x.1 == cursor_id)
+                            {
+                                if self.cursors_exists_id(span.0) && self.cursors_exists_id(span.1)
+                                {
+                                    if let Some(a) = self.cursors_get(span.0) {
+                                        if let Some(b) = self.cursors_get(span.1) {
+                                            let mut linked = true;
+                                            if ui
+                                                .checkbox(
+                                                    &mut linked,
+                                                    if a.id == cursor_id {
+                                                        format!("{}-{}", a.name, b.name)
+                                                    } else {
+                                                        format!("{}-{}", b.name, a.name)
+                                                    },
+                                                )
+                                                .clicked()
+                                            {
+                                                // remove this span
+                                                span_to_remove = Some(span.clone());
+                                                ui.close_menu();
+                                            };
+                                        }
+                                    }
+                                }
+                            }
+                            let cursors_unlinked = self
+                                .spans
+                                .iter()
+                                .filter(|x| x.0 != cursor_id && x.1 != cursor_id)
+                                .map(|x| x.clone())
+                                .collect::<Vec<_>>();
+                            let tuple: (Vec<i32>, Vec<i32>) = cursors_unlinked.into_iter().unzip();
+                            let mut cursors_unlinked = tuple
+                                .0
+                                .into_iter()
+                                .chain(tuple.1.into_iter())
+                                .collect::<Vec<_>>();
+                            cursors_unlinked.sort();
+                            for a in cursors_unlinked {
+                                if let Some(a) = self.cursors_get(a) {
+                                    let mut linked = false;
+                                    if ui
+                                        .checkbox(
+                                            &mut linked,
+                                            format!("{}-{}", cursor_name, a.name),
+                                        )
+                                        .clicked()
+                                    {
+                                        span_to_add = Some((cursor_id, a.id));
+                                        ui.close_menu();
+                                    }
+                                }
+                            }
+                            if let Some(span) = span_to_remove {
+                                let spans_new = self
+                                    .spans
+                                    .iter()
+                                    .map(|x| x.clone())
+                                    .filter(|x| *x != span)
+                                    .collect();
+                                self.spans = spans_new;
+                            }
+                        });
+                    }
+                    if let Some(span) = span_to_add {
+                        self.spans.push(span);
                     }
                 }
             }

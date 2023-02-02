@@ -1,4 +1,4 @@
-use crate::view::{WaveView, LINE_WIDTH, TEXT_BG_MULTIPLY, CURSOR_NEAREST};
+use crate::view::{WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY};
 use crate::wave::WaveInfo;
 use egui::*;
 
@@ -89,5 +89,11 @@ impl WaveView {
             painter.rect_filled(name_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
             paint_text(cursor.name.to_string(), time_rect.height());
         }
+    }
+    pub fn cursors_exists_id(&self, id: i32) -> bool {
+        self.cursors.iter().any(|c| c.id == id)
+    }
+    pub fn cursors_get(&self, id: i32) -> Option<&WaveCursor> {
+        self.cursors.iter().find(|c| c.id == id)
     }
 }
