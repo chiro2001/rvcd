@@ -380,6 +380,7 @@ impl WaveView {
                     ui.menu_button(format!("Mode: {}", signal.mode), |ui| {
                         if ui.button("Default").clicked() {
                             signal_new.mode = SignalViewMode::Default;
+                            ui.close_menu();
                         }
                         ui.menu_button("Number", |ui| {
                             use Radix::*;
@@ -393,6 +394,7 @@ impl WaveView {
                         });
                         if ui.button("Analog").clicked() {
                             signal_new.mode = SignalViewMode::Analog;
+                            ui.close_menu();
                         }
                     });
                 });
