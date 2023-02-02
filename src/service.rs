@@ -1,5 +1,5 @@
 use crate::message::{RvcdChannel, RvcdMsg};
-use crate::utils::execute;
+use crate::utils::{execute, sleep_ms};
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::WaveLoader;
 use anyhow::Result;
@@ -36,13 +36,34 @@ impl Service {
 
                 if exists {
                     // TODO: partly read
+                    // send path back
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        self.channel
+                            .tx
+                            .send(RvcdMsg::FileLoadStart(
+                                file.path().to_str().unwrap().to_string(),
+                            ))
+                            .unwrap();
+                    }
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        self.channel
+                            .tx
+                            .send(RvcdMsg::FileLoadStart("".to_string()))
+                            .unwrap();
+                    }
+                    for i in 1..=10 {
+                        sleep_ms(1000).await;
+                        self.channel
+                            .tx
+                            .send(RvcdMsg::LoadingProgress(i as f32 / 10.0))
+                            .unwrap();
+                    }
                     let data = file.read().await;
                     // if let Ok(w) = Vcd::load(&mut file) {
                     let mut reader = Cursor::new(data);
-                    if self.load_data_send(&mut reader) {
-                        // send path back
-                        self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
-                    } else {
+                    if !self.load_data_send(&mut reader) {
                         self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                     }
                 } else {
@@ -70,22 +91,7 @@ impl Service {
 
     pub async fn run(&mut self) {
         loop {
-            #[cfg(not(target_arch = "wasm32"))]
-            std::thread::sleep(std::time::Duration::from_millis(10));
-            #[cfg(target_arch = "wasm32")]
-            {
-                // #[wasm_bindgen]
-                pub fn sleep(ms: i32) -> js_sys::Promise {
-                    js_sys::Promise::new(&mut |resolve, _| {
-                        web_sys::window()
-                            .unwrap()
-                            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
-                            .unwrap();
-                    })
-                }
-                let promise = sleep(10);
-                let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-            }
+            sleep_ms(10).await;
             let r = self
                 .channel
                 .rx

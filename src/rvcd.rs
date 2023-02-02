@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::info;
 
-#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
 pub enum State {
     #[default]
     Idle,
@@ -30,6 +30,7 @@ pub enum State {
 pub struct Rvcd {
     /// File loading state
     #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
     pub state: State,
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -41,9 +42,8 @@ pub struct Rvcd {
     ///
     /// **Only available on native**
     pub filepath: String,
-    /// Loaded file reader
     #[serde(skip)]
-    pub file: Option<FileHandle>,
+    pub load_progress: f32,
     /// Displaying signals in the tree leaves
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
@@ -72,7 +72,7 @@ impl Default for Rvcd {
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
-            file: None,
+            load_progress: 0.0,
             signal_leaves: vec![],
             wave: None,
             view: Default::default(),
@@ -237,27 +237,7 @@ impl Rvcd {
                 }
                 self.state = State::Working;
             }
-            RvcdMsg::FileOpen(_file) => {
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    let path_new = _file.path().to_str().unwrap().to_string();
-                    if path_new != self.filepath {
-                        info!("open new file, clear all signals");
-                        self.view.signals.clear();
-                    } else {
-                        info!("open old file, remove unavailable signals");
-                        if let Some(wave) = &self.wave {
-                            self.view.signals_clean_unavailable(&wave.info);
-                        }
-                    }
-                    self.filepath = path_new;
-                }
-                self.file = Some(_file);
-                self.signal_leaves.clear();
-                if self.state == State::Idle {
-                    self.state = State::Loading;
-                }
-            }
+            RvcdMsg::FileOpen(_file) => {}
             RvcdMsg::Reload => {
                 self.reload();
             }
@@ -286,6 +266,28 @@ impl Rvcd {
                 // re-direct this to service side
                 if let Some(channel) = &self.channel {
                     channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
+                }
+            }
+            RvcdMsg::LoadingProgress(progress) => {
+                self.load_progress = progress;
+            }
+            RvcdMsg::FileLoadStart(_filepath) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    if _filepath != self.filepath {
+                        info!("open new file, clear all signals");
+                        self.view.signals.clear();
+                    } else {
+                        info!("open old file, remove unavailable signals");
+                        if let Some(wave) = &self.wave {
+                            self.view.signals_clean_unavailable(&wave.info);
+                        }
+                    }
+                    self.filepath = _filepath;
+                }
+                self.signal_leaves.clear();
+                if self.state == State::Idle {
+                    self.state = State::Loading;
                 }
             }
         };
@@ -388,6 +390,7 @@ impl Rvcd {
         if ui.button("Test Toast").clicked() {
             self.toasts.info("Test Toast", ToastOptions::default());
         }
+        ui.label(format!("State: {:?}", self.state));
     }
     pub fn handle_dropping_file(&mut self, ctx: &egui::Context) {
         // Collect dropped files:

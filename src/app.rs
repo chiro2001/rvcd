@@ -58,14 +58,11 @@ impl eframe::App for Rvcd {
             }
         }
 
-        // if false {
-        //     egui::Window::new("Window").show(ctx, |ui| {
-        //         ui.label("Windows can be moved by dragging them.");
-        //         ui.label("They are automatically sized based on contents.");
-        //         ui.label("You can turn on resizing and scrolling if you like.");
-        //         ui.label("You would normally choose either panels OR windows.");
-        //     });
-        // }
+        if self.state == State::Loading {
+            egui::Window::new("Loading").show(ctx, |ui| {
+                ui.label(format!("Progress: {:.1}%", self.load_progress * 100.0));
+            });
+        }
         self.toasts
             .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
 
