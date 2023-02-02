@@ -55,12 +55,15 @@ impl WaveView {
         });
     }
     /// Paint toolbar above wave panel
-    pub fn toolbar(&mut self, ui: &mut Ui) {
+    pub fn toolbar(&mut self, ui: &mut Ui, info: &WaveInfo) {
         ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
             if ui.button("⛔ Clear").clicked() {
                 self.signals.clear();
             }
-            if ui.button("🔄 Reload").clicked() {
+            if ui.button("↩ Reset View").clicked() {
+                self.range = (info.range.0 as f32, info.range.1 as f32);
+            }
+            if ui.button("🔄 Reload File").clicked() {
                 if let Some(tx) = &self.tx {
                     debug!("reload msg sent");
                     tx.send(RvcdMsg::Reload).unwrap();
@@ -84,7 +87,7 @@ impl WaveView {
         TopBottomPanel::top("wave_top")
             .resizable(false)
             .show_inside(ui, |ui| {
-                self.toolbar(ui);
+                self.toolbar(ui, &wave.info);
             });
         // bugs by: https://github.com/emilk/egui/issues/2430
         let use_rect = ui.max_rect();
@@ -283,7 +286,7 @@ impl WaveView {
             self.paint_cursor(ui, wave_left, info, cursor);
         }
     }
-    /// Paint span between `self.marker` and `self.marker_temp`
+    /// Paint span between two cursors
     pub fn paint_span(
         &self,
         ui: &mut Ui,
