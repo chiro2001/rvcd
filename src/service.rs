@@ -77,7 +77,6 @@ impl Service {
                                         data[count..(count + sz)].copy_from_slice(&buf[0..sz]);
                                         count += sz;
                                         let progress = count as f32 / total_sz as f32;
-                                        info!("progress: {}, sz: {}", progress, sz);
                                         self.channel
                                             .tx
                                             .send(RvcdMsg::LoadingProgress(progress))

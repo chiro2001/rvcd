@@ -66,14 +66,18 @@ impl WaveView {
                     warn!("no tx in view!");
                 }
             }
+            ui.label(format!(
+                "view range: #[{:.2} ~ {:.2}]",
+                self.range.0, self.range.1
+            ));
         });
     }
     /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
         let info: &WaveInfo = &wave.info;
         let wave_data: &[WaveDataItem] = &wave.data;
-        if self.range.0 == 0 && self.range.1 == 0 {
-            self.range = info.range;
+        if self.range.0 == 0.0 && self.range.1 == 0.0 {
+            self.range = (info.range.0 as f32, info.range.1 as f32);
         }
         TopBottomPanel::top("wave_top")
             .resizable(false)
@@ -179,16 +183,28 @@ impl WaveView {
                                         .flatten();
                                     if let Some(zoom) = zoom {
                                         let zoom = 1.0 / zoom;
-                                        if let Some(_pos) = pos_hover {
-                                            // TODO: zoom from this pos
-                                            new_range = (
-                                                self.range.0,
-                                                ((self.range.1 as f32 * zoom) as u64).clamp(
-                                                    info.range.0
-                                                        + (info.range.1 - info.range.0) / 200,
-                                                    info.range.1 * 2,
+                                        if let Some(pos) = pos_hover {
+                                            let painter = ui.painter();
+                                            let pos = pos2(pos.x - wave_left, pos.y);
+                                            // zoom from this pos
+                                            let center_pos = pos.x * (self.range.1 - self.range.0)
+                                                / self.wave_width
+                                                + self.range.0;
+                                            painter.debug_rect(
+                                                Rect::from_center_size(
+                                                    pos2(
+                                                        self.fpos_to_x(center_pos) + wave_left,
+                                                        pos.y,
+                                                    ),
+                                                    vec2(4.0, 4.0),
                                                 ),
+                                                Color32::RED,
+                                                "Center",
                                             );
+                                            let left = (center_pos - self.range.0) * zoom;
+                                            let right = (self.range.1 - center_pos) * zoom;
+                                            // new_range = (self.range.0, self.range.1 * zoom);
+                                            new_range = (center_pos - left, center_pos + right);
                                         }
                                     }
                                 }
@@ -210,12 +226,17 @@ impl WaveView {
                 Color32::YELLOW,
             );
             if drag_by_primary {
-                self.marker_temp
-                    .set_pos_valid(self.x_to_pos(pos.x).clamp(self.range.0, self.range.1));
+                self.marker_temp.set_pos_valid(
+                    self.x_to_pos(pos.x)
+                        .clamp(self.range.0 as u64, self.range.1 as u64),
+                );
             }
             if drag_release && self.marker_temp.valid {
-                self.marker
-                    .set_pos_valid(self.marker_temp.pos.clamp(self.range.0, self.range.1));
+                self.marker.set_pos_valid(
+                    self.marker_temp
+                        .pos
+                        .clamp(self.range.0 as u64, self.range.1 as u64),
+                );
             }
             if !drag_by_primary {
                 self.marker_temp.valid = false;

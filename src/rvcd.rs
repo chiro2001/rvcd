@@ -240,6 +240,7 @@ impl Rvcd {
                 if let Some(wave) = &self.wave {
                     self.view.signals_clean_unavailable(&wave.info);
                 }
+                // FIXME: update range
                 self.state = State::Working;
             }
             RvcdMsg::FileOpen(_file) => {}

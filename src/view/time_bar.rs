@@ -13,7 +13,7 @@ impl WaveView {
         let pos = response.interact_pointer_pos();
         let pos_new = pos.map(|pos| {
             self.x_to_pos(pos.x - offset)
-                .clamp(self.range.0, self.range.1)
+                .clamp(self.range.0 as u64, self.range.1 as u64)
         });
         // allocate size for text
         let text_rect = painter.text(
@@ -25,14 +25,14 @@ impl WaveView {
         );
         let line_stroke = (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY));
         painter.hline(rect.x_range(), rect.min.y + text_rect.height(), line_stroke);
-        let mut step: u64 = (self.range.1 - self.range.0) / 10;
+        let mut step: u64 = (self.range.1 - self.range.0) as u64 / 10;
         while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 {
             step /= 10;
         }
         if step == 0 {
             step = 1;
         }
-        let range = (self.range.0 / step * step)..(((self.range.1 / step) + 1) * step);
+        let range = (self.range.0 as u64 / step * step)..(((self.range.1 as u64 / step) + 1) * step);
         // paint time stamp labels
         for pos in range.step_by(step as usize) {
             let time = info.timescale.0 * pos;

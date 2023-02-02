@@ -59,6 +59,12 @@ impl WaveView {
         let items = wave_data.iter().filter(|i| i.id == signal.s.id);
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
+        // strange but works...
+        let wave_range_start_x = self.fpos_to_x(self.range.0 * 2.0);
+        let signal_rect = Rect::from_min_max(
+            signal_rect.min - vec2(wave_range_start_x, 0.0),
+            signal_rect.max - vec2(wave_range_start_x, 0.0),
+        );
         let mut it = items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
@@ -275,7 +281,7 @@ impl WaveView {
             paint_signal(
                 item_last,
                 &WaveDataItem {
-                    timestamp: u64::min(info.range.1, self.range.1),
+                    timestamp: u64::min(info.range.1, self.range.1 as u64),
                     ..WaveDataItem::default()
                 },
             );
@@ -284,7 +290,7 @@ impl WaveView {
         if ignore_x_start >= 0.0 {
             let right_pos = self
                 .x_to_pos(signal_rect.right())
-                .clamp(0, u64::min(self.range.1, info.range.1));
+                .clamp(0, u64::min(self.range.1 as u64, info.range.1));
             painter.rect_filled(
                 Rect::from_x_y_ranges(
                     RangeInclusive::new(ignore_x_start, self.pos_to_x(right_pos)),
