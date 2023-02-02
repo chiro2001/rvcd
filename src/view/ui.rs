@@ -44,6 +44,9 @@ impl WaveView {
             if ui.checkbox(&mut self.show_text, "Show Text").clicked() {
                 ui.close_menu();
             }
+            if ui.checkbox(&mut self.limit_range_left, "Limit Left Range").clicked() {
+                ui.close_menu();
+            }
             ui.horizontal(|ui| {
                 ui.label("Value font size ");
                 DragValue::new(&mut self.signal_font_size)
@@ -71,10 +74,6 @@ impl WaveView {
                     warn!("no tx in view!");
                 }
             }
-            ui.label(format!(
-                "view range: #[{:.2} ~ {:.2}]",
-                self.range.0, self.range.1
-            ));
             const EDIT_WIDTH: f32 = 100.0;
             ui.label("From:");
             // let mut from_text = format!("{}", self.range.0 as i64);
@@ -260,8 +259,11 @@ impl WaveView {
                                     } else if let Some(scroll) = scroll {
                                         let x_delta = -scroll.x;
                                         let pos_delta = self.x_to_fpos(x_delta) - self.range.0;
-                                        new_range =
+                                        let new_range_check =
                                             (self.range.0 + pos_delta, self.range.1 + pos_delta);
+                                        if !(self.limit_range_left && new_range_check.0 < 0.0) {
+                                            new_range = new_range_check;
+                                        }
                                     }
                                 }
                             });
@@ -272,6 +274,9 @@ impl WaveView {
         if (self.edit_range_from == "0" && self.edit_range_to == "0") || new_range != self.range {
             self.edit_range_from = (new_range.0 as i64).to_string();
             self.edit_range_to = (new_range.1 as i64).to_string();
+        }
+        if self.limit_range_left && new_range.0 < 0.0 {
+            new_range.0 = 0.0;
         }
         self.range = new_range;
         // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);

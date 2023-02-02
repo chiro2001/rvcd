@@ -61,6 +61,7 @@ pub struct WaveView {
     pub edit_range_from: String,
     #[serde(skip)]
     pub edit_range_to: String,
+    pub limit_range_left: bool,
 }
 
 impl Default for WaveView {
@@ -83,6 +84,7 @@ impl Default for WaveView {
             right_click_pos: None,
             edit_range_from: "0".to_string(),
             edit_range_to: "0".to_string(),
+            limit_range_left: true,
         }
     }
 }
