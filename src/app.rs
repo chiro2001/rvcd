@@ -60,9 +60,13 @@ impl eframe::App for Rvcd {
 
         if self.state == State::Loading {
             egui::Window::new("Loading").show(ctx, |ui| {
-                ui.label(format!("Loading Progress: {:.1}%", self.load_progress * 100.0));
+                ui.label(format!(
+                    "Loading Progress: {:.1}%",
+                    self.load_progress * 100.0
+                ));
                 ProgressBar::new(self.load_progress).ui(ui);
             });
+            ctx.request_repaint();
         }
         self.toasts
             .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));

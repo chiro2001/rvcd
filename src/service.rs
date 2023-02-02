@@ -3,7 +3,8 @@ use crate::utils::{execute, sleep_ms};
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::WaveLoader;
 use anyhow::Result;
-use std::io::{Cursor, Read};
+use std::fs::File;
+use std::io::{BufReader, Cursor, Read};
 use tracing::{debug, error, info};
 
 pub struct Service {
@@ -53,14 +54,46 @@ impl Service {
                             .send(RvcdMsg::FileLoadStart("".to_string()))
                             .unwrap();
                     }
-                    for i in 1..=10 {
-                        sleep_ms(1000).await;
-                        self.channel
-                            .tx
-                            .send(RvcdMsg::LoadingProgress(i as f32 / 10.0))
-                            .unwrap();
-                    }
+                    #[cfg(target_arch = "wasm32")]
                     let data = file.read().await;
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let data = {
+                        let path = file.path().to_str().unwrap().to_string();
+                        let file = File::open(path);
+                        match file {
+                            Ok(file) => {
+                                let total_sz = file.metadata().unwrap().len();
+                                let mut reader = BufReader::new(file);
+                                if total_sz != 0 {
+                                    const BUF_SIZE: usize = 1024 * 256;
+                                    // const BUF_SIZE: usize = 8;
+                                    let mut data = vec![0u8; total_sz as usize];
+                                    let mut buf = [0u8; BUF_SIZE];
+                                    let mut count = 0;
+                                    while let Ok(sz) = reader.read(&mut buf) {
+                                        if sz == 0 {
+                                            break;
+                                        }
+                                        data[count..(count + sz)].copy_from_slice(&buf[0..sz]);
+                                        count += sz;
+                                        let progress = count as f32 / total_sz as f32;
+                                        info!("progress: {}, sz: {}", progress, sz);
+                                        self.channel
+                                            .tx
+                                            .send(RvcdMsg::LoadingProgress(progress))
+                                            .unwrap();
+                                        // sleep_ms(1).await;
+                                    }
+                                    data
+                                } else {
+                                    vec![]
+                                }
+                            }
+                            Err(_) => {
+                                vec![]
+                            }
+                        }
+                    };
                     // if let Ok(w) = Vcd::load(&mut file) {
                     let mut reader = Cursor::new(data);
                     if !self.load_data_send(&mut reader) {
