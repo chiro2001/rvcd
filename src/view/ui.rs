@@ -2,7 +2,7 @@ use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
 use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET};
-use crate::wave::{WaveDataItem, WaveInfo};
+use crate::wave::{Wave, WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use std::ops::RangeInclusive;
@@ -68,11 +68,11 @@ impl WaveView {
         });
     }
     /// Paint wave panel
-    pub fn panel(&mut self, ui: &mut Ui, info: &Option<WaveInfo>, wave_data: &[WaveDataItem]) {
-        if let Some(info) = info {
-            if self.range.0 == 0 && self.range.1 == 0 {
-                self.range = info.range;
-            }
+    pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
+        let info: &WaveInfo = &wave.info;
+        let wave_data: &[WaveDataItem] = &wave.data;
+        if self.range.0 == 0 && self.range.1 == 0 {
+            self.range = info.range;
         }
         TopBottomPanel::top("wave_top")
             .resizable(false)
@@ -112,17 +112,13 @@ impl WaveView {
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
-                    if let Some(info) = info {
-                        ui.strong(format!(
-                            "Time #{}~#{} {}{}",
-                            info.range.0, info.range.1, info.timescale.0, info.timescale.1
-                        ));
-                    }
+                    ui.strong(format!(
+                        "Time #{}~#{} {}{}",
+                        info.range.0, info.range.1, info.timescale.0, info.timescale.1
+                    ));
                 });
                 header.col(|ui| {
-                    if let Some(info) = info {
-                        self.time_bar(ui, info, wave_left);
-                    }
+                    self.time_bar(ui, info, wave_left);
                 });
             })
             .body(|body| {
@@ -133,67 +129,65 @@ impl WaveView {
                         if let Some(signal) = signal {
                             row.col(|ui| self.ui_signal_label(signal, ui));
                             row.col(|ui| {
-                                if let Some(info) = info {
-                                    let response = self.ui_signal_wave(signal, wave_data, info, ui);
-                                    let pos_hover = response.hover_pos();
-                                    wave_left = ui.available_rect_before_wrap().left();
-                                    if let Some(pointer_pos) = response.interact_pointer_pos() {
-                                        pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
-                                        drag_started = response.drag_started();
-                                        drag_release = response.drag_released();
-                                        if response.dragged_by(PointerButton::Primary) {
-                                            drag_by_primary = true;
-                                        }
-                                        if response.dragged_by(PointerButton::Secondary) {
-                                            drag_by_secondary = true;
-                                        }
-                                        if response.dragged_by(PointerButton::Middle) {
-                                            drag_by_middle = true;
-                                        }
+                                let response = self.ui_signal_wave(signal, wave_data, info, ui);
+                                let pos_hover = response.hover_pos();
+                                wave_left = ui.available_rect_before_wrap().left();
+                                if let Some(pointer_pos) = response.interact_pointer_pos() {
+                                    pos = Some(pos2(pointer_pos.x - wave_left, pointer_pos.y));
+                                    drag_started = response.drag_started();
+                                    drag_release = response.drag_released();
+                                    if response.dragged_by(PointerButton::Primary) {
+                                        drag_by_primary = true;
                                     }
-                                    // catch mouse wheel events
-                                    if ui.rect_contains_pointer(use_rect) {
-                                        let _scroll = ui
-                                            .ctx()
-                                            .input()
-                                            .events
-                                            .iter()
-                                            .find(|x| match x {
-                                                Event::Scroll(_) => true,
-                                                _ => false,
-                                            })
-                                            .map(|x| match x {
-                                                Event::Scroll(v) => Some(v),
-                                                _ => None,
-                                            })
-                                            .flatten();
-                                        let zoom = ui
-                                            .ctx()
-                                            .input()
-                                            .events
-                                            .iter()
-                                            .find(|x| match x {
-                                                Event::Zoom(_) => true,
-                                                _ => false,
-                                            })
-                                            .map(|x| match x {
-                                                Event::Zoom(v) => Some(*v),
-                                                _ => None,
-                                            })
-                                            .flatten();
-                                        if let Some(zoom) = zoom {
-                                            let zoom = 1.0 / zoom;
-                                            if let Some(_pos) = pos_hover {
-                                                // TODO: zoom from this pos
-                                                new_range = (
-                                                    self.range.0,
-                                                    ((self.range.1 as f32 * zoom) as u64).clamp(
-                                                        info.range.0
-                                                            + (info.range.1 - info.range.0) / 200,
-                                                        info.range.1 * 2,
-                                                    ),
-                                                );
-                                            }
+                                    if response.dragged_by(PointerButton::Secondary) {
+                                        drag_by_secondary = true;
+                                    }
+                                    if response.dragged_by(PointerButton::Middle) {
+                                        drag_by_middle = true;
+                                    }
+                                }
+                                // catch mouse wheel events
+                                if ui.rect_contains_pointer(use_rect) {
+                                    let _scroll = ui
+                                        .ctx()
+                                        .input()
+                                        .events
+                                        .iter()
+                                        .find(|x| match x {
+                                            Event::Scroll(_) => true,
+                                            _ => false,
+                                        })
+                                        .map(|x| match x {
+                                            Event::Scroll(v) => Some(v),
+                                            _ => None,
+                                        })
+                                        .flatten();
+                                    let zoom = ui
+                                        .ctx()
+                                        .input()
+                                        .events
+                                        .iter()
+                                        .find(|x| match x {
+                                            Event::Zoom(_) => true,
+                                            _ => false,
+                                        })
+                                        .map(|x| match x {
+                                            Event::Zoom(v) => Some(*v),
+                                            _ => None,
+                                        })
+                                        .flatten();
+                                    if let Some(zoom) = zoom {
+                                        let zoom = 1.0 / zoom;
+                                        if let Some(_pos) = pos_hover {
+                                            // TODO: zoom from this pos
+                                            new_range = (
+                                                self.range.0,
+                                                ((self.range.1 as f32 * zoom) as u64).clamp(
+                                                    info.range.0
+                                                        + (info.range.1 - info.range.0) / 200,
+                                                    info.range.1 * 2,
+                                                ),
+                                            );
                                         }
                                     }
                                 }
@@ -226,17 +220,15 @@ impl WaveView {
                 self.marker_temp.valid = false;
             }
         }
-        if let Some(info) = info {
-            self.paint_span(ui, wave_left, info, pos);
-            if self.marker.valid {
-                self.paint_cursor(ui, wave_left, info, &self.marker);
-            }
-            if self.marker_temp.valid {
-                self.paint_cursor(ui, wave_left, info, &self.marker_temp);
-            }
-            for cursor in &self.cursors {
-                self.paint_cursor(ui, wave_left, info, cursor);
-            }
+        self.paint_span(ui, wave_left, info, pos);
+        if self.marker.valid {
+            self.paint_cursor(ui, wave_left, info, &self.marker);
+        }
+        if self.marker_temp.valid {
+            self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+        }
+        for cursor in &self.cursors {
+            self.paint_cursor(ui, wave_left, info, cursor);
         }
     }
     /// Paint span between `self.marker` and `self.marker_temp`

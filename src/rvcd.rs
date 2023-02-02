@@ -6,14 +6,14 @@ use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
 use crate::view::signal::SignalView;
 use crate::view::WaveView;
-use crate::wave::{WaveDataItem, WaveInfo, WaveSignalInfo, WaveTreeNode};
+use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{Layout, ScrollArea, Sense, Ui};
 use egui_toast::{ToastOptions, Toasts};
 use rfd::FileHandle;
 #[allow(unused_imports)]
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq)]
@@ -48,11 +48,7 @@ pub struct Rvcd {
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
     #[serde(skip)]
-    pub wave_info: Option<WaveInfo>,
-
-    #[serde(skip)]
-    pub wave_data: Vec<WaveDataItem>,
-
+    pub wave: Option<Arc<Wave>>,
     #[cfg(not(target_arch = "wasm32"))]
     pub view: WaveView,
     #[cfg(target_arch = "wasm32")]
@@ -78,8 +74,7 @@ impl Default for Rvcd {
             filepath: "".to_string(),
             file: None,
             signal_leaves: vec![],
-            wave_info: None,
-            wave_data: vec![],
+            wave: None,
             view: Default::default(),
             toasts: Toasts::new()
                 .direction(egui::Direction::BottomUp)
@@ -136,8 +131,8 @@ impl Rvcd {
     }
     fn signal_clicked(&mut self, id: u64) {
         if !self.view.signals.iter().any(|x| x.s.id == id) {
-            if let Some(info) = &self.wave_info {
-                self.view.signals.push(SignalView::from_id(id, info));
+            if let Some(wave) = &self.wave {
+                self.view.signals.push(SignalView::from_id(id, &wave.info));
             }
         }
     }
@@ -174,8 +169,8 @@ impl Rvcd {
                     Layout::left_to_right(Align::LEFT).with_cross_justify(false),
                     |ui| {
                         // ScrollArea::vertical().show(ui, |ui| {
-                        if let Some(info) = &self.wave_info {
-                            match TreeView::default().ui(ui, info.tree.root()) {
+                        if let Some(wave) = &self.wave {
+                            match TreeView::default().ui(ui, wave.info.tree.root()) {
                                 TreeAction::None => {}
                                 TreeAction::AddSignal(node) => match node {
                                     WaveTreeNode::WaveVar(d) => {
@@ -215,7 +210,13 @@ impl Rvcd {
         });
     }
     pub fn wave_panel(&mut self, ui: &mut Ui) {
-        self.view.panel(ui, &self.wave_info, &self.wave_data);
+        if let Some(wave) = &self.wave {
+            self.view.panel(ui, &wave);
+        } else {
+            ui.centered_and_justified(|ui| {
+                ui.heading("No file loaded. Drag file here or open file in menu.");
+            });
+        }
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
         info!(
@@ -224,12 +225,12 @@ impl Rvcd {
             self.view.signals.len()
         );
         match msg {
-            RvcdMsg::UpdateInfo(info) => {
-                info!("ui recv info: {}", info);
-                self.wave_info = Some(info);
+            RvcdMsg::UpdateWave(wave) => {
+                info!("ui recv wave: {}", wave);
+                self.wave = Some(wave);
                 self.signal_leaves.clear();
-                if let Some(info) = &self.wave_info {
-                    self.view.signals_clean_unavailable(info);
+                if let Some(wave) = &self.wave {
+                    self.view.signals_clean_unavailable(&wave.info);
                 }
                 self.state = State::Working;
             }
@@ -242,8 +243,8 @@ impl Rvcd {
                         self.view.signals.clear();
                     } else {
                         info!("open old file, remove unavailable signals");
-                        if let Some(info) = &self.wave_info {
-                            self.view.signals_clean_unavailable(info);
+                        if let Some(wave) = &self.wave {
+                            self.view.signals_clean_unavailable(&wave.info);
                         }
                     }
                     self.filepath = path_new;
@@ -253,9 +254,6 @@ impl Rvcd {
                 if self.state == State::Idle {
                     self.state = State::Loading;
                 }
-            }
-            RvcdMsg::UpdateData(data) => {
-                self.wave_data = data;
             }
             RvcdMsg::Reload => {
                 self.reload();
@@ -293,8 +291,7 @@ impl Rvcd {
         }
     }
     pub fn reset(&mut self) {
-        self.wave_info = None;
-        self.wave_data.clear();
+        self.wave = None;
         self.filepath.clear();
         self.state = State::Idle;
         self.view = self.view.reset();

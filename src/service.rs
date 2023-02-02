@@ -1,14 +1,13 @@
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::utils::execute;
 use crate::wave::vcd_parser::Vcd;
-use crate::wave::{Wave, WaveLoader};
+use crate::wave::WaveLoader;
 use anyhow::Result;
 use std::io::Cursor;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tracing::{debug, error, info};
 
 pub struct Service {
-    pub wave: Arc<Mutex<Option<Wave>>>,
     pub channel: RvcdChannel,
 }
 
@@ -32,22 +31,14 @@ impl Service {
                     let data = file.read().await;
                     // if let Ok(w) = Vcd::load(&mut file) {
                     let mut reader = Cursor::new(data);
-                    if let Ok(w) = Vcd::load(&mut reader) {
-                        info!("service load wave: {}", w);
-                        if let Ok(mut wave) = self.wave.lock() {
-                            *wave = Some(w);
-                            self.channel
-                                .tx
-                                .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.clone()))
-                                .unwrap();
-                            self.channel
-                                .tx
-                                .send(RvcdMsg::UpdateData(wave.as_ref().unwrap().data.to_vec()))
-                                .unwrap();
-                            // send path back
-                            self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
-                        }
-                        // *wave.lock().unwrap() = Some(w);
+                    if let Ok(wave) = Vcd::load(&mut reader) {
+                        info!("service load wave: {}", wave);
+                        self.channel
+                            .tx
+                            .send(RvcdMsg::UpdateWave(Arc::new(wave)))
+                            .unwrap();
+                        // send path back
+                        self.channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
                     }
                 } else {
                     #[cfg(not(target_arch = "wasm32"))]
@@ -62,10 +53,7 @@ impl Service {
     }
 
     pub fn new(channel: RvcdChannel) -> Self {
-        Self {
-            wave: Arc::new(Mutex::new(None)),
-            channel,
-        }
+        Self { channel }
     }
 
     pub async fn run(&mut self) {
