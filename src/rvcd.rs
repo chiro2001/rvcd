@@ -222,11 +222,16 @@ impl Rvcd {
         }
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
-        info!(
-            "ui handle msg: {:?}; signals: {}",
-            msg,
-            self.view.signals.len()
-        );
+        match msg {
+            RvcdMsg::LoadingProgress(_) => {}
+            _ => {
+                info!(
+                    "ui handle msg: {:?}; signals: {}",
+                    msg,
+                    self.view.signals.len()
+                );
+            }
+        };
         match msg {
             RvcdMsg::UpdateWave(wave) => {
                 info!("ui recv wave: {}", wave);
@@ -287,6 +292,7 @@ impl Rvcd {
                 }
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
+                    self.load_progress = 0.0;
                     self.state = State::Loading;
                 }
             }

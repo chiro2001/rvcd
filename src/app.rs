@@ -3,7 +3,7 @@ use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::emath::Align;
-use egui::{vec2, Layout};
+use egui::{vec2, Layout, ProgressBar, Widget};
 use tracing::info;
 
 impl eframe::App for Rvcd {
@@ -60,7 +60,8 @@ impl eframe::App for Rvcd {
 
         if self.state == State::Loading {
             egui::Window::new("Loading").show(ctx, |ui| {
-                ui.label(format!("Progress: {:.1}%", self.load_progress * 100.0));
+                ui.label(format!("Loading Progress: {:.1}%", self.load_progress * 100.0));
+                ProgressBar::new(self.load_progress).ui(ui);
             });
         }
         self.toasts
