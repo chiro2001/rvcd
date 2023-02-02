@@ -324,6 +324,14 @@ impl WaveView {
                         },
                     );
                 });
+            let response = ui.allocate_response(
+                ui.available_rect_before_wrap().size(),
+                Sense::click_and_drag(),
+            );
+            if let Some(pos) = response.interact_pointer_pos() {
+                dragging_pos = Some(pos - vec2(wave_left, 0.0));
+            }
+            pointer_state.handle_pointer_response(&response, wave_left);
         });
         let global_response = inner_response.response;
         let state = self.handle_response(
