@@ -1,5 +1,6 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
+use crate::view::cursor::WaveCursor;
 use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
 use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET};
 use crate::wave::{Wave, WaveDataItem, WaveInfo};
@@ -220,7 +221,7 @@ impl WaveView {
                 self.marker_temp.valid = false;
             }
         }
-        self.paint_span(ui, wave_left, info, pos);
+        self.paint_span(ui, wave_left, info, pos, &self.marker, &self.marker_temp);
         if self.marker.valid {
             self.paint_cursor(ui, wave_left, info, &self.marker);
         }
@@ -233,15 +234,19 @@ impl WaveView {
     }
     /// Paint span between `self.marker` and `self.marker_temp`
     /// TODO: paint span between any cursors
-    pub fn paint_span(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, pos: Option<Pos2>) {
+    pub fn paint_span(
+        &self,
+        ui: &mut Ui,
+        offset: f32,
+        info: &WaveInfo,
+        pos: Option<Pos2>,
+        a: &WaveCursor,
+        b: &WaveCursor,
+    ) {
         let paint_rect = ui.max_rect();
         let painter = ui.painter();
-        if self.marker.valid && self.marker_temp.valid {
-            let (a, b) = if self.marker.pos < self.marker_temp.pos {
-                (&self.marker, &self.marker_temp)
-            } else {
-                (&self.marker_temp, &self.marker)
-            };
+        if a.valid && b.valid {
+            let (a, b) = if a.pos < b.pos { (a, b) } else { (b, a) };
             let (x_a, x_b) = (self.pos_to_x(a.pos) + offset, self.pos_to_x(b.pos) + offset);
             let rect = Rect::from_min_max(pos2(x_a, paint_rect.min.y), pos2(x_b, paint_rect.max.y));
             painter.rect(
@@ -263,7 +268,7 @@ impl WaveView {
             painter.text(
                 pos2((x_a + x_b) / 2.0, y),
                 Align2::CENTER_BOTTOM,
-                if self.marker.pos <= self.marker_temp.pos {
+                if a.pos <= b.pos {
                     format!("+{}", time)
                 } else {
                     format!("-{}", time)

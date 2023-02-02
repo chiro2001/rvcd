@@ -27,7 +27,7 @@ pub struct WaveView {
     pub signals: Vec<SignalView>,
     /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
     pub range: (u64, u64),
-    /// Text alignment, TODO: fix center position error
+    /// Text alignment, FIXME: center position error
     pub align: SignalViewAlign,
     /// Whether to show background in signals
     pub background: bool,
