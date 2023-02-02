@@ -64,6 +64,10 @@ pub struct Rvcd {
     #[serde(skip)]
     pub frame_history: FrameHistory,
     pub debug_panel: bool,
+
+    #[cfg(target_arch = "wasm32")]
+    #[serde(skip)]
+    pub file: Option<FileHandle>
 }
 
 impl Default for Rvcd {
@@ -83,6 +87,8 @@ impl Default for Rvcd {
             run_mode: Default::default(),
             frame_history: Default::default(),
             debug_panel: false,
+            #[cfg(target_arch = "wasm32")]
+            file: None,
         }
     }
 }

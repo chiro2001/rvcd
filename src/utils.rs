@@ -24,7 +24,7 @@ pub async fn sleep_ms(mills: u64) {
                     .unwrap();
             })
         }
-        let promise = sleep(mills);
+        let promise = sleep(mills as i32);
         let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
     }
 }

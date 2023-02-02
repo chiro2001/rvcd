@@ -343,7 +343,11 @@ impl WaveView {
         ui.scope(|ui| {
             ui.set_height(signal.height);
             ui.centered_and_justified(|ui| {
-                ui.add(Label::new(text).wrap(false));
+                let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
+                // TODO: drag signal order
+                if response.clicked() {
+                    ui.scroll_to_rect(response.rect, None);
+                }
             });
         });
     }

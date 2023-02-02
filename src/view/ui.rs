@@ -8,6 +8,7 @@ use crate::view::{
 use crate::wave::{Wave, WaveDataItem, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
+use num_traits::Float;
 use std::ops::RangeInclusive;
 use tracing::{debug, warn};
 
@@ -44,7 +45,10 @@ impl WaveView {
             if ui.checkbox(&mut self.show_text, "Show Text").clicked() {
                 ui.close_menu();
             }
-            if ui.checkbox(&mut self.limit_range_left, "Limit Left Range").clicked() {
+            if ui
+                .checkbox(&mut self.limit_range_left, "Limit Left Range")
+                .clicked()
+            {
                 ui.close_menu();
             }
             ui.horizontal(|ui| {
@@ -144,7 +148,9 @@ impl WaveView {
             // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .cell_layout(Layout::centered_and_justified(Direction::TopDown))
             .column(Column::exact(fix_width).resizable(false))
-            .column(Column::exact(self.wave_width).resizable(false));
+            .column(Column::exact(self.wave_width).resizable(false))
+            .min_scrolled_height(0.0)
+            .max_scroll_height(f32::infinity());
         // .column(Column::auto())
         // .column(Column::remainder());
         let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
@@ -155,6 +161,7 @@ impl WaveView {
         let mut drag_by_secondary = false;
         let mut drag_by_middle = false;
         let mut new_range = self.range.clone();
+        let mut middle_click_pos = None;
         table
             .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                 header.col(|ui| {
@@ -191,6 +198,13 @@ impl WaveView {
                                     if response.dragged_by(PointerButton::Middle) {
                                         drag_by_middle = true;
                                     }
+                                }
+                                if response.clicked_by(PointerButton::Middle)
+                                    || response.dragged_by(PointerButton::Middle)
+                                {
+                                    middle_click_pos = response
+                                        .interact_pointer_pos()
+                                        .map(|p| pos2(p.x - wave_left, p.y));
                                 }
                                 // catch mouse wheel events
                                 if ui.rect_contains_pointer(use_rect) {
@@ -295,6 +309,20 @@ impl WaveView {
                     self.x_to_pos(pos.x)
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
+            }
+            if drag_by_middle {
+                if let Some(p1) = middle_click_pos {
+                    if let Some(p2) = self.middle_click_pos {
+                        let d = p1 - p2;
+                        ui.scroll_with_delta(d);
+                    }
+                }
+            }
+            if middle_click_pos.is_some() {
+                self.middle_click_pos = middle_click_pos;
+            }
+            if drag_release {
+                self.middle_click_pos = None;
             }
             if drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(

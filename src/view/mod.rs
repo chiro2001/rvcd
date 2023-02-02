@@ -58,6 +58,12 @@ pub struct WaveView {
     #[serde(skip)]
     pub right_click_pos: Option<Pos2>,
     #[serde(skip)]
+    pub middle_click_pos: Option<Pos2>,
+    #[serde(skip)]
+    pub scroll_start_pos: Pos2,
+    #[serde(skip)]
+    pub scroll_end: bool,
+    #[serde(skip)]
     pub edit_range_from: String,
     #[serde(skip)]
     pub edit_range_to: String,
@@ -82,6 +88,9 @@ impl Default for WaveView {
             wave_width: 100.0,
             signal_font_size: 12.0,
             right_click_pos: None,
+            middle_click_pos: None,
+            scroll_start_pos: Default::default(),
+            scroll_end: false,
             edit_range_from: "0".to_string(),
             edit_range_to: "0".to_string(),
             limit_range_left: true,
