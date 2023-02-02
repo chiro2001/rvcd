@@ -270,15 +270,46 @@ impl WaveView {
                     ignore_has_x = true;
                 }
             }
+            rect
         };
+        // TODO: Reduce horizontal value painting
+        // let mut done_early = false;
         while let Some(item) = it.next() {
+            // let mut done = false;
             if let Some(item_last) = item_last {
-                paint_signal(item_last, item);
+                let _value_rect = paint_signal(item_last, item);
+                // if !ui.is_rect_visible(_value_rect) {
+                //     painter.rect_filled(_value_rect, 0.0, Color32::RED);
+                //     done = true;
+                //     done_early = true;
+                // }
             }
             item_last = Some(item);
+            // if done {
+            //     break;
+            // }
         }
+        // if done_early {
+        //     let mut paint_it = || {
+        //         if let Some(item) = it.next() {
+        //             let r = if let Some(item_last) = item_last {
+        //                 let _ = paint_signal(item_last, item);
+        //                 true
+        //             } else {
+        //                 false
+        //             };
+        //             item_last = Some(item);
+        //             r
+        //         } else {
+        //             false
+        //         }
+        //     };
+        //     paint_it();
+        //     paint_it();
+        //     paint_it();
+        // } else {
         if let Some(item_last) = item_last {
-            paint_signal(
+            let _ = paint_signal(
                 item_last,
                 &WaveDataItem {
                     timestamp: u64::min(info.range.1 + 1, self.range.1 as u64 + 1),
@@ -286,6 +317,7 @@ impl WaveView {
                 },
             );
         }
+        // }
         // draw last
         if ignore_x_start >= 0.0 {
             let right_pos = (self.x_to_pos(signal_rect.right()) + 1)
