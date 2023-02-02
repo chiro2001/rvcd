@@ -67,10 +67,6 @@ pub struct WaveView {
     pub scrolling_last_index: Option<usize>,
     #[serde(skip)]
     pub scroll_end: bool,
-    #[serde(skip)]
-    pub edit_range_from: String,
-    #[serde(skip)]
-    pub edit_range_to: String,
     pub limit_range_left: bool,
 }
 
@@ -97,8 +93,6 @@ impl Default for WaveView {
             scrolling_next_index: None,
             scrolling_last_index: None,
             scroll_end: false,
-            edit_range_from: "0".to_string(),
-            edit_range_to: "0".to_string(),
             limit_range_left: true,
         }
     }

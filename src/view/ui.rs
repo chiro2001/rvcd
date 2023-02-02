@@ -80,41 +80,24 @@ impl WaveView {
             }
             const EDIT_WIDTH: f32 = 100.0;
             ui.label("From:");
-            // let mut from_text = format!("{}", self.range.0 as i64);
-            ui.with_layout(Layout::default(), |ui| {
-                ui.set_width(EDIT_WIDTH);
-                ui.text_edit_singleline(&mut self.edit_range_from);
-            });
+            let speed_min = 0.1;
+            let old_range = self.range.clone();
+            let drag_value = DragValue::new(&mut self.range.0)
+                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min));
+            let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1);
+            let drag_value = if self.limit_range_left {
+                drag_value.clamp_range(0.0..=range_right)
+            } else {
+                drag_value.clamp_range((-(info.range.1 as f32) * ZOOM_SIZE_MAX_SCALE)..=range_right)
+            };
+            drag_value.ui(ui);
             ui.label("To:");
-            // let mut to_text = format!("{}", self.range.1 as i64);
-            ui.with_layout(Layout::default(), |ui| {
-                ui.set_width(EDIT_WIDTH);
-                ui.text_edit_singleline(&mut self.edit_range_to);
-            });
-            if ui.button("🆗 Set").clicked() {
-                if let Ok(value) = self.edit_range_from.parse::<u64>() {
-                    let value = value as f32;
-                    let d = self.range.1 - value;
-                    if d > ZOOM_SIZE_MIN
-                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
-                    {
-                        self.range.0 = value;
-                    }
-                } else {
-                    self.edit_range_from = (self.range.0 as i64).to_string();
-                }
-                if let Ok(value) = self.edit_range_to.parse::<u64>() {
-                    let value = value as f32;
-                    let d = value - self.range.0;
-                    if d > ZOOM_SIZE_MIN
-                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
-                    {
-                        self.range.1 = value;
-                    }
-                } else {
-                    self.edit_range_to = (self.range.1 as i64).to_string();
-                }
-            }
+            DragValue::new(&mut self.range.1)
+                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min))
+                .clamp_range(
+                    (old_range.0 + ZOOM_SIZE_MIN)..=(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE),
+                )
+                .ui(ui);
         });
     }
     /// Paint wave panel
@@ -308,10 +291,6 @@ impl WaveView {
             })
             .collect();
         self.signals = signals_updated;
-        if (self.edit_range_from == "0" && self.edit_range_to == "0") || new_range != self.range {
-            self.edit_range_from = (new_range.0 as i64).to_string();
-            self.edit_range_to = (new_range.1 as i64).to_string();
-        }
         if self.limit_range_left && new_range.0 < 0.0 {
             new_range.0 = 0.0;
         }
