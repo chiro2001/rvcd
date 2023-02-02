@@ -19,7 +19,7 @@ const BG_MULTIPLY: f32 = 0.05;
 const TEXT_BG_MULTIPLY: f32 = 0.4;
 const CURSOR_NEAREST: f32 = 20.0;
 const UI_WIDTH_OFFSET: f32 = 8.0;
-const ZOOM_SIZE_MIN: f32 = 2.0;
+const ZOOM_SIZE_MIN: f32 = 12.0;
 const ZOOM_SIZE_MAX_SCALE: f32 = 5.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
