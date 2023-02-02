@@ -215,7 +215,6 @@ pub struct WaveInfo {
 #[derive(Clone)]
 pub struct Wave {
     pub info: WaveInfo,
-    /// TODO: store wave data as const global variable
     pub data: Vec<WaveDataItem>,
 }
 

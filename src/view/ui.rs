@@ -247,7 +247,6 @@ impl WaveView {
         }
     }
     /// Paint span between `self.marker` and `self.marker_temp`
-    /// TODO: paint span between any cursors
     pub fn paint_span(
         &self,
         ui: &mut Ui,
