@@ -38,7 +38,7 @@ impl Service {
                             *wave = Some(w);
                             self.channel
                                 .tx
-                                .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.copy()))
+                                .send(RvcdMsg::UpdateInfo(wave.as_ref().unwrap().info.clone()))
                                 .unwrap();
                             self.channel
                                 .tx

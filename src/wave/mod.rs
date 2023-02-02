@@ -92,6 +92,7 @@ impl Into<Option<BigUint>> for &WaveDataValue {
 }
 
 impl WaveDataValue {
+    /// to string in radix
     pub fn as_radix(&self, radix: Radix) -> String {
         match self {
             WaveDataValue::Comp(v) => BigUint::from_bytes_le(v).to_str_radix(radix.to_number() as u32),
@@ -127,6 +128,7 @@ impl Display for WaveDataItem {
 }
 
 impl WaveDataItem {
+    /// Compress [WaveDataItem], may change `Raw(_)` to `Comp(_)`
     fn compress(self) -> Result<Self> {
         if match &self.value {
             WaveDataValue::Comp(v) => v.len(),
@@ -175,7 +177,7 @@ pub enum WaveTreeNode {
     WaveRoot,
     WaveScope(String),
     WaveVar(WaveSignalInfo),
-    // id only to save space
+    /// id only to save space (Not available now)
     WaveId(u64),
 }
 
@@ -197,30 +199,23 @@ impl Display for WaveTreeNode {
 #[derive(Clone, Debug)]
 pub struct WaveInfo {
     pub timescale: (u64, WaveTimescaleUnit),
+    /// Position range
     pub range: (u64, u64),
+    /// Extra information
     pub headers: HashMap<String, String>,
+    /// Signal info: (name, width) indexed by id
     pub code_name_width: HashMap<u64, (String, u64)>,
+    /// Signal path indexed by id
     pub code_paths: HashMap<u64, Vec<String>>,
+    /// Signal scope and vars tree
     pub tree: Tree<WaveTreeNode>,
-}
-
-impl WaveInfo {
-    pub fn copy(&self) -> Self {
-        Self {
-            timescale: self.timescale,
-            range: self.range,
-            headers: self.headers.clone(),
-            code_name_width: self.code_name_width.clone(),
-            code_paths: self.code_paths.clone(),
-            tree: self.tree.deep_clone(),
-        }
-    }
 }
 
 /// loaded wave data in memory
 #[derive(Clone)]
 pub struct Wave {
     pub info: WaveInfo,
+    /// TODO: store wave data as const global variable
     pub data: Vec<WaveDataItem>,
 }
 
@@ -240,6 +235,7 @@ impl Display for Wave {
     }
 }
 
+/// To support other file formats
 pub trait WaveLoader {
     fn load(reader: &mut dyn Read) -> Result<Wave>;
 }
