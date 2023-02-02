@@ -53,7 +53,8 @@ impl WaveView {
             );
             match time {
                 time if time % (5 * step) == 0 => {
-                    let time_text = self.pos_to_time_fmt(&info.timescale, pos);
+                    // let time_text = self.pos_to_time_fmt(&info.timescale, pos);
+                    let time_text = self.pos_to_time(&info.timescale, pos);
                     painter.text(
                         pos2(x, rect.top()),
                         Align2::LEFT_TOP,

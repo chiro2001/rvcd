@@ -187,9 +187,11 @@ impl WaveView {
                                             let painter = ui.painter();
                                             let pos = pos2(pos.x - wave_left, pos.y);
                                             // zoom from this pos
-                                            let center_pos = pos.x * (self.range.1 - self.range.0)
+                                            let center_pos = (pos.x
+                                                * (self.range.1 - self.range.0)
                                                 / self.wave_width
-                                                + self.range.0;
+                                                + self.range.0)
+                                                .clamp(info.range.0 as f32, info.range.1 as f32);
                                             painter.debug_rect(
                                                 Rect::from_center_size(
                                                     pos2(
