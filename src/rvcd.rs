@@ -262,9 +262,12 @@ impl Rvcd {
                 self.toasts.add(toast);
             }
             RvcdMsg::FileOpenFailed => {
-                // self.toasts.error("File not found!", Duration::from_secs(5));
-                self.toasts
-                    .error("File not found!", ToastOptions::default());
+                let text = "Open file failed!";
+                if cfg!(not(target_arch = "wasm32")) {
+                    self.toasts.error(text, std::time::Duration::from_secs(5));
+                } else {
+                    self.toasts.error(text, ToastOptions::default());
+                }
                 self.reset();
             }
             RvcdMsg::FileOpenData(data) => {
@@ -387,8 +390,12 @@ impl Rvcd {
             info!("drag {} files!", dropped_files.len());
             dropped_files.first().map(|dropped_file| {
                 if let Some(path) = &dropped_file.path {
-                    let file = FileHandle::from(path.clone());
-                    self.message_handler(RvcdMsg::FileDrag(file));
+                    if path.is_file() {
+                        let file = FileHandle::from(path.clone());
+                        self.message_handler(RvcdMsg::FileDrag(file));
+                    } else {
+                        self.message_handler(RvcdMsg::FileOpenFailed);
+                    }
                 } else {
                     if let Some(data) = &dropped_file.bytes {
                         self.message_handler(RvcdMsg::FileOpenData(data.clone()));
