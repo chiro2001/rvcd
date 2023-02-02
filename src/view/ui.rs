@@ -75,6 +75,37 @@ impl WaveView {
                 "view range: #[{:.2} ~ {:.2}]",
                 self.range.0, self.range.1
             ));
+            const EDIT_WIDTH: f32 = 100.0;
+            ui.label("From:");
+            let mut from_text = format!("{}", self.range.0 as i64);
+            ui.with_layout(Layout::default(), |ui| {
+                ui.set_width(EDIT_WIDTH);
+                ui.text_edit_singleline(&mut from_text);
+            });
+            ui.label("To:");
+            let mut to_text = format!("{}", self.range.1 as i64);
+            ui.with_layout(Layout::default(), |ui| {
+                ui.set_width(EDIT_WIDTH);
+                ui.text_edit_singleline(&mut to_text);
+            });
+            if let Ok(value) = from_text.parse::<u64>() {
+                let value = value as f32;
+                let d = self.range.1 - value;
+                if d > ZOOM_SIZE_MIN
+                    && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                {
+                    self.range.0 = value;
+                }
+            }
+            if let Ok(value) = to_text.parse::<u64>() {
+                let value = value as f32;
+                let d = value - self.range.0;
+                if d > ZOOM_SIZE_MIN
+                    && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                {
+                    self.range.1 = value;
+                }
+            }
         });
     }
     /// Paint wave panel
