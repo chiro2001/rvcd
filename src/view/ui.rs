@@ -285,10 +285,15 @@ impl WaveView {
             .signals
             .iter()
             .map(|x| x.clone())
-            .map(|x| match new_signals.iter().find(|c| c.s.id == x.s.id) {
-                None => x,
-                Some(c) => c.clone(),
+            .map(|x| match new_signals.iter().find(|c| c.0.s.id == x.s.id) {
+                None => Some(x),
+                Some(c) => match c.1 {
+                    true => None,
+                    false => Some(c.0.clone()),
+                },
             })
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap())
             .collect();
         self.signals = signals_updated;
         if self.limit_range_left && new_range.0 < 0.0 {

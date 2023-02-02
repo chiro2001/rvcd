@@ -338,9 +338,14 @@ impl WaveView {
         response
     }
     /// Paint signal label
-    pub(crate) fn ui_signal_label(&self, signal: &SignalView, ui: &mut Ui) -> Option<SignalView> {
+    pub(crate) fn ui_signal_label(
+        &self,
+        signal: &SignalView,
+        ui: &mut Ui,
+    ) -> Option<(SignalView, bool)> {
         let mut signal_new = signal.clone();
         let text = signal.s.to_string();
+        let mut to_remove = false;
         ui.scope(|ui| {
             ui.set_height(signal.height);
             ui.centered_and_justified(|ui| {
@@ -348,18 +353,24 @@ impl WaveView {
                 // TODO: drag signal order
                 response.context_menu(|ui| {
                     if ui.button("Remove").clicked() {
+                        to_remove = true;
                         ui.close_menu();
                     }
-                    DragValue::new(&mut signal_new.height)
-                        .clamp_range((SIGNAL_HEIGHT_DEFAULT / 2.0)..=(SIGNAL_HEIGHT_DEFAULT * 4.0))
-                        .speed(1.0)
-                        .suffix("px")
-                        .ui(ui);
+                    ui.horizontal(|ui| {
+                        ui.label("Height: ");
+                        DragValue::new(&mut signal_new.height)
+                            .clamp_range(
+                                (SIGNAL_HEIGHT_DEFAULT / 2.0)..=(SIGNAL_HEIGHT_DEFAULT * 4.0),
+                            )
+                            .speed(1.0)
+                            .suffix("px")
+                            .ui(ui);
+                    });
                 });
             });
         });
-        if signal_new != *signal {
-            Some(signal_new)
+        if to_remove || signal_new != *signal {
+            Some((signal_new, to_remove))
         } else {
             None
         }
