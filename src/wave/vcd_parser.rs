@@ -310,7 +310,7 @@ impl WaveLoader for Vcd {
 #[cfg(test)]
 mod test {
     use crate::radix::radix_vector_to_string_n;
-    use crate::wave::vcd::{vcd_code_name, vcd_header_show, vcd_tree_show};
+    use crate::wave::vcd_parser::{vcd_code_name, vcd_header_show, vcd_tree_show};
     use anyhow::Result;
     use std::fs::File;
     use std::io::Read;

@@ -1,6 +1,6 @@
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::utils::execute;
-use crate::wave::vcd::Vcd;
+use crate::wave::vcd_parser::Vcd;
 use crate::wave::{Wave, WaveLoader};
 use anyhow::Result;
 use std::io::Cursor;

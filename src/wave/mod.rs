@@ -8,7 +8,7 @@ use std::io::Read;
 use trees::Tree;
 
 pub mod utils;
-pub mod vcd;
+pub mod vcd_parser;
 
 /// like [vcd::Value], basically for (de)serialize
 #[derive(Default, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
@@ -246,7 +246,7 @@ pub trait WaveLoader {
 
 #[cfg(test)]
 mod test {
-    use crate::wave::vcd::Vcd;
+    use crate::wave::vcd_parser::Vcd;
     use crate::wave::WaveLoader;
     use std::fs::File;
     // use trees::Node;
