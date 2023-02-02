@@ -4,6 +4,7 @@ use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireVal
 use egui::*;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
+use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
@@ -12,6 +13,15 @@ pub enum SignalViewMode {
     Default,
     Number(Radix),
     Analog,
+}
+impl Display for SignalViewMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SignalViewMode::Default => write!(f, "default"),
+            SignalViewMode::Number(r) => write!(f, "{}", r),
+            SignalViewMode::Analog => write!(f, "Analog"),
+        }
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Default, Debug, Clone)]
@@ -366,6 +376,24 @@ impl WaveView {
                             .speed(1.0)
                             .suffix("px")
                             .ui(ui);
+                    });
+                    ui.menu_button(format!("Mode: {}", signal.mode), |ui| {
+                        if ui.button("Default").clicked() {
+                            signal_new.mode = SignalViewMode::Default;
+                        }
+                        ui.menu_button("Number", |ui| {
+                            use Radix::*;
+                            let data = [Hex, Oct, Dec, Bin];
+                            data.into_iter().for_each(|r| {
+                                if ui.button(format!("{:?}", r)).clicked() {
+                                    signal_new.mode = SignalViewMode::Number(r);
+                                    ui.close_menu();
+                                }
+                            });
+                        });
+                        if ui.button("Analog").clicked() {
+                            signal_new.mode = SignalViewMode::Analog;
+                        }
                     });
                 });
             });

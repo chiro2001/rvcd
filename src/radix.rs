@@ -1,6 +1,7 @@
 use crate::wave::WireValue;
 use num_bigint::BigUint;
 use std::cmp::min;
+use std::fmt::{Display, Formatter};
 use tracing::debug;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Ord, PartialOrd, Eq, PartialEq, Clone)]
@@ -9,6 +10,12 @@ pub enum Radix {
     Oct,
     Dec,
     Hex,
+}
+
+impl Display for Radix {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Radix {
@@ -53,7 +60,7 @@ fn value_map_val(v: &WireValue) -> u8 {
 }
 
 /// Convert [Vec<WireValue>] to BigUInt
-/// 
+///
 /// **Warning: all [WireValue::Z] and [WireValue::X] will be replaced by [WireValue::V1]**
 pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
     let bits = vec.iter().map(value_map_val);
