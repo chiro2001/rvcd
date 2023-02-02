@@ -303,6 +303,7 @@ impl Rvcd {
                     self.state = State::Loading;
                 }
             }
+            RvcdMsg::FileLoadCancel => {}
         };
     }
     pub fn reload(&mut self) {

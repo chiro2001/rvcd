@@ -8,6 +8,7 @@ use std::sync::{mpsc, Arc};
 pub enum RvcdMsg {
     FileOpen(FileHandle),
     FileLoadStart(String),
+    FileLoadCancel,
     FileDrag(FileHandle),
     FileOpenData(Arc<[u8]>),
     LoadingProgress(f32),
@@ -29,6 +30,7 @@ impl Debug for RvcdMsg {
             RvcdMsg::FileDrag(_) => write!(f, "RvcdMsg: FileDrag"),
             RvcdMsg::LoadingProgress(p) => write!(f, "RvcdMsg: LoadingProgress({})", p),
             RvcdMsg::FileLoadStart(filepath) => write!(f, "RvcdMsg: FileLoadStart({})", filepath),
+            RvcdMsg::FileLoadCancel => write!(f, "RvcdMsg: FileLoadCancel"),
         }
     }
 }

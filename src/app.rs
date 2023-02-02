@@ -1,9 +1,10 @@
 use crate::files::preview_files_being_dropped;
+use crate::message::RvcdMsg;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::emath::Align;
-use egui::{vec2, Layout, ProgressBar, Widget};
+use egui::{vec2, Direction, Layout, ProgressBar, Widget};
 use tracing::info;
 
 impl eframe::App for Rvcd {
@@ -65,6 +66,16 @@ impl eframe::App for Rvcd {
                     self.load_progress * 100.0
                 ));
                 ProgressBar::new(self.load_progress).ui(ui);
+                ui.with_layout(
+                    Layout::centered_and_justified(Direction::TopDown).with_cross_justify(true),
+                    |ui| {
+                        if ui.button("Cancel").clicked() {
+                            if let Some(channel) = &self.channel {
+                                channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
+                            }
+                        }
+                    },
+                );
             });
             ctx.request_repaint();
         }

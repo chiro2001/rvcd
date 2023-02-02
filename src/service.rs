@@ -65,11 +65,12 @@ impl Service {
                                 let total_sz = file.metadata().unwrap().len();
                                 let mut reader = BufReader::new(file);
                                 if total_sz != 0 {
-                                    const BUF_SIZE: usize = 1024 * 256;
-                                    // const BUF_SIZE: usize = 8;
+                                    // const BUF_SIZE: usize = 1024 * 256;
+                                    const BUF_SIZE: usize = 8;
                                     let mut data = vec![0u8; total_sz as usize];
                                     let mut buf = [0u8; BUF_SIZE];
                                     let mut count = 0;
+                                    let mut canceled = false;
                                     while let Ok(sz) = reader.read(&mut buf) {
                                         if sz == 0 {
                                             break;
@@ -81,9 +82,25 @@ impl Service {
                                             .tx
                                             .send(RvcdMsg::LoadingProgress(progress))
                                             .unwrap();
-                                        // sleep_ms(1).await;
+                                        match self.channel.rx.try_recv() {
+                                            Ok(msg) => {
+                                                info!("service recv msg when loading: {:?}", msg);
+                                                match msg {
+                                                    RvcdMsg::FileLoadCancel => canceled = true,
+                                                    _ => {}
+                                                }
+                                            }
+                                            Err(_) => {}
+                                        }
+                                        if canceled {
+                                            break;
+                                        }
                                     }
-                                    data
+                                    if !canceled {
+                                        data
+                                    } else {
+                                        vec![]
+                                    }
                                 } else {
                                     vec![]
                                 }
