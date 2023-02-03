@@ -94,7 +94,7 @@ impl Service {
             }
         }
     }
-    async fn handle_message(&mut self, msg: RvcdMsg) -> Result<()> {
+    async fn handle_message(&mut self, msg: RvcdMsg) -> Result<bool> {
         info!("service handle msg: {:?}", msg);
         match msg {
             RvcdMsg::FileOpen(file) => {
@@ -177,9 +177,10 @@ impl Service {
                 }
                 info!("stop parsing data");
             }
+            RvcdMsg::StopService => return Ok(true),
             _ => {}
         }
-        Ok(())
+        Ok(false)
     }
 
     pub fn new(channel: RvcdChannel) -> Self {
@@ -207,9 +208,14 @@ impl Service {
                     .map(|msg| self.handle_message(msg));
                 if let Ok(r) = r {
                     match r.await {
-                        Ok(_) => {}
+                        Ok(will_break) => {
+                            if will_break {
+                                break;
+                            }
+                        }
                         Err(e) => {
-                            error!("service run error: {}", e)
+                            error!("service run error: {}", e);
+                            break;
                         }
                     };
                 }
@@ -222,14 +228,20 @@ impl Service {
                     .map(|msg| self.handle_message(msg));
                 if let Ok(r) = r {
                     match r.await {
-                        Ok(_) => {}
+                        Ok(will_break) => {
+                            if will_break {
+                                break;
+                            }
+                        }
                         Err(e) => {
-                            error!("service loop run error: {}", e)
+                            error!("service loop run error: {}", e);
+                            break;
                         }
                     };
                 }
             }
         }
+        info!("service stopped");
     }
 
     pub fn start(channel: RvcdChannel) {

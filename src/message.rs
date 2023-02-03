@@ -17,6 +17,7 @@ pub enum RvcdMsg {
     UpdateWave(Wave),
     Notification(Toast),
     ServiceDataReady(Vec<u8>),
+    StopService,
 }
 
 impl Debug for RvcdMsg {
@@ -37,6 +38,7 @@ impl Debug for RvcdMsg {
             RvcdMsg::ServiceDataReady(v) => {
                 write!(f, "RcdMsg: ServiceDataReady ({} bytes)", v.len())
             }
+            RvcdMsg::StopService => write!(f, "RvcdMsg: StopService"),
         }
     }
 }

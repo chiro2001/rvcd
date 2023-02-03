@@ -4,6 +4,7 @@ use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::size::FileSizeUnit;
 use crate::Rvcd;
+use eframe::glow::Context;
 use egui::{vec2, ProgressBar, Widget};
 use tracing::info;
 
@@ -95,5 +96,11 @@ impl eframe::App for Rvcd {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         info!("saving with {} signals loaded", self.view.signals.len());
         eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+
+    fn on_exit(&mut self, _gl: Option<&Context>) {
+        if let Some(channel) = &self.channel {
+            channel.tx.send(RvcdMsg::StopService).unwrap();
+        }
     }
 }
