@@ -11,7 +11,7 @@ use tracing::info;
 pub struct RvcdApp {
     pub apps: Vec<Rvcd>,
     pub app_now_id: Option<usize>,
-    #[serde(skip)]
+    // #[serde(skip)]
     pub open_apps: Vec<(usize, bool)>,
     #[serde(skip)]
     pub repaint_after_seconds: f32,
@@ -98,6 +98,12 @@ impl RvcdApp {
             self.app_now_id = Some(id);
         }
     }
+    pub fn close_all(&mut self) {
+        self.apps.iter_mut().for_each(|app| app.on_exit());
+        self.app_now_id = None;
+        self.open_apps.clear();
+        self.apps.clear();
+    }
 }
 
 impl eframe::App for RvcdApp {
@@ -129,6 +135,14 @@ impl eframe::App for RvcdApp {
                     if ui.button("Minimize").clicked() {
                         self.app_now_id = None;
                     }
+                }
+                if !self.apps.is_empty() {
+                    if ui.button("Close All").clicked() {
+                        self.close_all();
+                    }
+                }
+                if ui.button("Quit").clicked() {
+                    frame.close();
                 }
             });
         });
@@ -219,7 +233,10 @@ impl eframe::App for RvcdApp {
                     .filter(|x| x.0 != removed.id)
                     .map(|x| *x)
                     .collect();
-                info!("remove rvcd: id={}, open_apps: {:?}", removed.id, self.open_apps);
+                info!(
+                    "remove rvcd: id={}, open_apps: {:?}",
+                    removed.id, self.open_apps
+                );
             }
         }
         // if empty, create new main window
@@ -233,6 +250,8 @@ impl eframe::App for RvcdApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&Context>) {
+        // self.close_all();
+        // close all but save data
         for app in &mut self.apps {
             app.on_exit();
         }
