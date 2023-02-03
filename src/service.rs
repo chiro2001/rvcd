@@ -52,6 +52,7 @@ impl Service {
                     let mut count = 0;
                     let mut canceled = false;
                     info!("start reading file");
+                    let time_start = std::time::Instant::now();
                     while let Ok(sz) = reader.read(&mut buf) {
                         if sz == 0 {
                             break;
@@ -77,7 +78,9 @@ impl Service {
                         // sleep_ms(1000).await;
                         // std::thread::sleep(std::time::Duration::from_millis(1000));
                     }
-                    info!("stop reading file");
+                    let time_stop = std::time::Instant::now();
+                    let duration = time_stop - time_start;
+                    info!("stop reading file, used {} seconds", duration.as_secs());
                     if !canceled {
                         data
                     } else {
