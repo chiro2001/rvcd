@@ -16,6 +16,7 @@ pub enum RvcdMsg {
     Reload,
     UpdateWave(Wave),
     Notification(Toast),
+    ServiceDataReady(Vec<u8>),
 }
 
 impl Debug for RvcdMsg {
@@ -31,6 +32,9 @@ impl Debug for RvcdMsg {
             RvcdMsg::LoadingProgress(p) => write!(f, "RvcdMsg: LoadingProgress({})", p),
             RvcdMsg::FileLoadStart(filepath) => write!(f, "RvcdMsg: FileLoadStart({})", filepath),
             RvcdMsg::FileLoadCancel => write!(f, "RvcdMsg: FileLoadCancel"),
+            RvcdMsg::ServiceDataReady(v) => {
+                write!(f, "RcdMsg: ServiceDataReady ({} bytes)", v.len())
+            }
         }
     }
 }

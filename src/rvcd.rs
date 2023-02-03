@@ -304,6 +304,7 @@ impl Rvcd {
                 }
             }
             RvcdMsg::FileLoadCancel => {}
+            RvcdMsg::ServiceDataReady(_) => {}
         };
     }
     pub fn reload(&mut self) {
