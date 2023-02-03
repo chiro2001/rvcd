@@ -162,7 +162,7 @@ impl eframe::App for RvcdApp {
                     }
                     ui.checkbox(&mut self.debug_panel, "Debug Panel");
                     ui.checkbox(&mut self.sst_enabled, "SST");
-                    ui.label(format!("apps: {:?}", self.apps));
+                    // ui.label(format!("apps: {:?}", self.apps));
                 });
             });
         });
