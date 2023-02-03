@@ -11,6 +11,7 @@ use crate::wave::{WaveInfo, WaveTimescaleUnit};
 use egui::*;
 use std::sync::mpsc;
 use tracing::*;
+use crate::view::ui::ResponsePointerState;
 
 const LINE_WIDTH: f32 = 1.5;
 const TEXT_ROUND_OFFSET: f32 = 4.0;
@@ -75,6 +76,10 @@ pub struct WaveView {
     pub limit_range_left: bool,
     pub use_top_margin: bool,
     pub round_pointer: bool,
+    #[serde(skip)]
+    pub last_pointer_state: ResponsePointerState,
+    #[serde(skip)]
+    pub range_seek_started: bool,
 }
 
 impl Default for WaveView {
@@ -103,6 +108,8 @@ impl Default for WaveView {
             limit_range_left: true,
             use_top_margin: true,
             round_pointer: true,
+            last_pointer_state: Default::default(),
+            range_seek_started: false,
         }
     }
 }

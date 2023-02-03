@@ -10,9 +10,9 @@ use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct ResponsePointerState {
     pub drag_started: bool,
     pub drag_release: bool,
@@ -376,7 +376,7 @@ impl WaveView {
                 Default::default(),
                 Color32::YELLOW,
             );
-            if pointer_state.drag_by_primary {
+            if pointer_state.drag_by_primary || pointer_state.drag_by_secondary {
                 let fpos = self.x_to_fpos(pos.x);
                 let p = if self.round_pointer {
                     fpos.round() as u64
@@ -385,6 +385,10 @@ impl WaveView {
                 }
                 .clamp(self.range.0 as u64, self.range.1 as u64);
                 self.marker_temp.set_pos_valid(p);
+                if pointer_state.drag_by_secondary && !self.range_seek_started {
+                    self.marker.set_pos_valid(p);
+                    self.range_seek_started = true;
+                }
             }
             if pointer_state.move_drag_start_pos.is_some() && self.move_drag_start_pos.is_none() {
                 self.move_drag_start_pos = pointer_state.move_drag_start_pos;
@@ -408,14 +412,13 @@ impl WaveView {
                         // simply use const
                         if dy < -SIGNAL_HEIGHT_DEFAULT {
                             let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
-                            info!("to last signal: {}", index);
+                            debug!("to last signal: {}", index);
                             self.scrolling_next_index = Some(index);
                             self.move_drag_start_pos = Some(move_drag_pos);
                         }
                         if dy > SIGNAL_HEIGHT_DEFAULT {
-                            let index =
-                                usize::min(last_paint_row_index, self.signals.len() - 1);
-                            info!("to next signal: {}", index);
+                            let index = usize::min(last_paint_row_index, self.signals.len() - 1);
+                            debug!("to next signal: {}", index);
                             self.scrolling_next_index = Some(index);
                             self.move_drag_start_pos = Some(move_drag_pos);
                         }
@@ -429,14 +432,30 @@ impl WaveView {
                 self.move_drag_last_pos = None;
             }
             if pointer_state.drag_release && self.marker_temp.valid {
+                // scale to range
+                if self.last_pointer_state.drag_by_secondary {
+                    let (a, b) = if self.marker.pos < self.marker_temp.pos {
+                        (&self.marker, &self.marker_temp)
+                    } else {
+                        (&self.marker_temp, &self.marker)
+                    };
+                    let range_new = (a.pos as f32, b.pos as f32);
+                    debug!("range_new: {:?}", range_new);
+                    if range_new.1 - range_new.0 > 1.0 {
+                        self.range = range_new;
+                    }
+                }
                 self.marker.set_pos_valid(
                     self.marker_temp
                         .pos
                         .clamp(self.range.0 as u64, self.range.1 as u64),
                 );
             }
-            if !pointer_state.drag_by_primary {
+            if !pointer_state.drag_by_primary && !pointer_state.drag_by_secondary {
                 self.marker_temp.valid = false;
+            }
+            if pointer_state.drag_release {
+                self.range_seek_started = false;
             }
         }
         self.paint_span(
@@ -470,6 +489,7 @@ impl WaveView {
         for cursor in &self.cursors {
             self.paint_cursor(ui, wave_left, info, cursor);
         }
+        self.last_pointer_state = pointer_state;
     }
     pub fn move_horizontal(&self, dx: f32) -> (f32, f32) {
         let pos_delta = self.x_to_fpos(dx) - self.range.0;
