@@ -7,7 +7,7 @@ use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{vec2, Direction, DroppedFile, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget};
+use egui::{vec2, Direction, DroppedFile, Id, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget};
 use egui_extras::{Column, TableBuilder};
 use egui_toast::{ToastOptions, Toasts};
 use num_traits::Float;
@@ -147,7 +147,7 @@ impl Rvcd {
     ) where
         F: FnOnce(),
     {
-        egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
+        egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 self.menubar(ui, frame, maximum);
@@ -165,7 +165,7 @@ impl Rvcd {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if sst_enabled {
-                    egui::SidePanel::left("side_panel")
+                    egui::SidePanel::left(format!("side_panel_{}", self.id))
                         .resizable(true)
                         .show_inside(ui, |ui| {
                             self.sidebar(ui);
@@ -192,6 +192,7 @@ impl Rvcd {
         let ctx = ui.ctx();
         if self.state == State::Loading {
             egui::Window::new("Loading")
+                .id(Id::from(format!("loading_rvcd_{}", self.id)))
                 .resizable(false)
                 .show(ctx, |ui| {
                     ui.label(format!(
@@ -229,7 +230,7 @@ impl Rvcd {
         }
     }
     pub fn sidebar(&mut self, ui: &mut Ui) {
-        egui::TopBottomPanel::bottom("signal_leaf")
+        egui::TopBottomPanel::bottom(format!("signal_leaf_{}", self.id))
             .min_height(200.0)
             .max_height(400.0)
             .resizable(true)
