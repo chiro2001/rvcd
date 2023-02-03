@@ -54,7 +54,11 @@ impl eframe::App for Rvcd {
         });
 
         if let Some(channel) = &self.channel {
-            if let Ok(rx) = channel.rx.try_recv() {
+            let mut messages = vec![];
+            while let Ok(rx) = channel.rx.try_recv() {
+                messages.push(rx);
+            }
+            for rx in messages {
                 self.message_handler(rx);
             }
         }
