@@ -70,6 +70,8 @@ pub struct Rvcd {
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
     pub file: Option<FileHandle>,
+
+    pub tree: TreeView,
 }
 
 impl Default for Rvcd {
@@ -91,6 +93,7 @@ impl Default for Rvcd {
             debug_panel: false,
             #[cfg(target_arch = "wasm32")]
             file: None,
+            tree: Default::default(),
         }
     }
 }
@@ -191,7 +194,7 @@ impl Rvcd {
             ScrollArea::both().show(ui, |ui| {
                 // ui.centered_and_justified(|ui| {
                 if let Some(wave) = &self.wave {
-                    match TreeView::default().ui(ui, wave.info.tree.root()) {
+                    match self.tree.ui(ui, wave.info.tree.root()) {
                         TreeAction::None => {}
                         TreeAction::AddSignal(node) => match node {
                             WaveTreeNode::WaveVar(d) => {
@@ -413,6 +416,7 @@ impl Rvcd {
             }
         });
         self.view.menu(ui);
+        self.tree.menu(ui);
         ui.checkbox(&mut self.debug_panel, "Debug Panel");
         if ui.button("Test Toast").clicked() {
             self.toasts.info("Test Toast", ToastOptions::default());

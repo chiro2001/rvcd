@@ -1,15 +1,11 @@
 use crate::view::SIGNAL_TREE_HEIGHT_DEFAULT;
 use crate::wave::WaveTreeNode;
-use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Sense, Ui};
-use trees::{Node, Tree};
+use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
+use trees::Node;
 
-#[derive(Debug)]
-pub struct TreeView(Tree<WaveTreeNode>);
-
-impl Default for TreeView {
-    fn default() -> Self {
-        Self(Tree::new(WaveTreeNode::WaveRoot))
-    }
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct TreeView {
+    pub show_leaves: bool,
 }
 
 #[derive(PartialEq)]
@@ -22,7 +18,59 @@ pub enum TreeAction {
 
 impl TreeView {
     pub fn ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>) -> TreeAction {
-        if tree.has_no_child() {
+        let child_signals = |tree: &Node<WaveTreeNode>| {
+            tree.iter()
+                .map(|n| n.data().clone())
+                .map(|x| match x {
+                    WaveTreeNode::WaveVar(x) => Some(WaveTreeNode::WaveVar(x)),
+                    _ => None,
+                })
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap())
+                .collect::<Vec<_>>()
+        };
+        let recurse_child_signals = |tree: &Node<WaveTreeNode>| {
+            let mut queue = vec![tree];
+            let mut signal_collect = vec![];
+            while !queue.is_empty() {
+                let top = queue.last().unwrap().clone();
+                queue.remove(queue.len() - 1);
+                queue.extend(top.iter().filter(|x| match x.data() {
+                    WaveTreeNode::WaveScope(_) => true,
+                    _ => false,
+                }));
+                signal_collect.extend(child_signals(top));
+            }
+            signal_collect
+        };
+        let handle_scope_response = |response: Response| {
+            let mut add_all = false;
+            let mut recurse_add_all = false;
+            response.context_menu(|ui| {
+                if ui.button("Add all").clicked() {
+                    add_all = true;
+                    ui.close_menu();
+                }
+                if ui.button("Recurse add all").clicked() {
+                    recurse_add_all = true;
+                    ui.close_menu();
+                }
+            });
+            if add_all {
+                TreeAction::AddSignals(child_signals(tree))
+            } else if recurse_add_all {
+                TreeAction::AddSignals(recurse_child_signals(tree))
+            } else {
+                TreeAction::None
+            }
+        };
+        if tree.has_no_child()
+            || (!self.show_leaves
+                && !tree.iter().any(|x| match x.data() {
+                    WaveTreeNode::WaveScope(_) => true,
+                    _ => false,
+                }))
+        {
             let node = tree.data();
             let painter = ui.painter();
             let get_text_size = |text: &str| {
@@ -50,37 +98,17 @@ impl TreeView {
                 Default::default(),
                 ui.visuals().text_color(),
             );
-            if response.double_clicked() {
-                TreeAction::AddSignal(node.clone())
-            } else {
-                TreeAction::None
+            match node {
+                WaveTreeNode::WaveScope(_) => handle_scope_response(response),
+                _ => {
+                    if response.double_clicked() {
+                        TreeAction::AddSignal(node.clone())
+                    } else {
+                        TreeAction::None
+                    }
+                }
             }
         } else {
-            let child_signals = |tree: &Node<WaveTreeNode>| {
-                tree.iter()
-                    .map(|n| n.data().clone())
-                    .map(|x| match x {
-                        WaveTreeNode::WaveVar(x) => Some(WaveTreeNode::WaveVar(x)),
-                        _ => None,
-                    })
-                    .filter(|x| x.is_some())
-                    .map(|x| x.unwrap())
-                    .collect::<Vec<_>>()
-            };
-            let recurse_child_signals = |tree: &Node<WaveTreeNode>| {
-                let mut queue = vec![tree];
-                let mut signal_collect = vec![];
-                while !queue.is_empty() {
-                    let top = queue.last().unwrap().clone();
-                    queue.remove(queue.len() - 1);
-                    queue.extend(top.iter().filter(|x| match x.data() {
-                        WaveTreeNode::WaveScope(_) => true,
-                        _ => false,
-                    }));
-                    signal_collect.extend(child_signals(top));
-                }
-                signal_collect
-            };
             match tree.data() {
                 WaveTreeNode::WaveRoot => tree
                     .iter()
@@ -99,27 +127,7 @@ impl TreeView {
                         TreeAction::SelectScope(child_signals(tree))
                     } else {
                         match scope.body_returned {
-                            None => {
-                                let mut add_all = false;
-                                let mut recurse_add_all = false;
-                                scope.header_response.context_menu(|ui| {
-                                    if ui.button("Add all").clicked() {
-                                        add_all = true;
-                                        ui.close_menu();
-                                    }
-                                    if ui.button("Recurse add all").clicked() {
-                                        recurse_add_all = true;
-                                        ui.close_menu();
-                                    }
-                                });
-                                if add_all {
-                                    TreeAction::AddSignals(child_signals(tree))
-                                } else if recurse_add_all {
-                                    TreeAction::AddSignals(recurse_child_signals(tree))
-                                } else {
-                                    TreeAction::None
-                                }
-                            }
+                            None => handle_scope_response(scope.header_response),
                             Some(a) => match a {
                                 None => TreeAction::None,
                                 Some(a) => a,
@@ -129,5 +137,15 @@ impl TreeView {
                 }
             }
         }
+    }
+    pub fn menu(&mut self, ui: &mut Ui) {
+        ui.menu_button("SST", |ui| {
+            if ui
+                .checkbox(&mut self.show_leaves, "Show Tree Leaves")
+                .clicked()
+            {
+                ui.close_menu();
+            }
+        });
     }
 }
