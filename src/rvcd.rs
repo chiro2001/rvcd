@@ -127,6 +127,7 @@ impl Rvcd {
             tx: channel_req_tx,
             rx: channel_resp_rx,
         });
+        self.view.set_id(self.id);
         self.view.set_tx(channel_resp_tx);
         info!("last loaded {} signals", self.view.signals.len());
         self

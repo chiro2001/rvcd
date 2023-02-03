@@ -245,7 +245,7 @@ impl WaveView {
         if self.range.0 == 0.0 && self.range.1 == 0.0 {
             self.range = (info.range.0 as f32, info.range.1 as f32);
         }
-        TopBottomPanel::top("wave_top")
+        TopBottomPanel::top(format!("wave_top_{}", self.id))
             .resizable(false)
             .show_inside(ui, |ui| {
                 self.toolbar(ui, &wave.info);

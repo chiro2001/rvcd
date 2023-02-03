@@ -8,6 +8,8 @@ use eframe::Frame;
 use egui::{CentralPanel, Id, Ui, Window};
 use tracing::info;
 
+pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
+
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct RvcdApp {
@@ -15,8 +17,6 @@ pub struct RvcdApp {
     pub app_now_id: Option<usize>,
     // #[serde(skip)]
     pub open_apps: Vec<(usize, bool)>,
-    #[serde(skip)]
-    pub repaint_after_seconds: f32,
     #[serde(skip)]
     pub run_mode: RunMode,
     #[serde(skip)]
@@ -123,7 +123,7 @@ impl eframe::App for RvcdApp {
             RunMode::Reactive => {
                 // let the computer rest for a bit
                 ctx.request_repaint_after(std::time::Duration::from_secs_f32(
-                    self.repaint_after_seconds,
+                    REPAINT_AFTER_SECONDS,
                 ));
             }
         }

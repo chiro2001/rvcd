@@ -31,6 +31,7 @@ pub const SIGNAL_TREE_HEIGHT_DEFAULT: f32 = 20.0;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
 pub struct WaveView {
+    pub id: usize,
     /// Signals added to viewer
     pub signals: Vec<SignalView>,
     /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
@@ -85,6 +86,7 @@ pub struct WaveView {
 impl Default for WaveView {
     fn default() -> Self {
         Self {
+            id: 0,
             signals: vec![],
             range: (0.0, 0.0),
             align: Default::default(),
@@ -121,6 +123,9 @@ impl WaveView {
             tx: Some(tx),
             ..Default::default()
         }
+    }
+    pub fn set_id(&mut self, id: usize) {
+        self.id = id;
     }
     pub fn set_tx(&mut self, tx: mpsc::Sender<RvcdMsg>) {
         self.tx = Some(tx);
