@@ -279,6 +279,8 @@ impl Rvcd {
                 if let Some(channel) = &self.channel {
                     channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
                 }
+                // set state to loading
+                self.state = State::Loading;
             }
             RvcdMsg::LoadingProgress(progress, sz) => {
                 self.load_progress = (progress, sz);
