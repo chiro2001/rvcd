@@ -12,6 +12,7 @@ pub struct Service {
     pub channel: RvcdChannel,
     pub self_loop: RvcdChannel,
     pub cancel: Arc<Mutex<bool>>,
+    pub loading: Arc<Mutex<bool>>,
 }
 
 unsafe impl Send for Service {}
@@ -133,6 +134,7 @@ impl Service {
                         let _th = std::thread::spawn(move || {
                             Self::load_data_loop(path, tx, loop_tx, cancel)
                         });
+                        *self.loading.lock().unwrap() = true;
                         None
                     };
                     if let Some(data) = data {
@@ -157,13 +159,14 @@ impl Service {
             }
             RvcdMsg::FileLoadCancel => {
                 if let Ok(mut r) = self.cancel.lock() {
-                    if !*r {
+                    if !*r && *self.loading.lock().unwrap() {
                         *r = true;
                         info!("set cancel flag true");
                     }
                 }
             }
             RvcdMsg::ServiceDataReady(data) => {
+                *self.loading.lock().unwrap() = false;
                 info!("start parsing data");
                 // if let Ok(w) = Vcd::load(&mut file) {
                 let mut reader = Cursor::new(data);
@@ -187,6 +190,7 @@ impl Service {
             channel,
             self_loop,
             cancel: Arc::new(Mutex::new(false)),
+            loading: Arc::new(Mutex::new(false)),
         }
     }
 
