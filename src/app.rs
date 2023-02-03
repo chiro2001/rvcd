@@ -3,7 +3,7 @@ use crate::run_mode::RunMode;
 use crate::Rvcd;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{vec2, CentralPanel, Ui, Window};
+use egui::{CentralPanel, Ui, Window};
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -22,10 +22,16 @@ pub struct RvcdApp {
 
 impl RvcdApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self {
-            apps: vec![Rvcd::new(0, cc)],
-            ..Default::default()
+        let mut def: RvcdApp = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        } else {
+            Default::default()
+        };
+        if def.apps.is_empty() {
+            def.apps = vec![Rvcd::new(0)];
         }
+        def.apps = def.apps.into_iter().map(|a| a.init()).collect();
+        def
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
         let run_mode = &mut self.run_mode;
@@ -109,7 +115,8 @@ impl eframe::App for RvcdApp {
         }
         let show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
             Window::new(app.title())
-                .fixed_size(vec2(480.0, 640.0))
+                // .fixed_size(vec2(480.0, 640.0))
+                .min_height(200.0)
                 .show(ctx, |ui| {
                     app.update(ui, frame, self.sst_enabled);
                 })

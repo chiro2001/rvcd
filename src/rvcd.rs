@@ -1,7 +1,4 @@
-use crate::files::preview_files_being_dropped;
-use crate::frame_history::FrameHistory;
 use crate::message::{RvcdChannel, RvcdMsg};
-use crate::run_mode::RunMode;
 use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
@@ -95,7 +92,13 @@ impl Default for Rvcd {
 
 impl Rvcd {
     /// Called once before the first frame.
-    pub fn new(id: usize, cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(id: usize) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
+    }
+    pub fn init(mut self) -> Self {
         let (channel_req_tx, channel_req_rx) = mpsc::channel();
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
@@ -104,42 +107,32 @@ impl Rvcd {
             tx: channel_resp_tx.clone(),
             rx: channel_req_rx,
         });
-
-        let mut def = if let Some(storage) = cc.storage {
-            let def: Rvcd = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-            // auto open file
-            // let filepath = "data/cpu_ila_commit.vcd";
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let filepath = &def.filepath;
-                info!("last file: {}", filepath);
-                if !filepath.is_empty() {
-                    channel_req_tx
-                        .send(RvcdMsg::FileOpen(rfd::FileHandle::from(
-                            std::path::PathBuf::from(filepath),
-                        )))
-                        .unwrap();
-                }
+        // auto open file
+        // let filepath = "data/cpu_ila_commit.vcd";
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let filepath = &self.filepath;
+            info!("last file: {}", filepath);
+            if !filepath.is_empty() {
+                channel_req_tx
+                    .send(RvcdMsg::FileOpen(rfd::FileHandle::from(
+                        std::path::PathBuf::from(filepath),
+                    )))
+                    .unwrap();
             }
-            info!("last loaded {} signals", def.view.signals.len());
-            def
-        } else {
-            Default::default()
-        };
-        def.view.set_tx(channel_resp_tx);
-        Self {
-            id,
-            channel: Some(RvcdChannel {
-                tx: channel_req_tx,
-                rx: channel_resp_rx,
-            }),
-            ..def
         }
+        self.channel = Some(RvcdChannel {
+            tx: channel_req_tx,
+            rx: channel_resp_rx,
+        });
+        self.view.set_tx(channel_resp_tx);
+        info!("last loaded {} signals", self.view.signals.len());
+        self
     }
     pub fn title(&self) -> &str {
-        match self.state{
+        match self.state {
             State::Working => self.title.as_str(),
-            _ => "Rvcd"
+            _ => "Rvcd",
         }
     }
     pub fn update(&mut self, ui: &mut Ui, frame: &mut eframe::Frame, sst_enabled: bool) {
