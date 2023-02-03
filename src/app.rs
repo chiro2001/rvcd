@@ -1,5 +1,7 @@
+use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::run_mode::RunMode;
+use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::glow::Context;
 use eframe::Frame;
@@ -90,13 +92,14 @@ impl RvcdApp {
             .map(|x| x + 1)
             .unwrap_or(0)
     }
-    fn new_window(&mut self, maximum: bool) {
+    fn new_window(&mut self, maximum: bool) -> usize {
         let id = self.new_id();
         self.apps.push(Rvcd::new(id).init());
         self.open_apps.push((id, true));
         if maximum {
             self.app_now_id = Some(id);
         }
+        id
     }
     pub fn close_all(&mut self) {
         self.apps.iter_mut().for_each(|app| app.on_exit());
@@ -243,6 +246,22 @@ impl eframe::App for RvcdApp {
         // if self.apps.is_empty() {
         //     self.new_window(true);
         // }
+        preview_files_being_dropped(ctx);
+        if !ctx.input().raw.dropped_files.is_empty() {
+            let has_maximum_window = self.app_now_id.is_some();
+            if let Some(id) = self.app_now_id {
+                if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
+                    if app.state == State::Idle {
+                        app.handle_dropping_file(ctx);
+                    }
+                }
+            }
+            // create window and handle it
+            let id = self.new_window(!has_maximum_window);
+            if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
+                app.handle_dropping_file(ctx);
+            }
+        }
     }
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {

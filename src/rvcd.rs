@@ -222,7 +222,6 @@ impl Rvcd {
             .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
 
         // TODO: fix files drop
-        // preview_files_being_dropped(ctx);
         // self.handle_dropping_file(ctx);
     }
     /// Add signal to view.
