@@ -135,11 +135,29 @@ impl Rvcd {
             _ => "Rvcd",
         }
     }
-    pub fn update(&mut self, ui: &mut Ui, frame: &mut eframe::Frame, sst_enabled: bool) {
+    pub fn update<F>(
+        &mut self,
+        ui: &mut Ui,
+        frame: &mut eframe::Frame,
+        sst_enabled: bool,
+        maximum: bool,
+        do_min_max: F,
+    ) where
+        F: FnOnce(),
+    {
         egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 self.menubar(ui, frame);
+                if maximum {
+                    if ui.button("Minimum").clicked() {
+                        do_min_max();
+                    }
+                } else {
+                    if ui.button("Maximum").clicked() {
+                        do_min_max();
+                    }
+                }
             });
         });
         egui::CentralPanel::default().show_inside(ui, |ui| {

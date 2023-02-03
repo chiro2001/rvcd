@@ -82,6 +82,17 @@ impl RvcdApp {
         });
         egui::warn_if_debug_build(ui);
     }
+    fn new_id(&self) -> usize {
+        self.apps.iter().map(|x| x.id).max().unwrap_or(0)
+    }
+    fn new_window(&mut self, maximum: bool) {
+        let id = self.new_id();
+        self.apps.push(Rvcd::new(id).init());
+        self.open_apps.push((id, true));
+        if maximum {
+            self.app_now_id = Some(id);
+        }
+    }
 }
 
 impl eframe::App for RvcdApp {
@@ -110,6 +121,11 @@ impl eframe::App for RvcdApp {
                 if ui.checkbox(&mut self.sst_enabled, "SST").clicked() {
                     ui.close_menu();
                 }
+                if self.app_now_id.is_some() {
+                    if ui.button("Minimize").clicked() {
+                        self.app_now_id = None;
+                    }
+                }
             });
         });
         if self.debug_panel {
@@ -117,23 +133,30 @@ impl eframe::App for RvcdApp {
                 self.debug_panel(ui);
             });
         }
+        let app_now_id = self.app_now_id.clone();
         let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
             let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
-            if let Some((_id, open)) = open_app {
+            if let Some((id, open)) = open_app {
                 Window::new(app.title())
                     .min_height(200.0)
                     .default_width(ctx.used_size().x / 2.0)
                     .vscroll(false)
                     .open(open)
+                    .title_bar(true)
                     .show(ctx, |ui| {
-                        app.update(ui, frame, self.sst_enabled);
+                        app.update(ui, frame, self.sst_enabled, false, || {
+                            self.app_now_id = Some(*id)
+                        });
                     });
             }
         };
-        if let Some(id) = self.app_now_id {
+        let mut will_remove_now_id = false;
+        if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
                 CentralPanel::default().show(ctx, |ui| {
-                    app.update(ui, frame, self.sst_enabled);
+                    app.update(ui, frame, self.sst_enabled, true, || {
+                        will_remove_now_id = true;
+                    });
                 });
                 for app in &mut self.apps {
                     if id != app.id {
@@ -145,6 +168,9 @@ impl eframe::App for RvcdApp {
             for app in &mut self.apps {
                 show_app_in_window(app, ctx, frame);
             }
+        }
+        if will_remove_now_id {
+            self.app_now_id = None;
         }
         // remove closed windows
         let to_removes = self
@@ -175,8 +201,11 @@ impl eframe::App for RvcdApp {
             // let removed = self.apps.get(i).unwrap();
             info!("remove rvcd: id={}", removed.id);
         }
+        // if empty, create new main window
+        if self.apps.is_empty() {
+            self.new_window(true);
+        }
     }
-
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
