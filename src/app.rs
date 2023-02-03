@@ -4,8 +4,7 @@ use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::size::FileSizeUnit;
 use crate::Rvcd;
-use eframe::emath::Align;
-use egui::{vec2, Layout, ProgressBar, Widget};
+use egui::{vec2, ProgressBar, Widget};
 use tracing::info;
 
 impl eframe::App for Rvcd {
@@ -40,16 +39,14 @@ impl eframe::App for Rvcd {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 egui::SidePanel::left("side_panel").show_inside(ui, |ui| {
-                    ui.with_layout(
-                        Layout::top_down(Align::LEFT).with_cross_justify(true),
-                        |ui| self.sidebar(ui),
-                    );
+                    ui.vertical_centered_justified(|ui| {
+                        self.sidebar(ui);
+                    });
                 });
                 egui::CentralPanel::default().show_inside(ui, |ui| {
-                    ui.with_layout(
-                        Layout::top_down(Align::LEFT).with_cross_justify(true),
-                        |ui| self.wave_panel(ui),
-                    );
+                    ui.vertical_centered_justified(|ui| {
+                        self.wave_panel(ui);
+                    });
                 });
             });
         });

@@ -179,8 +179,6 @@ impl Rvcd {
                                                 .sense(Sense::click_and_drag()),
                                         );
                                         if response.double_clicked() {
-                                            // clicked_id = s.id;
-                                            // clicked = true;
                                             self.signal_clicked(signal.id, true);
                                         }
                                     }

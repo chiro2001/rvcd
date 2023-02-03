@@ -25,6 +25,7 @@ const WAVE_MARGIN_TOP: f32 = 32.0;
 const WAVE_MARGIN_TOP2: f32 = -6.0;
 pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
 pub const SIGNAL_LEAF_HEIGHT_DEFAULT: f32 = 20.0;
+pub const SIGNAL_TREE_HEIGHT_DEFAULT: f32 = 20.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
