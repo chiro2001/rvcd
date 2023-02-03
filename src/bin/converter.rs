@@ -8,7 +8,8 @@ use tracing::{info, warn};
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("convertor -- test --");
-    let path = "data/testbench.vcd";
+    // let path = "data/testbench.vcd";
+    let path = "data/testbench2.vcd";
     // let path = "data/cpu_ila_commit.vcd";
     if let Ok(mut input) = File::open(path) {
         let mut data = vec![];
