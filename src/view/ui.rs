@@ -250,246 +250,252 @@ impl WaveView {
             .show_inside(ui, |ui| {
                 self.toolbar(ui, &wave.info);
             });
-        // bugs by: https://github.com/emilk/egui/issues/2430
-        let use_rect = ui.max_rect();
-        const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
-        let fix_width = f32::max(
-            self.signals
-                .iter()
-                .map(|x| x.s.name.len())
-                .max()
-                .unwrap_or(0) as f32
-                * 8.0,
-            DEFAULT_MIN_SIGNAL_WIDTH,
-        );
-        self.wave_width = use_rect.width() - fix_width;
-        let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
-        let mut new_signals = vec![];
-        let mut last_paint_row_index = None;
-        let mut dragging_pos = None;
-        let mut pointer_state = ResponsePointerState::default();
+        CentralPanel::default().show_inside(ui, |ui| {
+            // bugs by: https://github.com/emilk/egui/issues/2430
+            let use_rect = ui.max_rect();
+            const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
+            let fix_width = f32::max(
+                self.signals
+                    .iter()
+                    .map(|x| x.s.name.len())
+                    .max()
+                    .unwrap_or(0) as f32
+                    * 8.0,
+                DEFAULT_MIN_SIGNAL_WIDTH,
+            );
+            self.wave_width = use_rect.width() - fix_width;
+            let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
+            let mut new_signals = vec![];
+            let mut last_paint_row_index = None;
+            let mut dragging_pos = None;
+            let mut pointer_state = ResponsePointerState::default();
 
-        let max_rect = ui.max_rect();
-        let inner_response = ui.allocate_ui(max_rect.size(), |ui| {
-            let table = TableBuilder::new(ui)
-                .striped(true)
-                .resizable(false)
-                // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .cell_layout(Layout::centered_and_justified(Direction::TopDown))
-                .column(Column::exact(fix_width).resizable(false))
-                .column(Column::exact(self.wave_width).resizable(false))
-                .min_scrolled_height(0.0)
-                .max_scroll_height(f32::infinity());
-            let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
-                table.scroll_to_row(scrolling_last_index, Some(Align::TOP))
-            } else {
-                table
-            };
-            let table = if let Some(scrolling_next_index) = self.scrolling_next_index.take() {
-                table.scroll_to_row(scrolling_next_index, Some(Align::BOTTOM))
-            } else {
-                table
-            };
-            table
-                .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
-                    header.col(|ui| {
-                        ui.strong(format!(
-                            "Time #{}~#{} {}{}",
-                            info.range.0, info.range.1, info.timescale.0, info.timescale.1
-                        ));
-                    });
-                    header.col(|ui| {
-                        self.time_bar(ui, info, wave_left);
-                    });
-                })
-                .body(|body| {
-                    body.heterogeneous_rows(
-                        self.signals.iter().map(|x| x.height),
-                        |row_index, mut row| {
-                            let signal = self.signals.get(row_index);
-                            last_paint_row_index = Some(row_index);
-                            if let Some(signal) = signal {
-                                row.col(|ui| {
-                                    if let Some(signal_new) =
-                                        self.ui_signal_label(signal, row_index, ui)
-                                    {
-                                        new_signals.push(signal_new);
-                                    }
-                                });
-                                row.col(|ui| {
-                                    if let Some(data) = wave.data.get(&signal.s.id) {
-                                        let response = self.ui_signal_wave(signal, data, info, ui);
-                                        if let Some(pos) = response.interact_pointer_pos() {
-                                            dragging_pos = Some(pos - vec2(wave_left, 0.0));
-                                        }
-                                        wave_left = ui.available_rect_before_wrap().left();
-                                        pointer_state.handle_pointer_response(&response, wave_left);
-                                    }
-                                });
-                            }
-                        },
-                    );
-                });
-            let response = ui.allocate_response(
-                ui.available_rect_before_wrap().size(),
-                Sense::click_and_drag(),
-            );
-            if let Some(pos) = response.interact_pointer_pos() {
-                dragging_pos = Some(pos - vec2(wave_left, 0.0));
-            }
-            pointer_state.handle_pointer_response(&response, wave_left);
-        });
-        let global_response = inner_response.response;
-        let state = self.handle_response(
-            ui,
-            &global_response,
-            wave_left,
-            &wave.info,
-            self.range.clone(),
-        );
-        // update signal information
-        let signals_updated = self
-            .signals
-            .iter()
-            .map(|x| x.clone())
-            .enumerate()
-            .map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
-                None => Some(x.1),
-                Some(c) => match c.2 {
-                    true => None,
-                    false => Some(c.0.clone()),
-                },
-            })
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
-            .collect();
-        self.signals = signals_updated;
-        self.range = state.new_range;
-        // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
-        // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
-        if let Some(pos) = dragging_pos {
-            let painter = ui.painter();
-            painter.text(
-                pos + vec2(wave_left, 0.0),
-                Align2::RIGHT_BOTTOM,
-                format!("{:?}", pos),
-                Default::default(),
-                Color32::YELLOW,
-            );
-            if pointer_state.drag_by_primary || pointer_state.drag_by_secondary {
-                let fpos = self.x_to_fpos(pos.x);
-                let p = if self.round_pointer {
-                    fpos.round() as u64
+            let max_rect = ui.max_rect();
+            let inner_response = ui.allocate_ui(max_rect.size(), |ui| {
+                let table = TableBuilder::new(ui)
+                    .striped(true)
+                    .resizable(false)
+                    // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                    .cell_layout(Layout::centered_and_justified(Direction::TopDown))
+                    .column(Column::exact(fix_width).resizable(false))
+                    .column(Column::exact(self.wave_width).resizable(false))
+                    .min_scrolled_height(0.0)
+                    .max_scroll_height(f32::infinity());
+                let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
+                    table.scroll_to_row(scrolling_last_index, Some(Align::TOP))
                 } else {
-                    fpos as u64
-                }
-                .clamp(self.range.0 as u64, self.range.1 as u64);
-                self.marker_temp.set_pos_valid(p);
-                if pointer_state.drag_by_secondary && !self.range_seek_started {
-                    self.marker.set_pos_valid(p);
-                    self.range_seek_started = true;
-                }
-            }
-            if pointer_state.move_drag_start_pos.is_some() && self.move_drag_start_pos.is_none() {
-                self.move_drag_start_pos = pointer_state.move_drag_start_pos;
-            }
-            if pointer_state.drag_release {
-                self.move_drag_start_pos = None;
-            }
-            if let Some(move_drag_start_pos) = self.move_drag_start_pos {
-                if let Some(move_drag_pos) = pointer_state.move_drag_pos {
-                    let delta = move_drag_pos - move_drag_start_pos;
-                    if let Some(move_drag_last_pos) = self.move_drag_last_pos {
-                        // Handle drag move
-                        let delta = move_drag_pos - move_drag_last_pos;
-                        let dx = -delta.x;
-                        self.range = self.move_horizontal(dx);
-                    }
-                    // natural direction
-                    let dy = -delta.y;
-                    // Handle right drag
-                    if let Some(last_paint_row_index) = last_paint_row_index {
-                        // simply use const
-                        if dy < -SIGNAL_HEIGHT_DEFAULT {
-                            let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
-                            debug!("to last signal: {}", index);
-                            self.scrolling_next_index = Some(index);
-                            self.move_drag_start_pos = Some(move_drag_pos);
-                        }
-                        if dy > SIGNAL_HEIGHT_DEFAULT {
-                            let index = usize::min(last_paint_row_index, self.signals.len() - 1);
-                            debug!("to next signal: {}", index);
-                            self.scrolling_next_index = Some(index);
-                            self.move_drag_start_pos = Some(move_drag_pos);
-                        }
-                    }
-                }
-            }
-            if pointer_state.move_drag_pos.is_some() {
-                self.move_drag_last_pos = pointer_state.move_drag_pos;
-            }
-            if pointer_state.drag_release {
-                self.move_drag_last_pos = None;
-            }
-            if pointer_state.drag_release && self.marker_temp.valid {
-                // scale to range
-                if self.last_pointer_state.drag_by_secondary {
-                    let (a, b) = if self.marker.pos < self.marker_temp.pos {
-                        (&self.marker, &self.marker_temp)
-                    } else {
-                        (&self.marker_temp, &self.marker)
-                    };
-                    let range_new = (a.pos as f32, b.pos as f32);
-                    debug!("range_new: {:?}", range_new);
-                    if range_new.1 - range_new.0 > 1.0 {
-                        self.range = range_new;
-                    }
-                }
-                self.marker.set_pos_valid(
-                    self.marker_temp
-                        .pos
-                        .clamp(self.range.0 as u64, self.range.1 as u64),
+                    table
+                };
+                let table = if let Some(scrolling_next_index) = self.scrolling_next_index.take() {
+                    table.scroll_to_row(scrolling_next_index, Some(Align::BOTTOM))
+                } else {
+                    table
+                };
+                table
+                    .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
+                        header.col(|ui| {
+                            ui.strong(format!(
+                                "Time #{}~#{} {}{}",
+                                info.range.0, info.range.1, info.timescale.0, info.timescale.1
+                            ));
+                        });
+                        header.col(|ui| {
+                            self.time_bar(ui, info, wave_left);
+                        });
+                    })
+                    .body(|body| {
+                        body.heterogeneous_rows(
+                            self.signals.iter().map(|x| x.height),
+                            |row_index, mut row| {
+                                let signal = self.signals.get(row_index);
+                                last_paint_row_index = Some(row_index);
+                                if let Some(signal) = signal {
+                                    row.col(|ui| {
+                                        if let Some(signal_new) =
+                                            self.ui_signal_label(signal, row_index, ui)
+                                        {
+                                            new_signals.push(signal_new);
+                                        }
+                                    });
+                                    row.col(|ui| {
+                                        if let Some(data) = wave.data.get(&signal.s.id) {
+                                            let response =
+                                                self.ui_signal_wave(signal, data, info, ui);
+                                            if let Some(pos) = response.interact_pointer_pos() {
+                                                dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                                            }
+                                            wave_left = ui.available_rect_before_wrap().left();
+                                            pointer_state
+                                                .handle_pointer_response(&response, wave_left);
+                                        }
+                                    });
+                                }
+                            },
+                        );
+                    });
+                let response = ui.allocate_response(
+                    ui.available_rect_before_wrap().size(),
+                    Sense::click_and_drag(),
                 );
-            }
-            if !pointer_state.drag_by_primary && !pointer_state.drag_by_secondary {
-                self.marker_temp.valid = false;
-            }
-            if pointer_state.drag_release {
-                self.range_seek_started = false;
-            }
-        }
-        self.paint_span(
-            ui,
-            wave_left,
-            info,
-            dragging_pos,
-            &self.marker,
-            &self.marker_temp,
-        );
-        // remove unavailable spans
-        self.spans = self
-            .spans
-            .iter()
-            .map(|x| x.clone())
-            .filter(|s| self.cursors_exists_id(s.0) && self.cursors_exists_id(s.1))
-            .collect();
-        for span in &self.spans {
-            if let Some(a) = self.cursors_get(span.0) {
-                if let Some(b) = self.cursors_get(span.1) {
-                    self.paint_span(ui, wave_left, info, None, a, b);
+                if let Some(pos) = response.interact_pointer_pos() {
+                    dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                }
+                pointer_state.handle_pointer_response(&response, wave_left);
+            });
+            let global_response = inner_response.response;
+            let state = self.handle_response(
+                ui,
+                &global_response,
+                wave_left,
+                &wave.info,
+                self.range.clone(),
+            );
+            // update signal information
+            let signals_updated = self
+                .signals
+                .iter()
+                .map(|x| x.clone())
+                .enumerate()
+                .map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
+                    None => Some(x.1),
+                    Some(c) => match c.2 {
+                        true => None,
+                        false => Some(c.0.clone()),
+                    },
+                })
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap())
+                .collect();
+            self.signals = signals_updated;
+            self.range = state.new_range;
+            // info!("fix_width = {}, ui left = {}, wave_left = {}", fix_width, ui.max_rect().left(), wave_left);
+            // info!("(fix_width + ui left) - wave_left = {}", fix_width + ui.max_rect().left() - wave_left);
+            if let Some(pos) = dragging_pos {
+                let painter = ui.painter();
+                painter.text(
+                    pos + vec2(wave_left, 0.0),
+                    Align2::RIGHT_BOTTOM,
+                    format!("{:?}", pos),
+                    Default::default(),
+                    Color32::YELLOW,
+                );
+                if pointer_state.drag_by_primary || pointer_state.drag_by_secondary {
+                    let fpos = self.x_to_fpos(pos.x);
+                    let p = if self.round_pointer {
+                        fpos.round() as u64
+                    } else {
+                        fpos as u64
+                    }
+                    .clamp(self.range.0 as u64, self.range.1 as u64);
+                    self.marker_temp.set_pos_valid(p);
+                    if pointer_state.drag_by_secondary && !self.range_seek_started {
+                        self.marker.set_pos_valid(p);
+                        self.range_seek_started = true;
+                    }
+                }
+                if pointer_state.move_drag_start_pos.is_some() && self.move_drag_start_pos.is_none()
+                {
+                    self.move_drag_start_pos = pointer_state.move_drag_start_pos;
+                }
+                if pointer_state.drag_release {
+                    self.move_drag_start_pos = None;
+                }
+                if let Some(move_drag_start_pos) = self.move_drag_start_pos {
+                    if let Some(move_drag_pos) = pointer_state.move_drag_pos {
+                        let delta = move_drag_pos - move_drag_start_pos;
+                        if let Some(move_drag_last_pos) = self.move_drag_last_pos {
+                            // Handle drag move
+                            let delta = move_drag_pos - move_drag_last_pos;
+                            let dx = -delta.x;
+                            self.range = self.move_horizontal(dx);
+                        }
+                        // natural direction
+                        let dy = -delta.y;
+                        // Handle right drag
+                        if let Some(last_paint_row_index) = last_paint_row_index {
+                            // simply use const
+                            if dy < -SIGNAL_HEIGHT_DEFAULT {
+                                let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
+                                debug!("to last signal: {}", index);
+                                self.scrolling_next_index = Some(index);
+                                self.move_drag_start_pos = Some(move_drag_pos);
+                            }
+                            if dy > SIGNAL_HEIGHT_DEFAULT {
+                                let index =
+                                    usize::min(last_paint_row_index, self.signals.len() - 1);
+                                debug!("to next signal: {}", index);
+                                self.scrolling_next_index = Some(index);
+                                self.move_drag_start_pos = Some(move_drag_pos);
+                            }
+                        }
+                    }
+                }
+                if pointer_state.move_drag_pos.is_some() {
+                    self.move_drag_last_pos = pointer_state.move_drag_pos;
+                }
+                if pointer_state.drag_release {
+                    self.move_drag_last_pos = None;
+                }
+                if pointer_state.drag_release && self.marker_temp.valid {
+                    // scale to range
+                    if self.last_pointer_state.drag_by_secondary {
+                        let (a, b) = if self.marker.pos < self.marker_temp.pos {
+                            (&self.marker, &self.marker_temp)
+                        } else {
+                            (&self.marker_temp, &self.marker)
+                        };
+                        let range_new = (a.pos as f32, b.pos as f32);
+                        debug!("range_new: {:?}", range_new);
+                        if range_new.1 - range_new.0 > 1.0 {
+                            self.range = range_new;
+                        }
+                    }
+                    self.marker.set_pos_valid(
+                        self.marker_temp
+                            .pos
+                            .clamp(self.range.0 as u64, self.range.1 as u64),
+                    );
+                }
+                if !pointer_state.drag_by_primary && !pointer_state.drag_by_secondary {
+                    self.marker_temp.valid = false;
+                }
+                if pointer_state.drag_release {
+                    self.range_seek_started = false;
                 }
             }
-        }
-        if self.marker.valid {
-            self.paint_cursor(ui, wave_left, info, &self.marker);
-        }
-        if self.marker_temp.valid {
-            self.paint_cursor(ui, wave_left, info, &self.marker_temp);
-        }
-        for cursor in &self.cursors {
-            self.paint_cursor(ui, wave_left, info, cursor);
-        }
-        self.last_pointer_state = pointer_state;
+            self.paint_span(
+                ui,
+                wave_left,
+                info,
+                dragging_pos,
+                &self.marker,
+                &self.marker_temp,
+            );
+            // remove unavailable spans
+            self.spans = self
+                .spans
+                .iter()
+                .map(|x| x.clone())
+                .filter(|s| self.cursors_exists_id(s.0) && self.cursors_exists_id(s.1))
+                .collect();
+            for span in &self.spans {
+                if let Some(a) = self.cursors_get(span.0) {
+                    if let Some(b) = self.cursors_get(span.1) {
+                        self.paint_span(ui, wave_left, info, None, a, b);
+                    }
+                }
+            }
+            if self.marker.valid {
+                self.paint_cursor(ui, wave_left, info, &self.marker);
+            }
+            if self.marker_temp.valid {
+                self.paint_cursor(ui, wave_left, info, &self.marker_temp);
+            }
+            for cursor in &self.cursors {
+                self.paint_cursor(ui, wave_left, info, cursor);
+            }
+            self.last_pointer_state = pointer_state;
+        });
     }
     pub fn move_horizontal(&self, dx: f32) -> (f32, f32) {
         let pos_delta = self.x_to_fpos(dx) - self.range.0;
