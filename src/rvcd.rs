@@ -15,7 +15,7 @@ use rfd::FileHandle;
 #[allow(unused_imports)]
 use std::path::PathBuf;
 use std::sync::mpsc;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
 pub enum State {
@@ -483,7 +483,10 @@ impl Rvcd {
     }
     pub fn on_exit(&mut self) {
         if let Some(channel) = &self.channel {
-            channel.tx.send(RvcdMsg::StopService).unwrap();
+            match channel.tx.send(RvcdMsg::StopService) {
+                Ok(_) => {}
+                Err(e) => warn!("cannot send stop msg: {}", e),
+            };
         }
     }
 }

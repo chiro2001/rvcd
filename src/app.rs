@@ -4,12 +4,15 @@ use crate::Rvcd;
 use eframe::glow::Context;
 use eframe::Frame;
 use egui::{CentralPanel, Ui, Window};
+use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct RvcdApp {
     pub apps: Vec<Rvcd>,
     pub app_now_id: Option<usize>,
+    #[serde(skip)]
+    pub open_apps: Vec<(usize, bool)>,
     #[serde(skip)]
     pub repaint_after_seconds: f32,
     #[serde(skip)]
@@ -30,6 +33,7 @@ impl RvcdApp {
         if def.apps.is_empty() {
             def.apps = vec![Rvcd::new(0)];
         }
+        def.open_apps = def.apps.iter().map(|x| (x.id, true)).collect();
         def.apps = def.apps.into_iter().map(|a| a.init()).collect();
         def
     }
@@ -113,13 +117,18 @@ impl eframe::App for RvcdApp {
                 self.debug_panel(ui);
             });
         }
-        let show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
-            Window::new(app.title())
-                // .fixed_size(vec2(480.0, 640.0))
-                .min_height(200.0)
-                .show(ctx, |ui| {
-                    app.update(ui, frame, self.sst_enabled);
-                })
+        let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
+            let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
+            if let Some((_id, open)) = open_app {
+                Window::new(app.title())
+                    .min_height(200.0)
+                    .default_width(ctx.used_size().x / 2.0)
+                    .vscroll(false)
+                    .open(open)
+                    .show(ctx, |ui| {
+                        app.update(ui, frame, self.sst_enabled);
+                    });
+            }
         };
         if let Some(id) = self.app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
@@ -136,6 +145,35 @@ impl eframe::App for RvcdApp {
             for app in &mut self.apps {
                 show_app_in_window(app, ctx, frame);
             }
+        }
+        // remove closed windows
+        let to_removes = self
+            .open_apps
+            .iter()
+            .filter(|x| !x.1)
+            .map(|(id, _)| *id)
+            .collect::<Vec<_>>();
+        if let Some(id) = self.app_now_id {
+            if to_removes.iter().any(|i| *i == id) {
+                self.app_now_id = None;
+            }
+        }
+        self.apps.iter_mut().for_each(|app| {
+            if to_removes.iter().any(|id| *id == app.id) {
+                app.on_exit();
+            }
+        });
+        let to_remove_indexes = self
+            .apps
+            .iter()
+            .enumerate()
+            .filter(|x| to_removes.iter().any(|id| x.1.id == *id))
+            .map(|x| x.0)
+            .collect::<Vec<_>>();
+        for i in to_remove_indexes {
+            let removed = self.apps.remove(i);
+            // let removed = self.apps.get(i).unwrap();
+            info!("remove rvcd: id={}", removed.id);
         }
     }
 
