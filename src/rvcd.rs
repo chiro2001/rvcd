@@ -1,14 +1,16 @@
+use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::run_mode::RunMode;
 use crate::service::Service;
+use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{Direction, DroppedFile, Layout, ScrollArea, Sense, Ui};
+use egui::{vec2, Direction, DroppedFile, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget};
 use egui_extras::{Column, TableBuilder};
 use egui_toast::{ToastOptions, Toasts};
 use num_traits::Float;
@@ -30,6 +32,8 @@ pub enum State {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Rvcd {
+    pub id: usize,
+    title: String,
     /// File loading state
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
@@ -59,25 +63,19 @@ pub struct Rvcd {
 
     #[serde(skip)]
     pub toasts: Toasts,
-    #[serde(skip)]
-    pub repaint_after_seconds: f32,
-    #[serde(skip)]
-    pub run_mode: RunMode,
-    #[serde(skip)]
-    pub frame_history: FrameHistory,
-    pub debug_panel: bool,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
     pub file: Option<FileHandle>,
 
     pub tree: TreeView,
-    pub sst_enabled: bool,
 }
 
 impl Default for Rvcd {
     fn default() -> Self {
         Self {
+            id: 0,
+            title: "Rvcd".to_string(),
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
@@ -88,21 +86,16 @@ impl Default for Rvcd {
             toasts: Toasts::new()
                 .direction(Direction::BottomUp)
                 .align_to_end(true),
-            repaint_after_seconds: 1.0,
-            run_mode: Default::default(),
-            frame_history: Default::default(),
-            debug_panel: false,
             #[cfg(target_arch = "wasm32")]
             file: None,
             tree: Default::default(),
-            sst_enabled: true,
         }
     }
 }
 
 impl Rvcd {
     /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(id: usize, cc: &eframe::CreationContext<'_>) -> Self {
         let (channel_req_tx, channel_req_rx) = mpsc::channel();
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
@@ -135,12 +128,82 @@ impl Rvcd {
         };
         def.view.set_tx(channel_resp_tx);
         Self {
+            id,
             channel: Some(RvcdChannel {
                 tx: channel_req_tx,
                 rx: channel_resp_rx,
             }),
             ..def
         }
+    }
+    pub fn title(&self) -> &str {
+        match self.state{
+            State::Working => self.title.as_str(),
+            _ => "Rvcd"
+        }
+    }
+    pub fn update(&mut self, ui: &mut Ui, frame: &mut eframe::Frame, sst_enabled: bool) {
+        egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
+            // The top panel is often a good place for a menu bar:
+            egui::menu::bar(ui, |ui| {
+                self.menubar(ui, frame);
+            });
+        });
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            ui.add_enabled_ui(self.state == State::Working, |ui| {
+                if sst_enabled {
+                    egui::SidePanel::left("side_panel")
+                        .resizable(true)
+                        .show_inside(ui, |ui| {
+                            self.sidebar(ui);
+                        });
+                }
+                egui::CentralPanel::default().show_inside(ui, |ui| {
+                    ui.vertical_centered_justified(|ui| {
+                        self.wave_panel(ui);
+                    });
+                });
+            });
+        });
+
+        if let Some(channel) = &self.channel {
+            let mut messages = vec![];
+            while let Ok(rx) = channel.rx.try_recv() {
+                messages.push(rx);
+            }
+            for rx in messages {
+                self.message_handler(rx);
+            }
+        }
+
+        let ctx = ui.ctx();
+        if self.state == State::Loading {
+            egui::Window::new("Loading")
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label(format!(
+                        "Loading Progress: {:.1}% / {}",
+                        self.load_progress.0 * 100.0,
+                        FileSizeUnit::from_bytes(self.load_progress.1)
+                    ));
+                    ProgressBar::new(self.load_progress.0).ui(ui);
+                    ui.centered_and_justified(|ui| {
+                        if ui.button("Cancel").clicked() {
+                            if let Some(channel) = &self.channel {
+                                info!("sent FileLoadCancel");
+                                channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
+                            }
+                        }
+                    });
+                });
+            ctx.request_repaint();
+        }
+        self.toasts
+            .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
+
+        // TODO: fix files drop
+        // preview_files_being_dropped(ctx);
+        // self.handle_dropping_file(ctx);
     }
     /// Add signal to view.
     ///
@@ -352,40 +415,6 @@ impl Rvcd {
         self.state = State::Idle;
         self.view = self.view.reset();
     }
-    pub fn debug_panel(&mut self, ui: &mut Ui) {
-        let run_mode = &mut self.run_mode;
-        ui.label("Mode:");
-        ui.radio_value(run_mode, RunMode::Reactive, "Reactive")
-            .on_hover_text("Repaint when there are animations or input (e.g. mouse movement)");
-        ui.radio_value(run_mode, RunMode::Continuous, "Continuous")
-            .on_hover_text("Repaint everything each frame");
-        if self.run_mode == RunMode::Continuous {
-            ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
-        } else {
-            self.frame_history.ui(ui);
-        }
-        let mut debug_on_hover = ui.ctx().debug_on_hover();
-        ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
-        ui.ctx().set_debug_on_hover(debug_on_hover);
-        if ui.button("Reset rvcd").clicked() {
-            self.reset();
-        }
-        ui.horizontal(|ui| {
-            if ui
-                .button("Reset egui")
-                .on_hover_text("Forget scroll, positions, sizes etc")
-                .clicked()
-            {
-                *ui.ctx().memory() = Default::default();
-            }
-
-            if ui.button("Reset everything").clicked() {
-                self.state = Default::default();
-                *ui.ctx().memory() = Default::default();
-            }
-        });
-        egui::warn_if_debug_build(ui);
-    }
     pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         egui::widgets::global_dark_light_mode_switch(ui);
         ui.menu_button("File", |ui| {
@@ -420,14 +449,14 @@ impl Rvcd {
         });
         self.view.menu(ui);
         ui.menu_button("SST", |ui| {
-            if ui.checkbox(&mut self.sst_enabled, "Enable SST").clicked() {
-                ui.close_menu();
-            };
-            if self.sst_enabled {
-                self.tree.menu(ui);
-            }
+            // if ui.checkbox(&mut self.sst_enabled, "Enable SST").clicked() {
+            //     ui.close_menu();
+            // };
+            // if self.sst_enabled {
+            self.tree.menu(ui);
+            // }
         });
-        ui.checkbox(&mut self.debug_panel, "Debug Panel");
+        // ui.checkbox(&mut self.debug_panel, "Debug Panel");
         if ui.button("Test Toast").clicked() {
             self.toasts.info("Test Toast", ToastOptions::default());
         }
@@ -457,6 +486,11 @@ impl Rvcd {
                     self.message_handler(RvcdMsg::FileOpenData(data.clone()));
                 }
             });
+        }
+    }
+    pub fn on_exit(&mut self) {
+        if let Some(channel) = &self.channel {
+            channel.tx.send(RvcdMsg::StopService).unwrap();
         }
     }
 }

@@ -5,6 +5,7 @@
 use anyhow::Result;
 use rvcd::Rvcd;
 use tracing::info;
+use rvcd::app::RvcdApp;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
@@ -29,7 +30,7 @@ async fn main() -> Result<()> {
         eframe::run_native(
             "Rvcd",
             native_options,
-            Box::new(|cc| Box::new(Rvcd::new(cc))),
+            Box::new(|cc| Box::new(RvcdApp::new(cc))),
         );
     };
     let rpc = async move {

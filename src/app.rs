@@ -1,17 +1,83 @@
-use crate::files::preview_files_being_dropped;
-use crate::message::RvcdMsg;
+use crate::frame_history::FrameHistory;
 use crate::run_mode::RunMode;
-use crate::rvcd::State;
-use crate::size::FileSizeUnit;
 use crate::Rvcd;
 use eframe::glow::Context;
-use egui::{vec2, ProgressBar, Widget};
-use tracing::info;
+use eframe::Frame;
+use egui::{vec2, CentralPanel, Ui, Window};
 
-impl eframe::App for Rvcd {
+#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[serde(default)] // if we add new fields, give them default values when deserializing old state
+pub struct RvcdApp {
+    pub apps: Vec<Rvcd>,
+    pub app_now_id: Option<usize>,
+    #[serde(skip)]
+    pub repaint_after_seconds: f32,
+    #[serde(skip)]
+    pub run_mode: RunMode,
+    #[serde(skip)]
+    pub frame_history: FrameHistory,
+    pub debug_panel: bool,
+    pub sst_enabled: bool,
+}
+
+impl RvcdApp {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        Self {
+            apps: vec![Rvcd::new(0, cc)],
+            ..Default::default()
+        }
+    }
+    pub fn debug_panel(&mut self, ui: &mut Ui) {
+        let run_mode = &mut self.run_mode;
+        ui.label("Mode:");
+        ui.radio_value(run_mode, RunMode::Reactive, "Reactive")
+            .on_hover_text("Repaint when there are animations or input (e.g. mouse movement)");
+        ui.radio_value(run_mode, RunMode::Continuous, "Continuous")
+            .on_hover_text("Repaint everything each frame");
+        if self.run_mode == RunMode::Continuous {
+            ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
+        } else {
+            self.frame_history.ui(ui);
+        }
+        let mut debug_on_hover = ui.ctx().debug_on_hover();
+        ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
+        ui.ctx().set_debug_on_hover(debug_on_hover);
+        ui.horizontal(|ui| {
+            if let Some(id) = self.app_now_id {
+                if ui.button("Reset this rvcd").clicked() {
+                    if let Some(app) = self.apps.get_mut(id) {
+                        app.reset();
+                    }
+                }
+            }
+            if ui.button("Reset app").clicked() {
+                for app in &mut self.apps {
+                    app.on_exit();
+                }
+                self.apps.clear();
+            }
+        });
+        ui.horizontal(|ui| {
+            if ui
+                .button("Reset egui")
+                .on_hover_text("Forget scroll, positions, sizes etc")
+                .clicked()
+            {
+                *ui.ctx().memory() = Default::default();
+            }
+
+            if ui.button("Reset everything").clicked() {
+                *ui.ctx().memory() = Default::default();
+            }
+        });
+        egui::warn_if_debug_build(ui);
+    }
+}
+
+impl eframe::App for RvcdApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         self.frame_history
             .on_new_frame(ctx.input().time, frame.info().cpu_usage);
         match self.run_mode {
@@ -26,81 +92,54 @@ impl eframe::App for Rvcd {
                 ));
             }
         }
+        egui::TopBottomPanel::top("global_menu").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                if ui.checkbox(&mut self.debug_panel, "Debug Panel").clicked() {
+                    ui.close_menu();
+                }
+                if ui.checkbox(&mut self.sst_enabled, "SST").clicked() {
+                    ui.close_menu();
+                }
+            });
+        });
         if self.debug_panel {
             egui::SidePanel::left("debug_panel").show(ctx, |ui| {
                 self.debug_panel(ui);
             });
         }
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                self.menubar(ui, frame);
-            });
-        });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.add_enabled_ui(self.state == State::Working, |ui| {
-                if self.sst_enabled {
-                    egui::SidePanel::left("side_panel")
-                        .resizable(true)
-                        .show_inside(ui, |ui| {
-                            self.sidebar(ui);
-                        });
-                }
-                egui::CentralPanel::default().show_inside(ui, |ui| {
-                    ui.vertical_centered_justified(|ui| {
-                        self.wave_panel(ui);
-                    });
-                });
-            });
-        });
-
-        if let Some(channel) = &self.channel {
-            let mut messages = vec![];
-            while let Ok(rx) = channel.rx.try_recv() {
-                messages.push(rx);
-            }
-            for rx in messages {
-                self.message_handler(rx);
-            }
-        }
-
-        if self.state == State::Loading {
-            egui::Window::new("Loading")
-                .resizable(false)
+        let show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
+            Window::new(app.title())
+                .fixed_size(vec2(480.0, 640.0))
                 .show(ctx, |ui| {
-                    ui.label(format!(
-                        "Loading Progress: {:.1}% / {}",
-                        self.load_progress.0 * 100.0,
-                        FileSizeUnit::from_bytes(self.load_progress.1)
-                    ));
-                    ProgressBar::new(self.load_progress.0).ui(ui);
-                    ui.centered_and_justified(|ui| {
-                        if ui.button("Cancel").clicked() {
-                            if let Some(channel) = &self.channel {
-                                info!("sent FileLoadCancel");
-                                channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
-                            }
-                        }
-                    });
+                    app.update(ui, frame, self.sst_enabled);
+                })
+        };
+        if let Some(id) = self.app_now_id {
+            if let Some(app) = self.apps.get_mut(id) {
+                CentralPanel::default().show(ctx, |ui| {
+                    app.update(ui, frame, self.sst_enabled);
                 });
-            ctx.request_repaint();
+                for app in &mut self.apps {
+                    if id != app.id {
+                        show_app_in_window(app, ctx, frame);
+                    }
+                }
+            }
+        } else {
+            for app in &mut self.apps {
+                show_app_in_window(app, ctx, frame);
+            }
         }
-        self.toasts
-            .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
-
-        preview_files_being_dropped(ctx);
-        self.handle_dropping_file(ctx);
     }
 
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        info!("saving with {} signals loaded", self.view.signals.len());
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     fn on_exit(&mut self, _gl: Option<&Context>) {
-        if let Some(channel) = &self.channel {
-            channel.tx.send(RvcdMsg::StopService).unwrap();
+        for app in &mut self.apps {
+            app.on_exit();
         }
     }
 }
