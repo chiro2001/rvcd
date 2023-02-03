@@ -1,4 +1,4 @@
-use crate::view::SIGNAL_TREE_HEIGHT_DEFAULT;
+use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT};
 use crate::wave::WaveTreeNode;
 use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
 use trees::Node;
@@ -6,6 +6,7 @@ use trees::Node;
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct TreeView {
     pub show_leaves: bool,
+    pub highlight_scope_id: Option<u64>,
 }
 
 #[derive(PartialEq)]
@@ -71,6 +72,7 @@ impl TreeView {
                     _ => false,
                 }))
         {
+            // paint as leaf
             let node = tree.data();
             let painter = ui.painter();
             let get_text_size = |text: &str| {
@@ -91,16 +93,33 @@ impl TreeView {
                 ),
                 Sense::click_and_drag(),
             );
+            let mut text_color = ui.visuals().text_color();
+            if let Some(highlight_scope_id) = self.highlight_scope_id {
+                text_color = match node {
+                    WaveTreeNode::WaveScope((_, id)) => {
+                        if *id == highlight_scope_id {
+                            painter.rect_filled(
+                                response.rect,
+                                0.0,
+                                Color32::YELLOW.linear_multiply(BG_MULTIPLY),
+                            )
+                        }
+                        ui.visuals().strong_text_color()
+                    }
+                    _ => ui.visuals().text_color(),
+                };
+            }
             painter.text(
                 response.rect.left_center(),
                 Align2::LEFT_CENTER,
                 text,
                 Default::default(),
-                ui.visuals().text_color(),
+                text_color,
             );
             match node {
-                WaveTreeNode::WaveScope(_) => {
+                WaveTreeNode::WaveScope((_, id)) => {
                     if response.clicked_by(PointerButton::Primary) {
+                        self.highlight_scope_id = Some(*id);
                         if response.double_clicked() {
                             TreeAction::AddSignals(child_signals(tree))
                         } else {

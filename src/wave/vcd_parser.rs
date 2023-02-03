@@ -103,16 +103,18 @@ pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, (String, u64)> {
 fn vcd_iterate_tree(
     mut tree: Box<Tree<WaveTreeNode>>,
     items: &[ScopeItem],
-    on_scope: fn(Box<Tree<WaveTreeNode>>, &Scope) -> Tree<WaveTreeNode>,
+    on_scope: fn(Box<Tree<WaveTreeNode>>, &Scope, u64) -> Tree<WaveTreeNode>,
     on_var: fn(Box<Tree<WaveTreeNode>>, &Var) -> Tree<WaveTreeNode>,
+    scope_id: u64,
 ) -> Tree<WaveTreeNode> {
     for item in items.iter() {
         match item {
             ScopeItem::Scope(scope) => {
-                let node = Box::new(Tree::new(WaveTreeNode::WaveScope(
+                let node = Box::new(Tree::new(WaveTreeNode::WaveScope((
                     scope.identifier.to_string(),
-                )));
-                tree.push_back(on_scope(node, scope));
+                    scope_id,
+                ))));
+                tree.push_back(on_scope(node, scope, scope_id));
             }
             ScopeItem::Var(var) => {
                 let IdCode(id) = var.code;
@@ -131,8 +133,14 @@ fn vcd_iterate_tree(
 
 pub fn vcd_tree(header: &Header) -> Result<Tree<WaveTreeNode>> {
     let root = Box::new(Tree::new(WaveRoot));
-    fn on_scope(tree: Box<Tree<WaveTreeNode>>, scope: &Scope) -> Tree<WaveTreeNode> {
-        vcd_iterate_tree(tree, scope.children.as_slice(), on_scope, on_var)
+    fn on_scope(tree: Box<Tree<WaveTreeNode>>, scope: &Scope, scope_id: u64) -> Tree<WaveTreeNode> {
+        vcd_iterate_tree(
+            tree,
+            scope.children.as_slice(),
+            on_scope,
+            on_var,
+            scope_id + 1,
+        )
     }
     fn on_var(tree: Box<Tree<WaveTreeNode>>, _var: &Var) -> Tree<WaveTreeNode> {
         tree.deep_clone()
@@ -142,6 +150,7 @@ pub fn vcd_tree(header: &Header) -> Result<Tree<WaveTreeNode>> {
         header.items.as_slice(),
         on_scope,
         on_var,
+        0,
     ))
 }
 

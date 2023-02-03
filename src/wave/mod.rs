@@ -95,7 +95,9 @@ impl WaveDataValue {
     /// to string in radix
     pub fn as_radix(&self, radix: Radix) -> String {
         match self {
-            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v).to_str_radix(radix.to_number() as u32),
+            WaveDataValue::Comp(v) => {
+                BigUint::from_bytes_le(v).to_str_radix(radix.to_number() as u32)
+            }
             WaveDataValue::Raw(v) => radix_vector_to_string(radix, v),
         }
     }
@@ -175,7 +177,7 @@ impl Display for WaveSignalInfo {
 pub enum WaveTreeNode {
     #[default]
     WaveRoot,
-    WaveScope(String),
+    WaveScope((String, u64)),
     WaveVar(WaveSignalInfo),
     /// id only to save space (Not available now)
     WaveId(u64),
@@ -188,7 +190,7 @@ impl Display for WaveTreeNode {
             "{}",
             match self {
                 WaveTreeNode::WaveRoot => "root".to_string(),
-                WaveTreeNode::WaveScope(scope) => scope.to_string(),
+                WaveTreeNode::WaveScope((scope, _id)) => scope.to_string(),
                 WaveTreeNode::WaveVar(i) => i.to_string(),
                 WaveTreeNode::WaveId(var) => format!("{}", var),
             }
