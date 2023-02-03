@@ -3,8 +3,7 @@ use crate::utils::{execute, sleep_ms};
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::WaveLoader;
 use anyhow::Result;
-use std::fs::File;
-use std::io::{BufReader, Cursor, Read};
+use std::io::{Cursor, Read};
 use std::sync::{mpsc, Arc, Mutex};
 use tracing::{error, info};
 
@@ -39,11 +38,11 @@ impl Service {
     }
     #[cfg(not(target_arch = "wasm32"))]
     fn load_data(path: String, tx: mpsc::Sender<RvcdMsg>, cancel: Arc<Mutex<bool>>) -> Vec<u8> {
-        let file = File::open(path);
+        let file = std::fs::File::open(path);
         match file {
             Ok(file) => {
                 let total_sz = file.metadata().unwrap().len();
-                let mut reader = BufReader::new(file);
+                let mut reader = std::io::BufReader::new(file);
                 if total_sz != 0 {
                     const BUF_SIZE: usize = 1024 * 256;
                     // const BUF_SIZE: usize = 8;
