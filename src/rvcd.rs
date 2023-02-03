@@ -9,7 +9,7 @@ use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{vec2, Direction, DroppedFile, Id, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget};
 use egui_extras::{Column, TableBuilder};
-use egui_toast::{ToastOptions, Toasts};
+use egui_toast::Toasts;
 use num_traits::Float;
 use rfd::FileHandle;
 #[allow(unused_imports)]
@@ -480,9 +480,9 @@ impl Rvcd {
             // }
         });
         // ui.checkbox(&mut self.debug_panel, "Debug Panel");
-        if ui.button("Test Toast").clicked() {
-            self.toasts.info("Test Toast", ToastOptions::default());
-        }
+        // if ui.button("Test Toast").clicked() {
+        //     self.toasts.info("Test Toast", ToastOptions::default());
+        // }
         ui.label(format!("State: {:?}", self.state));
     }
     pub fn handle_dropping_file(&mut self, ctx: &egui::Context) {
