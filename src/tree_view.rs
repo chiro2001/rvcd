@@ -56,7 +56,7 @@ impl TreeView {
                 TreeAction::None
             }
         } else {
-            let child_signals = || {
+            let child_signals = |tree: &Node<WaveTreeNode>| {
                 tree.iter()
                     .map(|n| n.data().clone())
                     .map(|x| match x {
@@ -66,6 +66,20 @@ impl TreeView {
                     .filter(|x| x.is_some())
                     .map(|x| x.unwrap())
                     .collect::<Vec<_>>()
+            };
+            let recurse_child_signals = |tree: &Node<WaveTreeNode>| {
+                let mut queue = vec![tree];
+                let mut signal_collect = vec![];
+                while !queue.is_empty() {
+                    let top = queue.last().unwrap().clone();
+                    queue.remove(queue.len() - 1);
+                    queue.extend(top.iter().filter(|x| match x.data() {
+                        WaveTreeNode::WaveScope(_) => true,
+                        _ => false,
+                    }));
+                    signal_collect.extend(child_signals(top));
+                }
+                signal_collect
             };
             match tree.data() {
                 WaveTreeNode::WaveRoot => tree
@@ -81,19 +95,35 @@ impl TreeView {
                                 .map(|child| self.ui(ui, child))
                                 .find(|a| *a != TreeAction::None)
                         });
-                    if scope.header_response.clicked() {
-                        TreeAction::SelectScope(child_signals())
+                    if scope.header_response.clicked_by(PointerButton::Primary) {
+                        TreeAction::SelectScope(child_signals(tree))
                     } else {
-                        if scope.header_response.clicked_by(PointerButton::Secondary) {
-                            TreeAction::AddSignals(child_signals())
-                        } else {
-                            match scope.body_returned {
-                                None => TreeAction::None,
-                                Some(a) => match a {
-                                    None => TreeAction::None,
-                                    Some(a) => a,
-                                },
+                        match scope.body_returned {
+                            None => {
+                                let mut add_all = false;
+                                let mut recurse_add_all = false;
+                                scope.header_response.context_menu(|ui| {
+                                    if ui.button("Add all").clicked() {
+                                        add_all = true;
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("Recurse add all").clicked() {
+                                        recurse_add_all = true;
+                                        ui.close_menu();
+                                    }
+                                });
+                                if add_all {
+                                    TreeAction::AddSignals(child_signals(tree))
+                                } else if recurse_add_all {
+                                    TreeAction::AddSignals(recurse_child_signals(tree))
+                                } else {
+                                    TreeAction::None
+                                }
                             }
+                            Some(a) => match a {
+                                None => TreeAction::None,
+                                Some(a) => a,
+                            },
                         }
                     }
                 }
