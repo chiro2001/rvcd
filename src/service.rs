@@ -5,7 +5,7 @@ use crate::wave::WaveLoader;
 use anyhow::Result;
 use std::io::{Cursor, Read};
 use std::sync::{mpsc, Arc, Mutex};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub struct Service {
     pub channel: RvcdChannel,
@@ -241,20 +241,26 @@ impl Service {
                 }
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        info!("[thread-{:?}] service stopped", std::thread::current().id());
+        #[cfg(target_arch = "wasm32")]
         info!("service stopped");
     }
 
     pub fn start(channel: RvcdChannel) {
-        info!("starting service...");
+        debug!("starting service...");
         execute(async move {
             run_service(channel).await;
         });
-        info!("service started");
+        debug!("service started");
     }
 }
 
 async fn run_service(channel: RvcdChannel) {
     let mut s = Service::new(channel);
+    #[cfg(not(target_arch = "wasm32"))]
+    info!("[thread-{:?}] service starts", std::thread::current().id());
+    #[cfg(target_arch = "wasm32")]
     info!("service starts");
     s.run().await
 }

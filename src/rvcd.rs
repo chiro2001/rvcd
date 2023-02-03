@@ -93,6 +93,7 @@ impl Default for Rvcd {
 impl Rvcd {
     /// Called once before the first frame.
     pub fn new(id: usize) -> Self {
+        info!("create rvcd id={}", id);
         Self {
             id,
             ..Default::default()

@@ -3,7 +3,7 @@ use crate::run_mode::RunMode;
 use crate::Rvcd;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{CentralPanel, Ui, Window};
+use egui::{CentralPanel, Id, Ui, Window};
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -83,7 +83,12 @@ impl RvcdApp {
         egui::warn_if_debug_build(ui);
     }
     fn new_id(&self) -> usize {
-        self.apps.iter().map(|x| x.id).max().unwrap_or(0)
+        self.apps
+            .iter()
+            .map(|x| x.id)
+            .max()
+            .map(|x| x + 1)
+            .unwrap_or(0)
     }
     fn new_window(&mut self, maximum: bool) {
         let id = self.new_id();
@@ -115,11 +120,10 @@ impl eframe::App for RvcdApp {
         }
         egui::TopBottomPanel::top("global_menu").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                if ui.checkbox(&mut self.debug_panel, "Debug Panel").clicked() {
-                    ui.close_menu();
-                }
-                if ui.checkbox(&mut self.sst_enabled, "SST").clicked() {
-                    ui.close_menu();
+                ui.checkbox(&mut self.debug_panel, "Debug Panel");
+                ui.checkbox(&mut self.sst_enabled, "SST");
+                if ui.button("New Window").clicked() {
+                    self.new_window(false);
                 }
                 if self.app_now_id.is_some() {
                     if ui.button("Minimize").clicked() {
@@ -142,6 +146,7 @@ impl eframe::App for RvcdApp {
                     .default_width(ctx.used_size().x / 2.0)
                     .vscroll(false)
                     .open(open)
+                    .id(Id::new(*id))
                     .title_bar(true)
                     .show(ctx, |ui| {
                         app.update(ui, frame, self.sst_enabled, false, || {
@@ -150,12 +155,12 @@ impl eframe::App for RvcdApp {
                     });
             }
         };
-        let mut will_remove_now_id = false;
+        let mut will_minimum_this = false;
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
                 CentralPanel::default().show(ctx, |ui| {
                     app.update(ui, frame, self.sst_enabled, true, || {
-                        will_remove_now_id = true;
+                        will_minimum_this = true;
                     });
                 });
                 for app in &mut self.apps {
@@ -169,7 +174,7 @@ impl eframe::App for RvcdApp {
                 show_app_in_window(app, ctx, frame);
             }
         }
-        if will_remove_now_id {
+        if will_minimum_this {
             self.app_now_id = None;
         }
         // remove closed windows
@@ -196,15 +201,31 @@ impl eframe::App for RvcdApp {
             .filter(|x| to_removes.iter().any(|id| x.1.id == *id))
             .map(|x| x.0)
             .collect::<Vec<_>>();
+        // if self.apps.len() > 1 {
+        //     info!(
+        //         "ids: {:?}, to_removes: {:?}, to_remove_indexes: {:?}",
+        //         self.apps.iter().map(|x| x.id).collect::<Vec<_>>(),
+        //         to_removes,
+        //         to_remove_indexes
+        //     );
+        // }
         for i in to_remove_indexes {
-            let removed = self.apps.remove(i);
-            // let removed = self.apps.get(i).unwrap();
-            info!("remove rvcd: id={}", removed.id);
+            if i < self.apps.len() {
+                let removed = self.apps.remove(i);
+                // let removed = self.apps.get(i).unwrap();
+                self.open_apps = self
+                    .open_apps
+                    .iter()
+                    .filter(|x| x.0 != removed.id)
+                    .map(|x| *x)
+                    .collect();
+                info!("remove rvcd: id={}, open_apps: {:?}", removed.id, self.open_apps);
+            }
         }
         // if empty, create new main window
-        if self.apps.is_empty() {
-            self.new_window(true);
-        }
+        // if self.apps.is_empty() {
+        //     self.new_window(true);
+        // }
     }
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
