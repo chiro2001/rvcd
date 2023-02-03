@@ -11,7 +11,7 @@ use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct RvcdApp {
     pub apps: Vec<Rvcd>,
@@ -24,6 +24,20 @@ pub struct RvcdApp {
     pub frame_history: FrameHistory,
     pub debug_panel: bool,
     pub sst_enabled: bool,
+}
+
+impl Default for RvcdApp {
+    fn default() -> Self {
+        Self{
+            apps: vec![],
+            app_now_id: None,
+            open_apps: vec![],
+            run_mode: Default::default(),
+            frame_history: Default::default(),
+            debug_panel: false,
+            sst_enabled: true,
+        }
+    }
 }
 
 impl RvcdApp {
