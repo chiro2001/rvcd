@@ -188,43 +188,43 @@ impl Rvcd {
                     });
             });
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ScrollArea::vertical().show(ui, |ui| {
-                ui.centered_and_justified(|ui| {
-                    if let Some(wave) = &self.wave {
-                        match TreeView::default().ui(ui, wave.info.tree.root()) {
-                            TreeAction::None => {}
-                            TreeAction::AddSignal(node) => match node {
-                                WaveTreeNode::WaveVar(d) => {
-                                    self.signal_clicked(d.id, true);
-                                }
-                                _ => {}
-                            },
-                            TreeAction::SelectScope(nodes) => {
-                                self.signal_leaves = nodes
-                                    .into_iter()
-                                    .map(|node| match node {
-                                        WaveTreeNode::WaveVar(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .filter(|x| x.is_some())
-                                    .map(|x| x.unwrap())
-                                    .collect();
+            ScrollArea::both().show(ui, |ui| {
+                // ui.centered_and_justified(|ui| {
+                if let Some(wave) = &self.wave {
+                    match TreeView::default().ui(ui, wave.info.tree.root()) {
+                        TreeAction::None => {}
+                        TreeAction::AddSignal(node) => match node {
+                            WaveTreeNode::WaveVar(d) => {
+                                self.signal_clicked(d.id, true);
                             }
-                            TreeAction::AddSignals(nodes) => {
-                                for node in nodes {
-                                    match node {
-                                        WaveTreeNode::WaveVar(d) => {
-                                            self.signal_clicked(d.id, false);
-                                        }
-                                        _ => {}
+                            _ => {}
+                        },
+                        TreeAction::SelectScope(nodes) => {
+                            self.signal_leaves = nodes
+                                .into_iter()
+                                .map(|node| match node {
+                                    WaveTreeNode::WaveVar(v) => Some(v),
+                                    _ => None,
+                                })
+                                .filter(|x| x.is_some())
+                                .map(|x| x.unwrap())
+                                .collect();
+                        }
+                        TreeAction::AddSignals(nodes) => {
+                            for node in nodes {
+                                match node {
+                                    WaveTreeNode::WaveVar(d) => {
+                                        self.signal_clicked(d.id, false);
                                     }
+                                    _ => {}
                                 }
                             }
                         }
-                    } else {
-                        ui.centered_and_justified(|ui| ui.label("No file loaded"));
                     }
-                });
+                } else {
+                    ui.centered_and_justified(|ui| ui.label("No file loaded"));
+                }
+                // });
             });
         });
     }

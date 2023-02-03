@@ -38,8 +38,7 @@ impl TreeView {
             let text_size = get_text_size(text.as_str()).size();
             let (response, painter) = ui.allocate_painter(
                 vec2(
-                    // text_size.x,
-                    ui.max_rect().width(),
+                    f32::max(ui.max_rect().width(), text_size.x),
                     f32::max(SIGNAL_TREE_HEIGHT_DEFAULT, text_size.y),
                 ),
                 Sense::click_and_drag(),
