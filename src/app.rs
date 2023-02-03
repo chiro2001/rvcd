@@ -6,7 +6,7 @@ use crate::Rvcd;
 use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{CentralPanel, Id, Layout, Ui, Window};
+use egui::{CentralPanel, DroppedFile, Id, Layout, Ui, Window};
 use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -162,6 +162,7 @@ impl eframe::App for RvcdApp {
                     }
                     ui.checkbox(&mut self.debug_panel, "Debug Panel");
                     ui.checkbox(&mut self.sst_enabled, "SST");
+                    ui.label(format!("apps: {:?}", self.apps));
                 });
             });
         });
@@ -259,20 +260,26 @@ impl eframe::App for RvcdApp {
             }
         }
         preview_files_being_dropped(ctx);
-        if !ctx.input().raw.dropped_files.is_empty() {
+        for file in &ctx.input().raw.dropped_files {
+            let file: &DroppedFile = file;
             let has_maximum_window = self.app_now_id.is_some();
-            if let Some(id) = self.app_now_id {
-                if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
-                    if app.state == State::Idle {
-                        app.handle_dropping_file(ctx);
+            match self
+                .app_now_id
+                .map(|id| {
+                    self.apps
+                        .iter_mut()
+                        .find(|a| a.id == id && a.state == State::Idle)
+                })
+                .flatten()
+            {
+                Some(app) => app.handle_dropping_file(file),
+                None => {
+                    let id = self.new_window(!has_maximum_window);
+                    if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
+                        app.handle_dropping_file(file);
                     }
                 }
-            }
-            // create window and handle it
-            let id = self.new_window(!has_maximum_window);
-            if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
-                app.handle_dropping_file(ctx);
-            }
+            };
         }
         // if empty, create new main window
         if self.apps.is_empty() {

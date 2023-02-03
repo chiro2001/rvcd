@@ -12,6 +12,7 @@ use egui_extras::{Column, TableBuilder};
 use egui_toast::Toasts;
 use num_traits::Float;
 use rfd::FileHandle;
+use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -66,6 +67,18 @@ pub struct Rvcd {
     pub file: Option<FileHandle>,
 
     pub tree: TreeView,
+}
+
+impl Display for Rvcd {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}] {}", self.id, self.title)
+    }
+}
+
+impl Debug for Rvcd {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
 }
 
 impl Default for Rvcd {
@@ -437,6 +450,7 @@ impl Rvcd {
         self.filepath.clear();
         self.state = State::Idle;
         self.view = self.view.reset();
+        self.title = format!("Rvcd-{}", self.id);
     }
     pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, maximum: bool) {
         egui::widgets::global_dark_light_mode_switch(ui);
@@ -485,31 +499,31 @@ impl Rvcd {
         // }
         ui.label(format!("State: {:?}", self.state));
     }
-    pub fn handle_dropping_file(&mut self, ctx: &egui::Context) {
+    pub fn handle_dropping_file(&mut self, dropped_file: &DroppedFile) {
         // Collect dropped files:
-        if !ctx.input().raw.dropped_files.is_empty() {
-            let dropped_files: Vec<DroppedFile> = ctx.input().raw.dropped_files.clone();
-            info!("drag {} files!", dropped_files.len());
-            dropped_files.first().map(|dropped_file| {
-                #[cfg(not(target_arch = "wasm32"))]
-                if let Some(path) = &dropped_file.path {
-                    if path.is_file() {
-                        let file = FileHandle::from(path.clone());
-                        self.message_handler(RvcdMsg::FileDrag(file));
-                    } else {
-                        self.message_handler(RvcdMsg::FileOpenFailed);
-                    }
-                } else {
-                    if let Some(data) = &dropped_file.bytes {
-                        self.message_handler(RvcdMsg::FileOpenData(data.clone()));
-                    }
-                }
-                #[cfg(target_arch = "wasm32")]
-                if let Some(data) = &dropped_file.bytes {
-                    self.message_handler(RvcdMsg::FileOpenData(data.clone()));
-                }
-            });
+        // if !ctx.input().raw.dropped_files.is_empty() {
+        //     let dropped_files: Vec<DroppedFile> = ctx.input().raw.dropped_files.clone();
+        //     info!("drag {} files!", dropped_files.len());
+        //     dropped_files.first().map(|dropped_file| {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(path) = &dropped_file.path {
+            if path.is_file() {
+                let file = FileHandle::from(path.clone());
+                self.message_handler(RvcdMsg::FileDrag(file));
+            } else {
+                self.message_handler(RvcdMsg::FileOpenFailed);
+            }
+        } else {
+            if let Some(data) = &dropped_file.bytes {
+                self.message_handler(RvcdMsg::FileOpenData(data.clone()));
+            }
         }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(data) = &dropped_file.bytes {
+            self.message_handler(RvcdMsg::FileOpenData(data.clone()));
+        }
+        //     });
+        // }
     }
     pub fn on_exit(&mut self) {
         if let Some(channel) = &self.channel {
