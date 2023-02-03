@@ -18,7 +18,10 @@ fn optimize_vcd_parser(path: &str) -> Result<()> {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let files = ["data/testbench.vcd"];
+    let files = [
+        // "data/testbench.vcd",
+        "data/cpu_ila_commit.vcd",
+    ];
     for file in files {
         let id = format!("load {}", file);
         println!("id: {}", id);

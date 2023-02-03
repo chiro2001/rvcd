@@ -218,6 +218,9 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
 pub struct Vcd;
 impl WaveLoader for Vcd {
     fn load(reader: &mut dyn Read) -> Result<Wave> {
+        info!("start parsing vcd file");
+        #[cfg(not(target_arch = "wasm32"))]
+        let perf_start = std::time::Instant::now();
         let mut parser = vcd::Parser::new(reader);
         let header = parser.parse_header()?;
         let code_names = vcd_code_name(&header)
@@ -296,6 +299,11 @@ impl WaveLoader for Vcd {
                 Command::ChangeString(_, _) => {}
                 _ => {}
             }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let perf_stop = std::time::Instant::now();
+            info!("parse vcd use time: {:?}", perf_stop - perf_start);
         }
         Ok(Wave {
             info: WaveInfo {
