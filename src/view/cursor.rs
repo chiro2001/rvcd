@@ -103,7 +103,10 @@ impl WaveView {
         let paint_text = |text: String, offset_y: f32, expect_width: f32| {
             painter.text(
                 pos2(
-                    x.clamp(offset, offset + self.wave_width - expect_width),
+                    x.clamp(
+                        offset,
+                        f32::max(offset, offset + self.wave_width - expect_width),
+                    ),
                     paint_rect.top() + offset_y,
                 ),
                 Align2::LEFT_TOP,

@@ -72,6 +72,7 @@ pub struct Rvcd {
     pub file: Option<FileHandle>,
 
     pub tree: TreeView,
+    pub sst_enabled: bool,
 }
 
 impl Default for Rvcd {
@@ -94,6 +95,7 @@ impl Default for Rvcd {
             #[cfg(target_arch = "wasm32")]
             file: None,
             tree: Default::default(),
+            sst_enabled: true,
         }
     }
 }
@@ -416,7 +418,14 @@ impl Rvcd {
             }
         });
         self.view.menu(ui);
-        self.tree.menu(ui);
+        ui.menu_button("SST", |ui| {
+            if ui.checkbox(&mut self.sst_enabled, "Enable SST").clicked() {
+                ui.close_menu();
+            };
+            if self.sst_enabled {
+                self.tree.menu(ui);
+            }
+        });
         ui.checkbox(&mut self.debug_panel, "Debug Panel");
         if ui.button("Test Toast").clicked() {
             self.toasts.info("Test Toast", ToastOptions::default());

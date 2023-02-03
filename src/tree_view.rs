@@ -139,13 +139,11 @@ impl TreeView {
         }
     }
     pub fn menu(&mut self, ui: &mut Ui) {
-        ui.menu_button("SST", |ui| {
-            if ui
-                .checkbox(&mut self.show_leaves, "Show Tree Leaves")
-                .clicked()
-            {
-                ui.close_menu();
-            }
-        });
+        if ui
+            .checkbox(&mut self.show_leaves, "Show Tree Leaves")
+            .clicked()
+        {
+            ui.close_menu();
+        }
     }
 }

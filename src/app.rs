@@ -38,11 +38,13 @@ impl eframe::App for Rvcd {
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
-                egui::SidePanel::left("side_panel").show_inside(ui, |ui| {
-                    ui.vertical_centered_justified(|ui| {
-                        self.sidebar(ui);
-                    });
-                });
+                if self.sst_enabled {
+                    egui::SidePanel::left("side_panel")
+                        .resizable(true)
+                        .show_inside(ui, |ui| {
+                            self.sidebar(ui);
+                        });
+                }
                 egui::CentralPanel::default().show_inside(ui, |ui| {
                     ui.vertical_centered_justified(|ui| {
                         self.wave_panel(ui);
