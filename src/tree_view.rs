@@ -56,13 +56,6 @@ impl TreeView {
                 TreeAction::None
             }
         } else {
-            let scope = CollapsingHeader::new(tree.data().to_string())
-                .default_open(true)
-                .show(ui, |ui| {
-                    tree.iter()
-                        .map(|child| self.ui(ui, child))
-                        .find(|a| *a != TreeAction::None)
-                });
             let child_signals = || {
                 tree.iter()
                     .map(|n| n.data().clone())
@@ -74,18 +67,34 @@ impl TreeView {
                     .map(|x| x.unwrap())
                     .collect::<Vec<_>>()
             };
-            if scope.header_response.clicked() {
-                TreeAction::SelectScope(child_signals())
-            } else {
-                if scope.header_response.clicked_by(PointerButton::Secondary) {
-                    TreeAction::AddSignals(child_signals())
-                } else {
-                    match scope.body_returned {
-                        None => TreeAction::None,
-                        Some(a) => match a {
-                            None => TreeAction::None,
-                            Some(a) => a,
-                        },
+            match tree.data() {
+                WaveTreeNode::WaveRoot => tree
+                    .iter()
+                    .map(|child| self.ui(ui, child))
+                    .find(|a| *a != TreeAction::None)
+                    .unwrap_or(TreeAction::None),
+                data => {
+                    let scope = CollapsingHeader::new(data.to_string())
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            tree.iter()
+                                .map(|child| self.ui(ui, child))
+                                .find(|a| *a != TreeAction::None)
+                        });
+                    if scope.header_response.clicked() {
+                        TreeAction::SelectScope(child_signals())
+                    } else {
+                        if scope.header_response.clicked_by(PointerButton::Secondary) {
+                            TreeAction::AddSignals(child_signals())
+                        } else {
+                            match scope.body_returned {
+                                None => TreeAction::None,
+                                Some(a) => match a {
+                                    None => TreeAction::None,
+                                    Some(a) => a,
+                                },
+                            }
+                        }
                     }
                 }
             }
