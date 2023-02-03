@@ -96,6 +96,7 @@ impl Rvcd {
         info!("create rvcd id={}", id);
         Self {
             id,
+            title: format!("Rvcd-{}", id),
             ..Default::default()
         }
     }
@@ -130,10 +131,10 @@ impl Rvcd {
         info!("last loaded {} signals", self.view.signals.len());
         self
     }
-    pub fn title(&self) -> &str {
+    pub fn title(&self) -> String {
         match self.state {
-            State::Working => self.title.as_str(),
-            _ => "Rvcd",
+            State::Working => self.title.to_string(),
+            _ => format!("Rvcd-{}", self.id),
         }
     }
     pub fn update<F>(
@@ -149,7 +150,7 @@ impl Rvcd {
         egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
-                self.menubar(ui, frame);
+                self.menubar(ui, frame, maximum);
                 if maximum {
                     if ui.button("Minimum").clicked() {
                         do_min_max();
@@ -387,7 +388,8 @@ impl Rvcd {
                             self.view.signals_clean_unavailable(&wave.info);
                         }
                     }
-                    self.filepath = _filepath;
+                    self.filepath = _filepath.clone();
+                    self.title = format!("Rvcd-{}", _filepath);
                 }
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
@@ -427,7 +429,7 @@ impl Rvcd {
         self.state = State::Idle;
         self.view = self.view.reset();
     }
-    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, maximum: bool) {
         egui::widgets::global_dark_light_mode_switch(ui);
         ui.menu_button("File", |ui| {
             // #[cfg(not(target_arch = "wasm32"))]
@@ -455,7 +457,7 @@ impl Rvcd {
                 }
             });
             #[cfg(not(target_arch = "wasm32"))]
-            if ui.button("Quit").clicked() {
+            if maximum && ui.button("Quit").clicked() {
                 _frame.close();
             }
         });
