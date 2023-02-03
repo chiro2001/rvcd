@@ -2,6 +2,7 @@ use crate::files::preview_files_being_dropped;
 use crate::message::RvcdMsg;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
+use crate::size::FileSizeUnit;
 use crate::Rvcd;
 use eframe::emath::Align;
 use egui::{vec2, Layout, ProgressBar, Widget};
@@ -68,10 +69,11 @@ impl eframe::App for Rvcd {
                 .resizable(false)
                 .show(ctx, |ui| {
                     ui.label(format!(
-                        "Loading Progress: {:.1}%",
-                        self.load_progress * 100.0
+                        "Loading Progress: {:.1}% / {}",
+                        self.load_progress.0 * 100.0,
+                        FileSizeUnit::from_bytes(self.load_progress.1)
                     ));
-                    ProgressBar::new(self.load_progress).ui(ui);
+                    ProgressBar::new(self.load_progress.0).ui(ui);
                     ui.centered_and_justified(|ui| {
                         if ui.button("Cancel").clicked() {
                             if let Some(channel) = &self.channel {

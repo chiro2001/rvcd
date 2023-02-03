@@ -43,7 +43,7 @@ pub struct Rvcd {
     /// **Only available on native**
     pub filepath: String,
     #[serde(skip)]
-    pub load_progress: f32,
+    pub load_progress: (f32, usize),
     /// Displaying signals in the tree leaves
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
@@ -67,7 +67,7 @@ pub struct Rvcd {
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
-    pub file: Option<FileHandle>
+    pub file: Option<FileHandle>,
 }
 
 impl Default for Rvcd {
@@ -76,7 +76,7 @@ impl Default for Rvcd {
             state: State::default(),
             channel: None,
             filepath: "".to_string(),
-            load_progress: 0.0,
+            load_progress: (0.0, 0),
             signal_leaves: vec![],
             wave: None,
             view: Default::default(),
@@ -229,7 +229,7 @@ impl Rvcd {
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
         match msg {
-            RvcdMsg::LoadingProgress(_) => {}
+            RvcdMsg::LoadingProgress(..) => {}
             _ => {
                 info!(
                     "ui handle msg: {:?}; signals: {}",
@@ -280,8 +280,8 @@ impl Rvcd {
                     channel.tx.send(RvcdMsg::FileOpen(file)).unwrap();
                 }
             }
-            RvcdMsg::LoadingProgress(progress) => {
-                self.load_progress = progress;
+            RvcdMsg::LoadingProgress(progress, sz) => {
+                self.load_progress = (progress, sz);
             }
             RvcdMsg::FileLoadStart(_filepath) => {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -299,7 +299,7 @@ impl Rvcd {
                 }
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
-                    self.load_progress = 0.0;
+                    self.load_progress = (0.0, 0);
                     self.state = State::Loading;
                 }
             }

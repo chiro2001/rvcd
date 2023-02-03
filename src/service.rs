@@ -59,7 +59,7 @@ impl Service {
                         data[count..(count + sz)].copy_from_slice(&buf[0..sz]);
                         count += sz;
                         let progress = count as f32 / total_sz as f32;
-                        tx.send(RvcdMsg::LoadingProgress(progress)).unwrap();
+                        tx.send(RvcdMsg::LoadingProgress(progress, count)).unwrap();
                         match cancel.lock() {
                             Ok(mut r) => {
                                 if *r {
