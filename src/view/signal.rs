@@ -1,5 +1,5 @@
 use crate::radix::Radix;
-use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, TEXT_ROUND_OFFSET};
+use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, TEXT_ROUND_OFFSET, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use egui::*;
 use num_bigint::BigUint;
@@ -38,7 +38,6 @@ pub struct SignalView {
     pub height: f32,
     pub mode: SignalViewMode,
 }
-pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
 impl SignalView {
     pub fn from_id(id: u64, info: &WaveInfo) -> Self {
         let d = ("unknown".to_string(), 0);

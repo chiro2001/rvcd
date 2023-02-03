@@ -5,11 +5,13 @@ use crate::service::Service;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
 use crate::view::signal::SignalView;
-use crate::view::WaveView;
+use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{DroppedFile, Layout, ScrollArea, Sense, Ui};
+use egui::{Direction, DroppedFile, Layout, ScrollArea, Sense, Ui};
+use egui_extras::{Column, TableBuilder};
 use egui_toast::{ToastOptions, Toasts};
+use num_traits::Float;
 use rfd::FileHandle;
 #[allow(unused_imports)]
 use std::path::PathBuf;
@@ -81,7 +83,7 @@ impl Default for Rvcd {
             wave: None,
             view: Default::default(),
             toasts: Toasts::new()
-                .direction(egui::Direction::BottomUp)
+                .direction(Direction::BottomUp)
                 .align_to_end(true),
             repaint_after_seconds: 1.0,
             run_mode: Default::default(),
@@ -147,74 +149,84 @@ impl Rvcd {
     }
     pub fn sidebar(&mut self, ui: &mut Ui) {
         egui::TopBottomPanel::bottom("signal_leaf")
-            // .min_height(100.0)
+            .min_height(200.0)
             .max_height(400.0)
             .resizable(true)
             .show_inside(ui, |ui| {
-                ScrollArea::vertical().show(ui, |ui| {
-                    ui.with_layout(
-                        Layout::top_down(Align::LEFT).with_cross_justify(true),
-                        |ui| {
-                            let mut clicked_id = 0;
-                            let mut clicked = false;
-                            for s in self.signal_leaves.iter() {
-                                let response =
-                                    ui.add(egui::Label::new(s.to_string()).sense(Sense::click()));
-                                if response.double_clicked() {
-                                    clicked_id = s.id;
-                                    clicked = true;
-                                }
-                            }
-                            if clicked {
-                                self.signal_clicked(clicked_id, true);
-                            }
-                        },
-                    );
-                });
+                // let text_height = egui::TextStyle::Body.resolve(ui.style()).size;
+                let text_height = SIGNAL_LEAF_HEIGHT_DEFAULT;
+                TableBuilder::new(ui)
+                    .resizable(false)
+                    .striped(true)
+                    .cell_layout(Layout::left_to_right(Align::Center))
+                    .column(Column::remainder())
+                    .min_scrolled_height(0.0)
+                    .max_scroll_height(f32::infinity())
+                    .header(SIGNAL_LEAF_HEIGHT_DEFAULT, |mut header| {
+                        header.col(|ui| {
+                            ui.strong("Signals");
+                        });
+                    })
+                    .body(|body| {
+                        body.rows(
+                            text_height,
+                            self.signal_leaves.len(),
+                            |row_index, mut row| {
+                                row.col(|ui| {
+                                    if let Some(signal) = self.signal_leaves.get(row_index) {
+                                        let response = ui.add(
+                                            egui::Label::new(signal.to_string())
+                                                .sense(Sense::click_and_drag()),
+                                        );
+                                        if response.double_clicked() {
+                                            // clicked_id = s.id;
+                                            // clicked = true;
+                                            self.signal_clicked(signal.id, true);
+                                        }
+                                    }
+                                });
+                            },
+                        );
+                    });
             });
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ScrollArea::vertical().show(ui, |ui| {
-                ui.with_layout(
-                    Layout::left_to_right(Align::LEFT).with_cross_justify(false),
-                    |ui| {
-                        // ScrollArea::vertical().show(ui, |ui| {
-                        if let Some(wave) = &self.wave {
-                            match TreeView::default().ui(ui, wave.info.tree.root()) {
-                                TreeAction::None => {}
-                                TreeAction::AddSignal(node) => match node {
-                                    WaveTreeNode::WaveVar(d) => {
-                                        self.signal_clicked(d.id, true);
-                                    }
-                                    _ => {}
-                                },
-                                TreeAction::SelectScope(nodes) => {
-                                    self.signal_leaves = nodes
-                                        .into_iter()
-                                        .map(|node| match node {
-                                            WaveTreeNode::WaveVar(v) => Some(v),
-                                            _ => None,
-                                        })
-                                        .filter(|x| x.is_some())
-                                        .map(|x| x.unwrap())
-                                        .collect();
+                ui.centered_and_justified(|ui| {
+                    if let Some(wave) = &self.wave {
+                        match TreeView::default().ui(ui, wave.info.tree.root()) {
+                            TreeAction::None => {}
+                            TreeAction::AddSignal(node) => match node {
+                                WaveTreeNode::WaveVar(d) => {
+                                    self.signal_clicked(d.id, true);
                                 }
-                                TreeAction::AddSignals(nodes) => {
-                                    for node in nodes {
-                                        match node {
-                                            WaveTreeNode::WaveVar(d) => {
-                                                self.signal_clicked(d.id, false);
-                                            }
-                                            _ => {}
+                                _ => {}
+                            },
+                            TreeAction::SelectScope(nodes) => {
+                                self.signal_leaves = nodes
+                                    .into_iter()
+                                    .map(|node| match node {
+                                        WaveTreeNode::WaveVar(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .filter(|x| x.is_some())
+                                    .map(|x| x.unwrap())
+                                    .collect();
+                            }
+                            TreeAction::AddSignals(nodes) => {
+                                for node in nodes {
+                                    match node {
+                                        WaveTreeNode::WaveVar(d) => {
+                                            self.signal_clicked(d.id, false);
                                         }
+                                        _ => {}
                                     }
                                 }
                             }
-                        } else {
-                            ui.centered_and_justified(|ui| ui.label("No file loaded"));
                         }
-                        // });
-                    },
-                );
+                    } else {
+                        ui.centered_and_justified(|ui| ui.label("No file loaded"));
+                    }
+                });
             });
         });
     }

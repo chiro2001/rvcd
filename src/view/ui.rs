@@ -1,11 +1,7 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
-use crate::view::signal::SIGNAL_HEIGHT_DEFAULT;
-use crate::view::{
-    WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
-    ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
-};
+use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN, SIGNAL_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};

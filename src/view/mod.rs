@@ -23,6 +23,8 @@ const ZOOM_SIZE_MIN: f32 = 12.0;
 const ZOOM_SIZE_MAX_SCALE: f32 = 5.0;
 const WAVE_MARGIN_TOP: f32 = 32.0;
 const WAVE_MARGIN_TOP2: f32 = -6.0;
+pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
+pub const SIGNAL_LEAF_HEIGHT_DEFAULT: f32 = 20.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(default)]
