@@ -85,6 +85,6 @@ harness = false
 name = "rvcd"
 path = "src/main.rs"
 
-[[bin]]
-name = "converter"
-path = "src/bin/converter.rs"
+#[[bin]]
+#name = "converter"
+#path = "src/bin/converter.rs"
