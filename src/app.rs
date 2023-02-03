@@ -1,3 +1,4 @@
+use eframe::emath::Align;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::run_mode::RunMode;
@@ -5,7 +6,7 @@ use crate::rvcd::State;
 use crate::Rvcd;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{CentralPanel, Id, Ui, Window};
+use egui::{CentralPanel, Id, Layout, Ui, Window};
 use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -129,24 +130,31 @@ impl eframe::App for RvcdApp {
         }
         egui::TopBottomPanel::top("global_menu").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.checkbox(&mut self.debug_panel, "Debug Panel");
-                ui.checkbox(&mut self.sst_enabled, "SST");
-                if ui.button("New Window").clicked() {
-                    self.new_window(false);
-                }
-                if self.app_now_id.is_some() {
-                    if ui.button("Minimize").clicked() {
-                        self.app_now_id = None;
+                if let Some(id) = self.app_now_id {
+                    if let Some(app) = self.apps.iter_mut().find(|app| app.id == id) {
+                        app.menubar(ui, frame, true);
                     }
                 }
-                if !self.apps.is_empty() {
-                    if ui.button("Close All").clicked() {
-                        self.close_all();
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui.button("Quit").clicked() {
+                        frame.close();
                     }
-                }
-                if ui.button("Quit").clicked() {
-                    frame.close();
-                }
+                    if !self.apps.is_empty() {
+                        if ui.button("Close All").clicked() {
+                            self.close_all();
+                        }
+                    }
+                    if ui.button("New Window").clicked() {
+                        self.new_window(false);
+                    }
+                    if self.app_now_id.is_some() {
+                        if ui.button("Minimize").clicked() {
+                            self.app_now_id = None;
+                        }
+                    }
+                    ui.checkbox(&mut self.debug_panel, "Debug Panel");
+                    ui.checkbox(&mut self.sst_enabled, "SST");
+                });
             });
         });
         if self.debug_panel {

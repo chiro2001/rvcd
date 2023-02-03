@@ -148,27 +148,29 @@ impl Rvcd {
     ) where
         F: FnOnce(),
     {
-        egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                self.menubar(ui, frame, maximum);
-                if maximum {
-                    if ui.button("Minimum").clicked() {
-                        do_min_max();
+        if !maximum {
+            egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
+                // The top panel is often a good place for a menu bar:
+                egui::menu::bar(ui, |ui| {
+                    self.menubar(ui, frame, maximum);
+                    if maximum {
+                        if ui.button("Minimum").clicked() {
+                            do_min_max();
+                        }
+                    } else {
+                        if ui.button("Maximum").clicked() {
+                            do_min_max();
+                        }
                     }
-                } else {
-                    if ui.button("Maximum").clicked() {
-                        do_min_max();
-                    }
-                }
+                });
             });
-        });
-        egui::TopBottomPanel::bottom(format!("bottom_panel_{}", self.id))
-            .min_height(0.0)
-            .resizable(false)
-            .show_inside(ui, |_ui| {
-                // ui.label("bottom");
-            });
+            egui::TopBottomPanel::bottom(format!("bottom_panel_{}", self.id))
+                .min_height(0.0)
+                .resizable(false)
+                .show_inside(ui, |_ui| {
+                    // ui.label("bottom");
+                });
+        }
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if sst_enabled {
