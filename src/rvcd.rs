@@ -162,6 +162,12 @@ impl Rvcd {
                 }
             });
         });
+        egui::TopBottomPanel::bottom(format!("bottom_panel_{}", self.id))
+            .min_height(0.0)
+            .resizable(false)
+            .show_inside(ui, |_ui| {
+                // ui.label("bottom");
+            });
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if sst_enabled {
