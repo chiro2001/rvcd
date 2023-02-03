@@ -66,7 +66,8 @@ impl WaveView {
     ) -> Response {
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::click_and_drag());
-        let items = wave_data.iter().filter(|i| i.id == signal.s.id);
+        // let items = wave_data.iter().filter(|i| i.id == signal.s.id);
+        let items = wave_data.iter();
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
         // strange but works...

@@ -6,7 +6,7 @@ use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
     ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
 };
-use crate::wave::{Wave, WaveDataItem, WaveInfo};
+use crate::wave::{Wave, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
@@ -243,7 +243,6 @@ impl WaveView {
     /// Paint wave panel
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
         let info: &WaveInfo = &wave.info;
-        let wave_data: &[WaveDataItem] = &wave.data;
         if self.range.0 == 0.0 && self.range.1 == 0.0 {
             self.range = (info.range.0 as f32, info.range.1 as f32);
         }
@@ -319,12 +318,14 @@ impl WaveView {
                                     }
                                 });
                                 row.col(|ui| {
-                                    let response = self.ui_signal_wave(signal, wave_data, info, ui);
-                                    if let Some(pos) = response.interact_pointer_pos() {
-                                        dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                                    if let Some(data) = wave.data.get(&signal.s.id) {
+                                        let response = self.ui_signal_wave(signal, data, info, ui);
+                                        if let Some(pos) = response.interact_pointer_pos() {
+                                            dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                                        }
+                                        wave_left = ui.available_rect_before_wrap().left();
+                                        pointer_state.handle_pointer_response(&response, wave_left);
                                     }
-                                    wave_left = ui.available_rect_before_wrap().left();
-                                    pointer_state.handle_pointer_response(&response, wave_left);
                                 });
                             }
                         },

@@ -116,14 +116,14 @@ impl Default for WaveDataValue {
 /// item struct in data list
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
 pub struct WaveDataItem {
-    pub id: u64,
+    // pub id: u64,
     pub value: WaveDataValue,
     pub timestamp: u64,
 }
 
 impl Display for WaveDataItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "#{} [{}] {}", self.timestamp, self.id, self.value)
+        write!(f, "#{} {}", self.timestamp, self.value)
     }
 }
 
@@ -215,7 +215,7 @@ pub struct WaveInfo {
 #[derive(Clone)]
 pub struct Wave {
     pub info: WaveInfo,
-    pub data: Vec<WaveDataItem>,
+    pub data: HashMap<u64, Vec<WaveDataItem>>,
 }
 
 impl Display for WaveInfo {

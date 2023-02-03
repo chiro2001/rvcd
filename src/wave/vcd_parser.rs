@@ -250,7 +250,7 @@ impl WaveLoader for Vcd {
         } else {
             (1, WaveTimescaleUnit::default())
         };
-        let mut data = vec![];
+        let mut data: HashMap<u64, Vec<WaveDataItem>> = HashMap::new();
         let mut timestamp = 0u64;
         let mut time_start = 0xfffffffffffffu64;
         let mut time_stop = 0u64;
@@ -268,25 +268,29 @@ impl WaveLoader for Vcd {
                 }
                 Command::ChangeScalar(i, v) => {
                     let IdCode(id) = i;
-                    data.push(
-                        WaveDataItem {
-                            id,
-                            value: Raw(vec![v.into()]),
-                            timestamp,
-                        }
-                        .compress()?,
-                    );
+                    let item = WaveDataItem {
+                        value: Raw(vec![v.into()]),
+                        timestamp,
+                    }
+                    .compress()?;
+                    if let Some(list) = data.get_mut(&id) {
+                        list.push(item);
+                    } else {
+                        data.insert(id, vec![item]);
+                    }
                 }
                 Command::ChangeVector(i, v) => {
                     let IdCode(id) = i;
-                    data.push(
-                        WaveDataItem {
-                            id,
-                            value: Raw(v.into_iter().map(|x| x.into()).collect()),
-                            timestamp,
-                        }
-                        .compress()?,
-                    );
+                    let item = WaveDataItem {
+                        value: Raw(v.into_iter().map(|x| x.into()).collect()),
+                        timestamp,
+                    }
+                    .compress()?;
+                    if let Some(list) = data.get_mut(&id) {
+                        list.push(item);
+                    } else {
+                        data.insert(id, vec![item]);
+                    }
                 }
                 Command::ChangeReal(_, _) => {}
                 Command::ChangeString(_, _) => {}
