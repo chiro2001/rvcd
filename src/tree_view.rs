@@ -99,7 +99,17 @@ impl TreeView {
                 ui.visuals().text_color(),
             );
             match node {
-                WaveTreeNode::WaveScope(_) => handle_scope_response(response),
+                WaveTreeNode::WaveScope(_) => {
+                    if response.clicked_by(PointerButton::Primary) {
+                        if response.double_clicked() {
+                            TreeAction::AddSignals(child_signals(tree))
+                        } else {
+                            TreeAction::SelectScope(child_signals(tree))
+                        }
+                    } else {
+                        handle_scope_response(response)
+                    }
+                }
                 _ => {
                     if response.double_clicked() {
                         TreeAction::AddSignal(node.clone())
