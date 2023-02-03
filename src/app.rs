@@ -1,9 +1,9 @@
-use eframe::emath::Align;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::Rvcd;
+use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
 use egui::{CentralPanel, Id, Layout, Ui, Window};
@@ -139,11 +139,11 @@ impl eframe::App for RvcdApp {
                     if ui.button("Quit").clicked() {
                         frame.close();
                     }
-                    if !self.apps.is_empty() {
+                    ui.add_enabled_ui(self.apps.len() > 1, |ui| {
                         if ui.button("Close All").clicked() {
                             self.close_all();
                         }
-                    }
+                    });
                     if ui.button("New Window").clicked() {
                         self.new_window(false);
                     }
@@ -151,6 +151,14 @@ impl eframe::App for RvcdApp {
                         if ui.button("Minimize").clicked() {
                             self.app_now_id = None;
                         }
+                    } else {
+                        ui.add_enabled_ui(self.apps.len() == 1, |ui| {
+                            if ui.button("Maximum").clicked() {
+                                if let Some(app) = self.apps.get(0) {
+                                    self.app_now_id = Some(app.id);
+                                }
+                            }
+                        });
                     }
                     ui.checkbox(&mut self.debug_panel, "Debug Panel");
                     ui.checkbox(&mut self.sst_enabled, "SST");
@@ -250,10 +258,6 @@ impl eframe::App for RvcdApp {
                 );
             }
         }
-        // if empty, create new main window
-        // if self.apps.is_empty() {
-        //     self.new_window(true);
-        // }
         preview_files_being_dropped(ctx);
         if !ctx.input().raw.dropped_files.is_empty() {
             let has_maximum_window = self.app_now_id.is_some();
@@ -269,6 +273,10 @@ impl eframe::App for RvcdApp {
             if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
                 app.handle_dropping_file(ctx);
             }
+        }
+        // if empty, create new main window
+        if self.apps.is_empty() {
+            self.new_window(true);
         }
     }
     /// Called by the frame work to save state before shutdown.
