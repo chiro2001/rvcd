@@ -1,13 +1,16 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::view::cursor::WaveCursor;
-use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN, SIGNAL_HEIGHT_DEFAULT};
+use crate::view::{
+    WaveView, BG_MULTIPLY, LINE_WIDTH, SIGNAL_HEIGHT_DEFAULT, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP,
+    WAVE_MARGIN_TOP2, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
+};
 use crate::wave::{Wave, WaveInfo};
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 #[derive(Default, Debug)]
 pub struct ResponsePointerState {
@@ -404,15 +407,16 @@ impl WaveView {
                     if let Some(last_paint_row_index) = last_paint_row_index {
                         // simply use const
                         if dy < -SIGNAL_HEIGHT_DEFAULT {
-                            debug!("to last signal");
-                            self.scrolling_next_index =
-                                Some(i64::max(last_paint_row_index as i64 - 1, 0) as usize);
+                            let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
+                            info!("to last signal: {}", index);
+                            self.scrolling_next_index = Some(index);
                             self.right_drag_start_pos = Some(right_drag_pos);
                         }
                         if dy > SIGNAL_HEIGHT_DEFAULT {
-                            debug!("to next signal");
-                            self.scrolling_next_index =
-                                Some(usize::min(last_paint_row_index + 1, self.signals.len() - 1));
+                            let index =
+                                usize::min(last_paint_row_index, self.signals.len() - 1);
+                            info!("to next signal: {}", index);
+                            self.scrolling_next_index = Some(index);
                             self.right_drag_start_pos = Some(right_drag_pos);
                         }
                     }
