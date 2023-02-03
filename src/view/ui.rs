@@ -19,8 +19,8 @@ pub struct ResponsePointerState {
     pub drag_by_primary: bool,
     pub drag_by_secondary: bool,
     pub drag_by_middle: bool,
-    pub right_drag_start_pos: Option<Pos2>,
-    pub right_drag_pos: Option<Pos2>,
+    pub move_drag_start_pos: Option<Pos2>,
+    pub move_drag_pos: Option<Pos2>,
 }
 impl ResponsePointerState {
     pub fn handle_pointer_response(&mut self, response: &Response, wave_left: f32) {
@@ -37,12 +37,12 @@ impl ResponsePointerState {
                 self.drag_by_middle = true;
             }
         }
-        if response.dragged_by(PointerButton::Secondary) {
+        if response.dragged_by(PointerButton::Middle) {
             let p = response
                 .interact_pointer_pos()
                 .map(|p| pos2(p.x - wave_left, p.y));
-            self.right_drag_pos = p;
-            self.right_drag_start_pos = p;
+            self.move_drag_pos = p;
+            self.move_drag_start_pos = p;
         }
     }
 }
@@ -386,18 +386,18 @@ impl WaveView {
                 .clamp(self.range.0 as u64, self.range.1 as u64);
                 self.marker_temp.set_pos_valid(p);
             }
-            if pointer_state.right_drag_start_pos.is_some() && self.right_drag_start_pos.is_none() {
-                self.right_drag_start_pos = pointer_state.right_drag_start_pos;
+            if pointer_state.move_drag_start_pos.is_some() && self.move_drag_start_pos.is_none() {
+                self.move_drag_start_pos = pointer_state.move_drag_start_pos;
             }
             if pointer_state.drag_release {
-                self.right_drag_start_pos = None;
+                self.move_drag_start_pos = None;
             }
-            if let Some(right_drag_start_pos) = self.right_drag_start_pos {
-                if let Some(right_drag_pos) = pointer_state.right_drag_pos {
-                    let delta = right_drag_pos - right_drag_start_pos;
-                    if let Some(right_drag_last_pos) = self.right_drag_last_pos {
+            if let Some(move_drag_start_pos) = self.move_drag_start_pos {
+                if let Some(move_drag_pos) = pointer_state.move_drag_pos {
+                    let delta = move_drag_pos - move_drag_start_pos;
+                    if let Some(move_drag_last_pos) = self.move_drag_last_pos {
                         // Handle drag move
-                        let delta = right_drag_pos - right_drag_last_pos;
+                        let delta = move_drag_pos - move_drag_last_pos;
                         let dx = -delta.x;
                         self.range = self.move_horizontal(dx);
                     }
@@ -410,23 +410,23 @@ impl WaveView {
                             let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
                             info!("to last signal: {}", index);
                             self.scrolling_next_index = Some(index);
-                            self.right_drag_start_pos = Some(right_drag_pos);
+                            self.move_drag_start_pos = Some(move_drag_pos);
                         }
                         if dy > SIGNAL_HEIGHT_DEFAULT {
                             let index =
                                 usize::min(last_paint_row_index, self.signals.len() - 1);
                             info!("to next signal: {}", index);
                             self.scrolling_next_index = Some(index);
-                            self.right_drag_start_pos = Some(right_drag_pos);
+                            self.move_drag_start_pos = Some(move_drag_pos);
                         }
                     }
                 }
             }
-            if pointer_state.right_drag_pos.is_some() {
-                self.right_drag_last_pos = pointer_state.right_drag_pos;
+            if pointer_state.move_drag_pos.is_some() {
+                self.move_drag_last_pos = pointer_state.move_drag_pos;
             }
             if pointer_state.drag_release {
-                self.right_drag_last_pos = None;
+                self.move_drag_last_pos = None;
             }
             if pointer_state.drag_release && self.marker_temp.valid {
                 self.marker.set_pos_valid(
