@@ -79,7 +79,7 @@ impl Display for Rvcd {
 
 impl Debug for Rvcd {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{self}")
     }
 }
 
@@ -111,7 +111,7 @@ impl Rvcd {
         info!("create rvcd id={}", id);
         Self {
             id,
-            title: format!("Rvcd-{}", id),
+            title: format!("Rvcd-{id}"),
             ..Default::default()
         }
     }
@@ -172,10 +172,8 @@ impl Rvcd {
                         if ui.button("Minimum").clicked() {
                             do_min_max();
                         }
-                    } else {
-                        if ui.button("Maximum").clicked() {
-                            do_min_max();
-                        }
+                    } else if ui.button("Maximum").clicked() {
+                        do_min_max();
                     }
                 });
             });
@@ -338,12 +336,10 @@ impl Rvcd {
                         TreeAction::SelectScope(nodes) => {
                             self.signal_leaves = nodes
                                 .into_iter()
-                                .map(|node| match node {
+                                .filter_map(|node| match node {
                                     WaveTreeNode::WaveVar(v) => Some(v),
                                     _ => None,
                                 })
-                                .filter(|x| x.is_some())
-                                .map(|x| x.unwrap())
                                 .collect();
                         }
                         TreeAction::AddSignals(nodes) => {
@@ -366,7 +362,7 @@ impl Rvcd {
     }
     pub fn wave_panel(&mut self, ui: &mut Ui) {
         if let Some(wave) = &self.wave {
-            self.view.panel(ui, &wave);
+            self.view.panel(ui, wave);
         } else {
             ui.centered_and_justified(|ui| {
                 ui.heading("No file loaded. Drag file here or open file in menu.");
@@ -444,7 +440,7 @@ impl Rvcd {
                         }
                     }
                     self.filepath = _filepath.clone();
-                    self.title = format!("Rvcd-{}", _filepath);
+                    self.title = format!("Rvcd-{_filepath}");
                 }
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
@@ -547,10 +543,8 @@ impl Rvcd {
             } else {
                 self.message_handler(RvcdMsg::FileOpenFailed);
             }
-        } else {
-            if let Some(data) = &dropped_file.bytes {
-                self.message_handler(RvcdMsg::FileOpenData(data.clone()));
-            }
+        } else if let Some(data) = &dropped_file.bytes {
+            self.message_handler(RvcdMsg::FileOpenData(data.clone()));
         }
         #[cfg(target_arch = "wasm32")]
         if let Some(data) = &dropped_file.bytes {

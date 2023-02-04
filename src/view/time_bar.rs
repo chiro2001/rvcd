@@ -30,7 +30,7 @@ impl WaveView {
         } else {
             (1, 1)
         };
-        while step as f32 * rect.width() / (self.range.1 - self.range.0) as f32 > 80.0 && step > 1 {
+        while step as f32 * rect.width() / (self.range.1 - self.range.0) > 80.0 && step > 1 {
             step /= 10;
             unit /= 10;
         }
@@ -81,19 +81,17 @@ impl WaveView {
         // primary drag cursors
         if response.drag_released() {
             self.dragging_cursor_id = None;
-        } else {
-            if response.dragged_by(PointerButton::Primary) {
-                if let Some(id) = cursor_id {
-                    let cursor = match id {
-                        -1 => Some(&mut self.marker),
-                        // -2 => &mut self.marker_temp,
-                        id => self.cursors.iter_mut().find(|x| x.id == id),
-                    };
-                    if let Some(cursor) = cursor {
-                        self.dragging_cursor_id = Some(cursor.id);
-                        // cursor.pos = (cursor.pos as i64 + delta_pos) as u64;
-                        cursor.pos = pos_new.unwrap();
-                    }
+        } else if response.dragged_by(PointerButton::Primary) {
+            if let Some(id) = cursor_id {
+                let cursor = match id {
+                    -1 => Some(&mut self.marker),
+                    // -2 => &mut self.marker_temp,
+                    id => self.cursors.iter_mut().find(|x| x.id == id),
+                };
+                if let Some(cursor) = cursor {
+                    self.dragging_cursor_id = Some(cursor.id);
+                    // cursor.pos = (cursor.pos as i64 + delta_pos) as u64;
+                    cursor.pos = pos_new.unwrap();
                 }
             }
         }
@@ -121,22 +119,20 @@ impl WaveView {
                             }
                             ui.close_menu();
                         }
-                    } else {
-                        if let Some(cursor) = match id {
-                            -1 => Some(&mut self.marker),
-                            _ => None,
-                        } {
-                            if ui
-                                .button(if cursor.valid {
-                                    "Disable cursor"
-                                } else {
-                                    "Enable cursor"
-                                })
-                                .clicked()
-                            {
-                                cursor.valid = !cursor.valid;
-                                ui.close_menu();
-                            }
+                    } else if let Some(cursor) = match id {
+                        -1 => Some(&mut self.marker),
+                        _ => None,
+                    } {
+                        if ui
+                            .button(if cursor.valid {
+                                "Disable cursor"
+                            } else {
+                                "Enable cursor"
+                            })
+                            .clicked()
+                        {
+                            cursor.valid = !cursor.valid;
+                            ui.close_menu();
                         }
                     }
                     let mut span_to_add = None;
@@ -148,11 +144,9 @@ impl WaveView {
                                 cursor.valid = false;
                                 ui.close_menu();
                             }
-                        } else {
-                            if ui.button("Enable cursor").clicked() {
-                                cursor.valid = true;
-                                ui.close_menu();
-                            }
+                        } else if ui.button("Enable cursor").clicked() {
+                            cursor.valid = true;
+                            ui.close_menu();
                         }
                         let mut linked_cursors = vec![];
                         ui.menu_button("Spans", |ui| {
@@ -184,7 +178,7 @@ impl WaveView {
                                                 .clicked()
                                             {
                                                 // remove this span
-                                                span_to_remove = Some(span.clone());
+                                                span_to_remove = Some(*span);
                                                 ui.close_menu();
                                             };
                                         }
@@ -210,8 +204,7 @@ impl WaveView {
                             if let Some(span) = span_to_remove {
                                 let spans_new = self
                                     .spans
-                                    .iter()
-                                    .map(|x| x.clone())
+                                    .iter().copied()
                                     .filter(|x| *x != span)
                                     .collect();
                                 self.spans = spans_new;
@@ -220,8 +213,7 @@ impl WaveView {
                                 let spans_new = self
                                     .spans
                                     .iter()
-                                    .filter(|x| x.0 != cursor_id && x.1 != cursor_id)
-                                    .map(|x| x.clone())
+                                    .filter(|x| x.0 != cursor_id && x.1 != cursor_id).copied()
                                     .collect();
                                 self.spans = spans_new;
                                 ui.close_menu();

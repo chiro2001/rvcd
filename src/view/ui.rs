@@ -71,7 +71,7 @@ impl WaveView {
                 use Radix::*;
                 let data = [Hex, Oct, Dec, Bin];
                 data.into_iter().for_each(|r| {
-                    if ui.button(format!("{:?}", r)).clicked() {
+                    if ui.button(format!("{r:?}")).clicked() {
                         self.default_radix = r;
                         ui.close_menu();
                     }
@@ -84,7 +84,7 @@ impl WaveView {
                     super::SignalViewAlign::Right,
                 ];
                 data.into_iter().for_each(|a| {
-                    if ui.button(format!("{:?}", a)).clicked() {
+                    if ui.button(format!("{a:?}")).clicked() {
                         self.align = a;
                         ui.close_menu();
                     }
@@ -144,7 +144,7 @@ impl WaveView {
             const EDIT_WIDTH: f32 = 100.0;
             ui.label("From:");
             let speed_min = 0.1;
-            let old_range = self.range.clone();
+            let old_range = self.range;
             let drag_value = DragValue::new(&mut self.range.0)
                 .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min));
             let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1);
@@ -186,11 +186,10 @@ impl WaveView {
                     Event::Scroll(_) => true,
                     _ => false,
                 })
-                .map(|x| match x {
+                .and_then(|x| match x {
                     Event::Scroll(v) => Some(*v),
                     _ => None,
-                })
-                .flatten();
+                });
             let zoom = ui
                 .ctx()
                 .input()
@@ -200,11 +199,10 @@ impl WaveView {
                     Event::Zoom(_) => true,
                     _ => false,
                 })
-                .map(|x| match x {
+                .and_then(|x| match x {
                     Event::Zoom(v) => Some(*v),
                     _ => None,
-                })
-                .flatten();
+                });
             if let Some(zoom) = zoom {
                 let zoom = 1.0 / zoom;
                 if let Some(pos) = response.hover_pos() {
@@ -271,14 +269,13 @@ impl WaveView {
             } else {
                 None
             })
-            .map(|p| {
+            .and_then(|p| {
                 if p < info.range.0 || p > info.range.1 {
                     None
                 } else {
                     Some(p)
                 }
-            })
-            .flatten();
+            });
             let signal_values_text = if let Some(marker_value_pos) = marker_value_pos {
                 self.signals
                     .iter()
@@ -410,23 +407,20 @@ impl WaveView {
                 &global_response,
                 wave_left,
                 &wave.info,
-                self.range.clone(),
+                self.range,
             );
             // update signal information
             let signals_updated = self
                 .signals
-                .iter()
-                .map(|x| x.clone())
+                .iter().cloned()
                 .enumerate()
-                .map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
+                .filter_map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
                     None => Some(x.1),
                     Some(c) => match c.2 {
                         true => None,
                         false => Some(c.0.clone()),
                     },
                 })
-                .filter(|x| x.is_some())
-                .map(|x| x.unwrap())
                 .collect();
             self.signals = signals_updated;
             self.range = state.new_range;
@@ -437,7 +431,7 @@ impl WaveView {
                 painter.text(
                     pos + vec2(wave_left, 0.0),
                     Align2::RIGHT_BOTTOM,
-                    format!("{:?}", pos),
+                    format!("{pos:?}"),
                     Default::default(),
                     Color32::YELLOW,
                 );
@@ -536,8 +530,7 @@ impl WaveView {
             // remove unavailable spans
             self.spans = self
                 .spans
-                .iter()
-                .map(|x| x.clone())
+                .iter().copied()
                 .filter(|s| self.cursors_exists_id(s.0) && self.cursors_exists_id(s.1))
                 .collect();
             for span in &self.spans {
@@ -624,9 +617,9 @@ impl WaveView {
                 pos2((x_a + x_b) / 2.0, y),
                 Align2::CENTER_BOTTOM,
                 if a.pos <= b.pos {
-                    format!("+{}", time)
+                    format!("+{time}")
                 } else {
-                    format!("-{}", time)
+                    format!("-{time}")
                 },
                 Default::default(),
                 ui.visuals().strong_text_color(),

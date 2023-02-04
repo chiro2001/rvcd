@@ -48,7 +48,7 @@ pub enum WaveTimescaleUnit {
 }
 impl Display for WaveTimescaleUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
+        write!(f, "{}", format!("{self:?}").to_ascii_lowercase())
     }
 }
 impl WaveTimescaleUnit {
@@ -83,9 +83,9 @@ pub enum WaveDataValue {
     Raw(Vec<WireValue>),
 }
 
-impl Into<Option<BigUint>> for &WaveDataValue {
-    fn into(self) -> Option<BigUint> {
-        match self {
+impl From<&WaveDataValue> for Option<BigUint> {
+    fn from(val: &WaveDataValue) -> Self {
+        match val {
             WaveDataValue::Comp(v) => Some(BigUint::from_bytes_le(v.as_slice())),
             _ => None,
         }
@@ -179,7 +179,7 @@ pub enum WaveSignalType {
 }
 impl Display for WaveSignalType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
+        write!(f, "{}", format!("{self:?}").to_ascii_lowercase())
     }
 }
 impl From<VarType> for WaveSignalType {
@@ -230,7 +230,7 @@ impl From<ScopeType> for WaveScopeType {
 }
 impl Display for WaveScopeType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
+        write!(f, "{}", format!("{self:?}").to_ascii_lowercase())
     }
 }
 #[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
@@ -304,7 +304,7 @@ impl Display for WaveTreeNode {
                 WaveTreeNode::WaveRoot => "root".to_string(),
                 WaveTreeNode::WaveScope(s) => s.to_string(),
                 WaveTreeNode::WaveVar(i) => i.to_string(),
-                WaveTreeNode::WaveId(var) => format!("{}", var),
+                WaveTreeNode::WaveId(var) => format!("{var}"),
             }
         )
     }
@@ -358,10 +358,10 @@ impl Wave {
                     if data[index].timestamp == pos {
                         Some(data[index].clone())
                     } else {
-                        data.get(index - 1).map(|x| x.clone())
+                        data.get(index - 1).cloned()
                     }
                 }
-                Err(index) => data.get(index - 1).map(|x| x.clone()),
+                Err(index) => data.get(index - 1).cloned(),
             }
         } else {
             None
@@ -386,7 +386,7 @@ mod test {
     fn test_load_wave() -> anyhow::Result<()> {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         let wave = Vcd::load(&mut input)?;
-        println!("loaded wave: {}", wave);
+        println!("loaded wave: {wave}");
         // for item in &wave.data {
         //     println!("item: {}", item);
         // }

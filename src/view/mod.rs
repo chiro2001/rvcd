@@ -173,10 +173,10 @@ impl WaveView {
         let mut v = pos * timescale.0;
         let mut u = timescale.1;
         while v > 10 && u.larger().is_some() {
-            v = v / 10;
+            v /= 10;
             u = u.larger().unwrap();
         }
-        format!("{}{}", v, u)
+        format!("{v}{u}")
     }
     /// Get new id for cursor
     fn next_cursor_id(&self) -> i32 {

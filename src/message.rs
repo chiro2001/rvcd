@@ -24,7 +24,7 @@ impl Debug for RvcdMsg {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             RvcdMsg::Notification(_toast) => write!(f, "RvcdMsg: Toast[...]"),
-            RvcdMsg::FileOpen(file) => write!(f, "RvcdMsg: FileOpen({:?})", file),
+            RvcdMsg::FileOpen(file) => write!(f, "RvcdMsg: FileOpen({file:?})"),
             RvcdMsg::FileOpenFailed => write!(f, "RvcdMsg: FileOpenFailed"),
             RvcdMsg::Reload => write!(f, "RvcdMsg: Reload"),
             RvcdMsg::UpdateWave(_) => write!(f, "RvcdMsg: UpdateWave"),
@@ -33,7 +33,7 @@ impl Debug for RvcdMsg {
             RvcdMsg::LoadingProgress(p, sz) => {
                 write!(f, "RvcdMsg: LoadingProgress({}%, {} bytes)", p * 100.0, sz)
             }
-            RvcdMsg::FileLoadStart(filepath) => write!(f, "RvcdMsg: FileLoadStart({})", filepath),
+            RvcdMsg::FileLoadStart(filepath) => write!(f, "RvcdMsg: FileLoadStart({filepath})"),
             RvcdMsg::FileLoadCancel => write!(f, "RvcdMsg: FileLoadCancel"),
             RvcdMsg::ServiceDataReady(v) => {
                 write!(f, "RcdMsg: ServiceDataReady ({} bytes)", v.len())

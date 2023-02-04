@@ -14,7 +14,7 @@ pub enum Radix {
 
 impl Display for Radix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

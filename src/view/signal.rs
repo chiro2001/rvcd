@@ -21,7 +21,7 @@ impl Display for SignalViewMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             SignalViewMode::Default => write!(f, "default"),
-            SignalViewMode::Number(r) => write!(f, "{}", r),
+            SignalViewMode::Number(r) => write!(f, "{r}"),
             SignalViewMode::Analog => write!(f, "Analog"),
         }
     }
@@ -74,7 +74,7 @@ impl WaveView {
             signal_rect.min - vec2(wave_range_start_x, 0.0),
             signal_rect.max - vec2(wave_range_start_x, 0.0),
         );
-        let mut it = items;
+        let it = items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
         let mut ignore_has_x = false;
@@ -90,9 +90,9 @@ impl WaveView {
             let width = signal_rect.width();
             let height = signal_rect.height();
             let percent_rect_left =
-                (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0) as f32;
+                (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
             let percent_rect_right =
-                (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0) as f32;
+                (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
             let rect = Rect::from_min_max(
                 pos2(
                     signal_rect.left() + width * percent_rect_left,
@@ -201,74 +201,72 @@ impl WaveView {
                     }
                     let value_font = FontId::monospace(self.signal_font_size);
                     let text_min_size = get_text_size(ui, "+", value_font.clone());
-                    if self.show_text {
-                        if rect.width() >= text_min_size.x + TEXT_ROUND_OFFSET {
-                            let pos = match self.align {
-                                SignalViewAlign::Left => {
-                                    rect.left_center() + vec2(TEXT_ROUND_OFFSET, 0.0)
-                                }
-                                SignalViewAlign::Center => rect.center(),
-                                SignalViewAlign::Right => {
-                                    rect.right_center() - vec2(TEXT_ROUND_OFFSET, 0.0)
+                    if self.show_text && rect.width() >= text_min_size.x + TEXT_ROUND_OFFSET {
+                        let pos = match self.align {
+                            SignalViewAlign::Left => {
+                                rect.left_center() + vec2(TEXT_ROUND_OFFSET, 0.0)
+                            }
+                            SignalViewAlign::Center => rect.center(),
+                            SignalViewAlign::Right => {
+                                rect.right_center() - vec2(TEXT_ROUND_OFFSET, 0.0)
+                            }
+                        };
+                        // pre-paint to calculate size
+                        let text_rect = painter.text(
+                            pos,
+                            match self.align {
+                                SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                            },
+                            text.as_str(),
+                            value_font.clone(),
+                            Color32::TRANSPARENT,
+                        );
+                        let paint_text =
+                            if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
+                                text
+                            } else {
+                                let text_mono_width = text_rect.width() / text.len() as f32;
+                                let text_len = text.len();
+                                let remains = &text[0..(text_len
+                                    - ((text_rect.width() + TEXT_ROUND_OFFSET - rect.width())
+                                        / text_mono_width)
+                                        as usize)];
+                                if remains.len() <= 1 {
+                                    "+".to_string()
+                                } else {
+                                    let len = remains.len();
+                                    format!("{}+", &remains[0..(len - 2)])
                                 }
                             };
-                            // pre-paint to calculate size
-                            let text_rect = painter.text(
-                                pos,
-                                match self.align {
-                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                                },
-                                text.as_str(),
-                                value_font.clone(),
-                                Color32::TRANSPARENT,
-                            );
-                            let paint_text =
-                                if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
-                                    text
-                                } else {
-                                    let text_mono_width = text_rect.width() / text.len() as f32;
-                                    let text_len = text.len();
-                                    let remains = &text[0..(text_len
-                                        - ((text_rect.width() + TEXT_ROUND_OFFSET - rect.width())
-                                            / text_mono_width)
-                                            as usize)];
-                                    if remains.len() <= 1 {
-                                        "+".to_string()
-                                    } else {
-                                        let len = remains.len();
-                                        format!("{}+", &remains[0..(len - 2)])
-                                    }
-                                };
-                            // let text_font = FontId::monospace(self.signal_font_size);
-                            // TODO: limit text position
-                            // let text_rect = painter.text(
-                            //     Pos2::ZERO,
-                            //     Align2::RIGHT_BOTTOM,
-                            //     paint_text.as_str(),
-                            //     text_font.clone(),
-                            //     Color32::TRANSPARENT,
-                            // );
-                            // let pos = pos2(
-                            //     pos.x.clamp(
-                            //         rect.left(),
-                            //         rect.right() - text_rect.width(),
-                            //     ),
-                            //     pos.y,
-                            // );
-                            painter.text(
-                                pos,
-                                match self.align {
-                                    SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                    SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                    SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                                },
-                                paint_text,
-                                value_font,
-                                text_color,
-                            );
-                        }
+                        // let text_font = FontId::monospace(self.signal_font_size);
+                        // TODO: limit text position
+                        // let text_rect = painter.text(
+                        //     Pos2::ZERO,
+                        //     Align2::RIGHT_BOTTOM,
+                        //     paint_text.as_str(),
+                        //     text_font.clone(),
+                        //     Color32::TRANSPARENT,
+                        // );
+                        // let pos = pos2(
+                        //     pos.x.clamp(
+                        //         rect.left(),
+                        //         rect.right() - text_rect.width(),
+                        //     ),
+                        //     pos.y,
+                        // );
+                        painter.text(
+                            pos,
+                            match self.align {
+                                SignalViewAlign::Left => Align2::LEFT_CENTER,
+                                SignalViewAlign::Center => Align2::CENTER_CENTER,
+                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
+                            },
+                            paint_text,
+                            value_font,
+                            text_color,
+                        );
                     }
                 }
             } else {
@@ -284,7 +282,7 @@ impl WaveView {
         };
         // TODO: Reduce horizontal value painting
         // let mut done_early = false;
-        while let Some(item) = it.next() {
+        for item in it {
             // let mut done = false;
             if let Some(item_last) = item_last {
                 let _value_rect = paint_signal(item_last, item);
@@ -386,7 +384,7 @@ impl WaveView {
                             use Radix::*;
                             let data = [Hex, Oct, Dec, Bin];
                             data.into_iter().for_each(|r| {
-                                if ui.button(format!("{:?}", r)).clicked() {
+                                if ui.button(format!("{r:?}")).clicked() {
                                     signal_new.mode = SignalViewMode::Number(r);
                                     ui.close_menu();
                                 }

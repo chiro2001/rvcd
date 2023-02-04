@@ -20,7 +20,7 @@ impl WaveCursor {
         Self {
             id,
             pos,
-            name: format!("Cursor{}", id),
+            name: format!("Cursor{id}"),
             valid: true,
         }
     }

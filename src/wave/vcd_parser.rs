@@ -360,7 +360,7 @@ mod test {
                 None => "None",
             };
             match &command {
-                Timestamp(i) => println!("#{}", i),
+                Timestamp(i) => println!("#{i}"),
                 ChangeScalar(i, v) => println!("code={}, value={}, name={}", i, v, get_name(i)),
                 ChangeVector(i, v) => println!(
                     "code={}, value={}, name={}",
@@ -368,7 +368,7 @@ mod test {
                     radix_vector_to_string_n(&v.iter().map(|x| (*x).into()).collect(), 4),
                     get_name(i)
                 ),
-                c => println!("unknown: {:#?}", c),
+                c => println!("unknown: {c:#?}"),
             }
             cache.push(command);
         }

@@ -35,12 +35,10 @@ impl TreeView {
         let child_signals = |tree: &Node<WaveTreeNode>| {
             tree.iter()
                 .map(|n| n.data().clone())
-                .map(|x| match x {
+                .filter_map(|x| match x {
                     WaveTreeNode::WaveVar(x) => Some(WaveTreeNode::WaveVar(x)),
                     _ => None,
                 })
-                .filter(|x| x.is_some())
-                .map(|x| x.unwrap())
                 .collect::<Vec<_>>()
         };
         let recurse_child_signals = |tree: &Node<WaveTreeNode>| {

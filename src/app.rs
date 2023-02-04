@@ -186,7 +186,7 @@ impl eframe::App for RvcdApp {
                 self.debug_panel(ui);
             });
         }
-        let app_now_id = self.app_now_id.clone();
+        let app_now_id = self.app_now_id;
         let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
             let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
             if let Some((id, open)) = open_app {
@@ -262,12 +262,7 @@ impl eframe::App for RvcdApp {
             if i < self.apps.len() {
                 let removed = self.apps.remove(i);
                 // let removed = self.apps.get(i).unwrap();
-                self.open_apps = self
-                    .open_apps
-                    .iter()
-                    .filter(|x| x.0 != removed.id)
-                    .map(|x| *x)
-                    .collect();
+                self.open_apps.retain(|x| x.0 != removed.id);
                 info!(
                     "remove rvcd: id={}, open_apps: {:?}",
                     removed.id, self.open_apps
@@ -281,12 +276,11 @@ impl eframe::App for RvcdApp {
             let has_maximum_window = self.app_now_id.is_some();
             match self
                 .app_now_id
-                .map(|id| {
+                .and_then(|id| {
                     self.apps
                         .iter_mut()
                         .find(|a| a.id == id && a.state == State::Idle)
                 })
-                .flatten()
             {
                 Some(app) => app.handle_dropping_file(file),
                 None => {

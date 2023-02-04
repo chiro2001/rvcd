@@ -23,8 +23,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         "data/cpu_ila_commit.vcd",
     ];
     for file in files {
-        let id = format!("load {}", file);
-        println!("id: {}", id);
+        let id = format!("load {file}");
+        println!("id: {id}");
         c.bench_function(id.as_ref(), |b| {
             b.iter(|| black_box(optimize_vcd_parser(file)))
         });
