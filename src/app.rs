@@ -28,7 +28,7 @@ pub struct RvcdApp {
 
 impl Default for RvcdApp {
     fn default() -> Self {
-        Self{
+        Self {
             apps: vec![],
             app_now_id: None,
             open_apps: vec![],

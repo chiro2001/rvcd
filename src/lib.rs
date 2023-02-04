@@ -1,18 +1,18 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 pub mod app;
+pub mod files;
+pub mod frame_history;
 pub mod message;
 pub mod radix;
+pub mod run_mode;
 pub mod rvcd;
+pub mod server;
 pub mod service;
+pub mod size;
 pub mod tree_view;
 pub mod utils;
-pub mod wave;
-pub mod server;
 pub mod view;
-pub mod frame_history;
-pub mod run_mode;
-pub mod files;
-pub mod size;
+pub mod wave;
 
 pub use crate::rvcd::Rvcd;

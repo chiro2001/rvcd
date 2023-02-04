@@ -3,8 +3,8 @@
 
 #[allow(unused_imports)]
 use anyhow::Result;
-use tracing::info;
 use rvcd::app::RvcdApp;
+use tracing::info;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]

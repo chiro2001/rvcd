@@ -356,7 +356,7 @@ mod test {
         for command_result in parser {
             let command = command_result?;
             let get_name = |code: &IdCode| match code_name.get(code) {
-                Some((v, _w)) => v,
+                Some(s) => s.name.as_str(),
                 None => "None",
             };
             match &command {
