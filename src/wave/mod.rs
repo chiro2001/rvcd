@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 use trees::Tree;
-use vcd::{IdCode, Var, VarType};
+use vcd::{IdCode, Scope, ScopeType, Var, VarType};
 
 pub mod utils;
 pub mod vcd_parser;
@@ -179,11 +179,11 @@ pub enum WaveSignalType {
 }
 impl Display for WaveSignalType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
     }
 }
-impl From<&VarType> for WaveSignalType {
-    fn from(value: &VarType) -> Self {
+impl From<VarType> for WaveSignalType {
+    fn from(value: VarType) -> Self {
         match value {
             VarType::Event => Self::Event,
             VarType::Integer => Self::Integer,
@@ -205,6 +205,52 @@ impl From<&VarType> for WaveSignalType {
             VarType::String => Self::String,
             _ => panic!("error converting var type"),
         }
+    }
+}
+#[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
+pub enum WaveScopeType {
+    #[default]
+    Module,
+    Task,
+    Function,
+    Begin,
+    Fork,
+}
+impl From<ScopeType> for WaveScopeType {
+    fn from(value: ScopeType) -> Self {
+        match value {
+            ScopeType::Module => Self::Module,
+            ScopeType::Task => Self::Task,
+            ScopeType::Function => Self::Function,
+            ScopeType::Begin => Self::Begin,
+            ScopeType::Fork => Self::Fork,
+            _ => panic!("error converting scope type"),
+        }
+    }
+}
+impl Display for WaveScopeType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
+    }
+}
+#[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
+pub struct WaveScopeInfo {
+    pub id: u64,
+    pub name: String,
+    pub typ: WaveScopeType,
+}
+impl WaveScopeInfo {
+    fn from_scope(id: u64, value: &Scope) -> Self {
+        Self {
+            id,
+            name: value.identifier.to_string(),
+            typ: value.scope_type.into(),
+        }
+    }
+}
+impl Display for WaveScopeInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -234,7 +280,7 @@ impl From<&Var> for WaveSignalInfo {
             id,
             name: value.reference.to_string(),
             width: value.size.into(),
-            typ: (&value.var_type).into(),
+            typ: value.var_type.into(),
         }
     }
 }
@@ -243,7 +289,7 @@ impl From<&Var> for WaveSignalInfo {
 pub enum WaveTreeNode {
     #[default]
     WaveRoot,
-    WaveScope((String, u64)),
+    WaveScope(WaveScopeInfo),
     WaveVar(WaveSignalInfo),
     /// id only to save space (Not available now)
     WaveId(u64),
@@ -256,7 +302,7 @@ impl Display for WaveTreeNode {
             "{}",
             match self {
                 WaveTreeNode::WaveRoot => "root".to_string(),
-                WaveTreeNode::WaveScope((scope, _id)) => scope.to_string(),
+                WaveTreeNode::WaveScope(s) => s.to_string(),
                 WaveTreeNode::WaveVar(i) => i.to_string(),
                 WaveTreeNode::WaveId(var) => format!("{}", var),
             }

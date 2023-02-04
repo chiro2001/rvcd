@@ -1,12 +1,14 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::WaveTreeNode::WaveRoot;
 use crate::wave::{
-    Wave, WaveDataItem, WaveInfo, WaveLoader, WaveSignalInfo, WaveTimescaleUnit, WaveTreeNode,
-    WireValue,
+    Wave, WaveDataItem, WaveInfo, WaveLoader, WaveScopeInfo, WaveSignalInfo, WaveTimescaleUnit,
+    WaveTreeNode, WireValue,
 };
 use anyhow::{anyhow, Result};
 use queues::{IsQueue, Queue};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::io::Read;
 use std::slice::Iter;
 use tracing::info;
@@ -109,11 +111,15 @@ fn vcd_iterate_tree(
     for item in items.iter() {
         match item {
             ScopeItem::Scope(scope) => {
-                let node = Box::new(Tree::new(WaveTreeNode::WaveScope((
-                    scope.identifier.to_string(),
-                    scope_id,
-                ))));
-                tree.push_back(on_scope(node, scope, scope_id));
+                let mut hasher = DefaultHasher::new();
+                scope.identifier.hash(&mut hasher);
+                scope_id.hash(&mut hasher);
+                let id = hasher.finish();
+                let node = Box::new(Tree::new(WaveTreeNode::WaveScope(
+                    // bfs cannot specify id, so use hash now. TODO: dfs
+                    WaveScopeInfo::from_scope(id, scope),
+                )));
+                tree.push_back(on_scope(node, scope, id));
             }
             ScopeItem::Var(var) => {
                 let node = Box::new(Tree::new(WaveTreeNode::WaveVar(var.into())));

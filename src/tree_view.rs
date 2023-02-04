@@ -100,8 +100,8 @@ impl TreeView {
             };
             if let Some(highlight_scope_id) = self.highlight_scope_id {
                 text_color = match node {
-                    WaveTreeNode::WaveScope((_, id)) => {
-                        if *id == highlight_scope_id {
+                    WaveTreeNode::WaveScope(s) => {
+                        if s.id == highlight_scope_id {
                             painter.rect_filled(
                                 response.rect,
                                 0.0,
@@ -121,9 +121,9 @@ impl TreeView {
                 text_color,
             );
             match node {
-                WaveTreeNode::WaveScope((_, id)) => {
+                WaveTreeNode::WaveScope(s) => {
                     if response.clicked_by(PointerButton::Primary) {
-                        self.highlight_scope_id = Some(*id);
+                        self.highlight_scope_id = Some(s.id);
                         if response.double_clicked() {
                             TreeAction::AddSignals(child_signals(tree))
                         } else {
