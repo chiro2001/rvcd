@@ -15,7 +15,8 @@ use tracing::*;
 
 pub const LINE_WIDTH: f32 = 1.5;
 pub const TEXT_ROUND_OFFSET: f32 = 4.0;
-pub const MIN_SIGNAL_WIDTH: f32 = 2.0;
+// pub const MIN_SIGNAL_WIDTH: f32 = 2.0;
+pub const MIN_SIGNAL_WIDTH: f32 = 0.8;
 pub const BG_MULTIPLY: f32 = 0.05;
 pub const TEXT_BG_MULTIPLY: f32 = 0.4;
 pub const CURSOR_NEAREST: f32 = 20.0;

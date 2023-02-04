@@ -66,6 +66,12 @@ impl WaveView {
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::click_and_drag());
         // let items = wave_data.iter().filter(|i| i.id == signal.s.id);
         let items = wave_data.iter();
+        let start_pos = self.range.0 as u64;
+        let start_index = wave_data.binary_search_by_key(&start_pos, |x| x.timestamp);
+        let start_items = match start_index {
+            Ok(index) => items.skip(index - 1),
+            Err(index) => items.skip(index - 1),
+        };
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
         // strange but works...
@@ -74,7 +80,7 @@ impl WaveView {
             signal_rect.min - vec2(wave_range_start_x, 0.0),
             signal_rect.max - vec2(wave_range_start_x, 0.0),
         );
-        let it = items;
+        let it = start_items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
         let mut ignore_has_x = false;
