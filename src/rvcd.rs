@@ -7,7 +7,9 @@ use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
-use egui::{vec2, Direction, DroppedFile, Id, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget};
+use egui::{
+    vec2, Align2, Direction, DroppedFile, Id, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget,
+};
 use egui_extras::{Column, TableBuilder};
 use egui_toast::Toasts;
 use num_traits::Float;
@@ -280,18 +282,34 @@ impl Rvcd {
                             self.signal_leaves.len(),
                             |row_index, mut row| {
                                 if let Some(signal) = self.signal_leaves.get(row_index) {
-                                    row.col(|ui| {
-                                        ui.label(signal.typ.to_string());
-                                    });
                                     let signal = signal.clone();
-                                    row.col(|ui| {
-                                        let response = ui.add(
-                                            egui::Label::new(signal.to_string())
-                                                .sense(Sense::click_and_drag()),
+                                    let mut handle_draw_response = |ui: &mut Ui, text: String| {
+                                        let (response, painter) = ui.allocate_painter(
+                                            ui.max_rect().size(),
+                                            Sense::click_and_drag(),
+                                        );
+                                        let on_hover = ui.rect_contains_pointer(response.rect);
+                                        let color = if on_hover {
+                                            ui.visuals().strong_text_color()
+                                        } else {
+                                            ui.visuals().text_color()
+                                        };
+                                        painter.text(
+                                            response.rect.left_center(),
+                                            Align2::LEFT_CENTER,
+                                            text,
+                                            Default::default(),
+                                            color,
                                         );
                                         if response.double_clicked() {
                                             self.signal_clicked(signal.id, true);
                                         }
+                                    };
+                                    row.col(|ui| {
+                                        handle_draw_response(ui, signal.typ.to_string());
+                                    });
+                                    row.col(|ui| {
+                                        handle_draw_response(ui, signal.to_string());
                                     });
                                 } else {
                                     row.col(|ui| {
