@@ -294,7 +294,7 @@ impl WaveView {
             let fixed_value_width = f32::max(
                 signal_values_text
                     .iter()
-                    .map(|s| get_text_size(ui, s, Default::default()).x)
+                    .map(|s| get_text_size(ui, s, FontId::monospace(self.signal_font_size)).x)
                     .reduce(f32::max)
                     .unwrap_or(0.0),
                 DEFAULT_MIN_VALUE_WIDTH,
@@ -361,11 +361,22 @@ impl WaveView {
                                         }
                                     });
                                     row.col(|ui| {
-                                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                            if let Some(value) = signal_values_text.get(row_index) {
-                                                ui.label(value);
-                                            }
-                                        });
+                                        if let Some(value) = signal_values_text.get(row_index) {
+                                            let (response, painter) = ui.allocate_painter(
+                                                ui.max_rect().size(),
+                                                Sense::click_and_drag(),
+                                            );
+                                            // ui.label(value);
+                                            let value_font =
+                                                FontId::monospace(self.signal_font_size);
+                                            painter.text(
+                                                response.rect.left_center(),
+                                                Align2::LEFT_CENTER,
+                                                value,
+                                                value_font,
+                                                ui.visuals().strong_text_color(),
+                                            );
+                                        }
                                     });
                                     row.col(|ui| {
                                         if let Some(data) = wave.data.get(&signal.s.id) {
