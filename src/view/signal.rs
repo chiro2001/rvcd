@@ -66,11 +66,17 @@ impl WaveView {
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::click_and_drag());
         // let items = wave_data.iter().filter(|i| i.id == signal.s.id);
         let items = wave_data.iter();
+        // let start_pos = self.range.0.ceil() as u64;
         let start_pos = self.range.0 as u64;
         let start_index = wave_data.binary_search_by_key(&start_pos, |x| x.timestamp);
         let start_items = match start_index {
-            Ok(index) => items.skip(index - 1),
-            Err(index) => items.skip(index - 1),
+            Ok(index) | Err(index) => {
+                if index > 0 {
+                    items.skip(index - 1)
+                } else {
+                    items.skip(0)
+                }
+            }
         };
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
@@ -80,6 +86,26 @@ impl WaveView {
             signal_rect.min - vec2(wave_range_start_x, 0.0),
             signal_rect.max - vec2(wave_range_start_x, 0.0),
         );
+        // painter.vline(
+        //     signal_rect.left(),
+        //     response.rect.y_range(),
+        //     (LINE_WIDTH, Color32::WHITE),
+        // );
+        // painter.rect_stroke(signal_rect, 3.0, (LINE_WIDTH * 2.0, Color32::WHITE));
+        // painter.rect_filled(
+        //     Rect::from_min_max(
+        //         signal_rect.min + vec2(wave_range_start_x, 0.0),
+        //         signal_rect.max + vec2(wave_range_start_x, 0.0),
+        //     ),
+        //     3.0,
+        //     Color32::WHITE,
+        // );
+
+        // painter.vline(
+        //     self.pos_to_x(start_pos) + signal_rect.left() + wave_range_start_x,
+        //     response.rect.y_range(),
+        //     (LINE_WIDTH, Color32::RED),
+        // );
         let it = start_items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
@@ -109,6 +135,7 @@ impl WaveView {
                     signal_rect.top() + height,
                 ),
             );
+            // painter.rect_filled(rect, 3.0, Color32::GRAY);
             if !ui.is_rect_visible(rect) {
                 return Rect::NOTHING;
             }
@@ -218,24 +245,14 @@ impl WaveView {
                             }
                         };
                         // pre-paint to calculate size
-                        let text_rect = painter.text(
-                            pos,
-                            match self.align {
-                                SignalViewAlign::Left => Align2::LEFT_CENTER,
-                                SignalViewAlign::Center => Align2::CENTER_CENTER,
-                                SignalViewAlign::Right => Align2::RIGHT_CENTER,
-                            },
-                            text.as_str(),
-                            value_font.clone(),
-                            Color32::TRANSPARENT,
-                        );
-                        let paint_text = if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
+                        let text_size = get_text_size(ui, text.as_str(), value_font.clone());
+                        let paint_text = if rect.width() >= text_size.x + TEXT_ROUND_OFFSET {
                             text
                         } else {
-                            let text_mono_width = text_rect.width() / text.len() as f32;
+                            let text_mono_width = text_size.x / text.len() as f32;
                             let text_len = text.len();
                             let remains = &text[0..(text_len
-                                - ((text_rect.width() + TEXT_ROUND_OFFSET - rect.width())
+                                - ((text_size.x + TEXT_ROUND_OFFSET - rect.width())
                                     / text_mono_width) as usize)];
                             if remains.len() <= 1 {
                                 "+".to_string()
@@ -290,7 +307,7 @@ impl WaveView {
             // let mut done = false;
             if let Some(item_last) = item_last {
                 let value_rect = paint_signal(item_last, item);
-                if value_rect.left() > response.rect.right() {
+                if value_rect == Rect::NOTHING || value_rect.left() > response.rect.right() {
                     break;
                 }
                 // if !ui.is_rect_visible(_value_rect) {
