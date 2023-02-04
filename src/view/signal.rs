@@ -359,7 +359,7 @@ impl WaveView {
         let mut to_remove = false;
         ui.scope(|ui| {
             ui.set_height(signal.height);
-            ui.centered_and_justified(|ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
                 // TODO: drag signal order
                 response.context_menu(|ui| {

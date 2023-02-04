@@ -315,7 +315,7 @@ impl WaveView {
                     .striped(true)
                     .resizable(false)
                     // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    // .cell_layout(Layout::centered_and_justified(Direction::TopDown))
+                    .cell_layout(Layout::centered_and_justified(Direction::TopDown))
                     .column(Column::exact(fixed_name_width).resizable(false))
                     .column(Column::exact(fixed_value_width).resizable(false))
                     .column(Column::exact(self.wave_width).resizable(false))
@@ -361,9 +361,11 @@ impl WaveView {
                                         }
                                     });
                                     row.col(|ui| {
-                                        if let Some(value) = signal_values_text.get(row_index) {
-                                            ui.label(value);
-                                        }
+                                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                            if let Some(value) = signal_values_text.get(row_index) {
+                                                ui.label(value);
+                                            }
+                                        });
                                     });
                                     row.col(|ui| {
                                         if let Some(data) = wave.data.get(&signal.s.id) {
