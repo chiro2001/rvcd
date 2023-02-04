@@ -481,6 +481,7 @@ impl Rvcd {
     pub fn reset(&mut self) {
         self.wave = None;
         self.filepath.clear();
+        self.signal_leaves.clear();
         self.state = State::Idle;
         self.view = self.view.reset();
         self.title = format!("Rvcd-{}", self.id);

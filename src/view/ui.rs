@@ -160,9 +160,9 @@ impl WaveView {
                 )
                 .ui(ui);
         });
-        if self.use_top_margin {
-            ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
-        }
+        // if self.use_top_margin {
+        //     ui.allocate_space(vec2(1.0, WAVE_MARGIN_TOP));
+        // }
     }
     pub fn handle_response(
         &self,
