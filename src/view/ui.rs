@@ -255,7 +255,7 @@ impl WaveView {
             // bugs by: https://github.com/emilk/egui/issues/2430
             let use_rect = ui.max_rect();
             const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
-            let fix_width = f32::max(
+            let fixed_name_width = f32::max(
                 self.signals
                     .iter()
                     .map(|x| get_text_size(ui, x.s.to_string().as_str(), Default::default()).x)
@@ -263,8 +263,19 @@ impl WaveView {
                     .unwrap_or(0.0),
                 DEFAULT_MIN_SIGNAL_WIDTH,
             );
-            self.wave_width = use_rect.width() - fix_width;
-            let mut wave_left: f32 = fix_width + use_rect.left() + UI_WIDTH_OFFSET;
+            const DEFAULT_MIN_VALUE_WIDTH: f32 = 32.0;
+            let fixed_value_width = f32::max(
+                // self.signals
+                //     .iter()
+                //     .map(|x| get_text_size(ui, x.s.to_string().as_str(), Default::default()).x)
+                //     .reduce(f32::max)
+                //     .unwrap_or(0.0),
+                32.0,
+                DEFAULT_MIN_VALUE_WIDTH,
+            );
+            self.wave_width = use_rect.width() - fixed_name_width - fixed_value_width;
+            let mut wave_left: f32 =
+                fixed_name_width + fixed_value_width + use_rect.left() + UI_WIDTH_OFFSET;
             let mut new_signals = vec![];
             let mut last_paint_row_index = None;
             let mut dragging_pos = None;
@@ -276,8 +287,9 @@ impl WaveView {
                     .striped(true)
                     .resizable(false)
                     // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    .cell_layout(Layout::centered_and_justified(Direction::TopDown))
-                    .column(Column::exact(fix_width).resizable(false))
+                    // .cell_layout(Layout::centered_and_justified(Direction::TopDown))
+                    .column(Column::exact(fixed_name_width).resizable(false))
+                    .column(Column::exact(fixed_value_width).resizable(false))
                     .column(Column::exact(self.wave_width).resizable(false))
                     .min_scrolled_height(0.0)
                     .max_scroll_height(f32::infinity());
@@ -300,6 +312,9 @@ impl WaveView {
                             ));
                         });
                         header.col(|ui| {
+                            ui.strong("value");
+                        });
+                        header.col(|ui| {
                             self.time_bar(ui, info, wave_left);
                         });
                     })
@@ -316,6 +331,9 @@ impl WaveView {
                                         {
                                             new_signals.push(signal_new);
                                         }
+                                    });
+                                    row.col(|ui| {
+                                        ui.label("value");
                                     });
                                     row.col(|ui| {
                                         if let Some(data) = wave.data.get(&signal.s.id) {
