@@ -274,14 +274,11 @@ impl eframe::App for RvcdApp {
         for file in &ctx.input().raw.dropped_files {
             let file: &DroppedFile = file;
             let has_maximum_window = self.app_now_id.is_some();
-            match self
-                .app_now_id
-                .and_then(|id| {
-                    self.apps
-                        .iter_mut()
-                        .find(|a| a.id == id && a.state == State::Idle)
-                })
-            {
+            match self.app_now_id.and_then(|id| {
+                self.apps
+                    .iter_mut()
+                    .find(|a| a.id == id && a.state == State::Idle)
+            }) {
                 Some(app) => app.handle_dropping_file(file),
                 None => {
                     let id = self.new_window(!has_maximum_window);

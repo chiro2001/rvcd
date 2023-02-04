@@ -223,23 +223,21 @@ impl WaveView {
                             value_font.clone(),
                             Color32::TRANSPARENT,
                         );
-                        let paint_text =
-                            if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
-                                text
+                        let paint_text = if rect.width() >= text_rect.width() + TEXT_ROUND_OFFSET {
+                            text
+                        } else {
+                            let text_mono_width = text_rect.width() / text.len() as f32;
+                            let text_len = text.len();
+                            let remains = &text[0..(text_len
+                                - ((text_rect.width() + TEXT_ROUND_OFFSET - rect.width())
+                                    / text_mono_width) as usize)];
+                            if remains.len() <= 1 {
+                                "+".to_string()
                             } else {
-                                let text_mono_width = text_rect.width() / text.len() as f32;
-                                let text_len = text.len();
-                                let remains = &text[0..(text_len
-                                    - ((text_rect.width() + TEXT_ROUND_OFFSET - rect.width())
-                                        / text_mono_width)
-                                        as usize)];
-                                if remains.len() <= 1 {
-                                    "+".to_string()
-                                } else {
-                                    let len = remains.len();
-                                    format!("{}+", &remains[0..(len - 2)])
-                                }
-                            };
+                                let len = remains.len();
+                                format!("{}+", &remains[0..(len - 2)])
+                            }
+                        };
                         // let text_font = FontId::monospace(self.signal_font_size);
                         // TODO: limit text position
                         // let text_rect = painter.text(

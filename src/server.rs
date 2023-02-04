@@ -1,12 +1,10 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::server::server::rvcd_rpc_server::RvcdRpc;
+use crate::server::rvcd_rpc_server::RvcdRpc;
 use tonic::{Request, Response, Status};
 use tracing::debug;
 
-pub mod server {
-    tonic::include_proto!("rvcd");
-}
+tonic::include_proto!("rvcd");
 
 #[derive(Debug, Default)]
 pub struct RvcdRemote {}

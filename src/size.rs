@@ -10,7 +10,7 @@ pub enum FileSizeUnit {
 }
 impl Display for FileSizeUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{self:?}"))
+        write!(f, "{self:?}")
     }
 }
 impl FileSizeUnit {

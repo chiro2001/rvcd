@@ -45,12 +45,12 @@ impl TreeView {
             let mut queue = vec![tree];
             let mut signal_collect = vec![];
             while !queue.is_empty() {
-                let top = queue.last().unwrap().clone();
+                let top = *queue.last().unwrap();
                 queue.remove(queue.len() - 1);
-                queue.extend(top.iter().filter(|x| match x.data() {
-                    WaveTreeNode::WaveScope(_) => true,
-                    _ => false,
-                }));
+                queue.extend(
+                    top.iter()
+                        .filter(|x| matches!(x.data(), WaveTreeNode::WaveScope(_))),
+                );
                 signal_collect.extend(child_signals(top));
             }
             signal_collect
@@ -85,10 +85,9 @@ impl TreeView {
             WaveTreeNode::WaveVar(_) => self.show_leaves,
             WaveTreeNode::WaveId(_) => false,
         }) || (!self.show_tail_leaves
-            && !tree.iter().any(|x| match x.data() {
-                WaveTreeNode::WaveScope(_) => true,
-                _ => false,
-            }))
+            && !tree
+                .iter()
+                .any(|x| matches!(x.data(), WaveTreeNode::WaveScope(_))))
         {
             // paint as leaf
             let node = tree.data();

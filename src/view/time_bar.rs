@@ -202,18 +202,16 @@ impl WaveView {
                                 }
                             }
                             if let Some(span) = span_to_remove {
-                                let spans_new = self
-                                    .spans
-                                    .iter().copied()
-                                    .filter(|x| *x != span)
-                                    .collect();
+                                let spans_new =
+                                    self.spans.iter().copied().filter(|x| *x != span).collect();
                                 self.spans = spans_new;
                             }
                             if ui.button("Remove all relative spans").clicked() {
                                 let spans_new = self
                                     .spans
                                     .iter()
-                                    .filter(|x| x.0 != cursor_id && x.1 != cursor_id).copied()
+                                    .filter(|x| x.0 != cursor_id && x.1 != cursor_id)
+                                    .copied()
                                     .collect();
                                 self.spans = spans_new;
                                 ui.close_menu();

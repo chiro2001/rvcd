@@ -182,10 +182,7 @@ impl WaveView {
                 .input()
                 .events
                 .iter()
-                .find(|x| match x {
-                    Event::Scroll(_) => true,
-                    _ => false,
-                })
+                .find(|x| matches!(x, Event::Scroll(_)))
                 .and_then(|x| match x {
                     Event::Scroll(v) => Some(*v),
                     _ => None,
@@ -195,10 +192,7 @@ impl WaveView {
                 .input()
                 .events
                 .iter()
-                .find(|x| match x {
-                    Event::Zoom(_) => true,
-                    _ => false,
-                })
+                .find(|x| matches!(x, Event::Zoom(_)))
                 .and_then(|x| match x {
                     Event::Zoom(v) => Some(*v),
                     _ => None,
@@ -402,17 +396,13 @@ impl WaveView {
                 pointer_state.handle_pointer_response(&response, wave_left);
             });
             let global_response = inner_response.response;
-            let state = self.handle_response(
-                ui,
-                &global_response,
-                wave_left,
-                &wave.info,
-                self.range,
-            );
+            let state =
+                self.handle_response(ui, &global_response, wave_left, &wave.info, self.range);
             // update signal information
             let signals_updated = self
                 .signals
-                .iter().cloned()
+                .iter()
+                .cloned()
                 .enumerate()
                 .filter_map(|x| match new_signals.iter().find(|c| c.1 == x.0) {
                     None => Some(x.1),
@@ -530,7 +520,8 @@ impl WaveView {
             // remove unavailable spans
             self.spans = self
                 .spans
-                .iter().copied()
+                .iter()
+                .copied()
                 .filter(|s| self.cursors_exists_id(s.0) && self.cursors_exists_id(s.1))
                 .collect();
             for span in &self.spans {

@@ -10,7 +10,7 @@ use tracing::info;
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use rvcd::server::server::rvcd_rpc_server::RvcdRpcServer;
+    use rvcd::server::rvcd_rpc_server::RvcdRpcServer;
     use rvcd::server::RvcdRemote;
     use tonic::transport::Server;
 

@@ -327,12 +327,11 @@ impl Rvcd {
                 if let Some(wave) = &self.wave {
                     match self.tree.ui(ui, wave.info.tree.root()) {
                         TreeAction::None => {}
-                        TreeAction::AddSignal(node) => match node {
-                            WaveTreeNode::WaveVar(d) => {
+                        TreeAction::AddSignal(node) => {
+                            if let WaveTreeNode::WaveVar(d) = node {
                                 self.signal_clicked(d.id, true);
                             }
-                            _ => {}
-                        },
+                        }
                         TreeAction::SelectScope(nodes) => {
                             self.signal_leaves = nodes
                                 .into_iter()
@@ -344,11 +343,8 @@ impl Rvcd {
                         }
                         TreeAction::AddSignals(nodes) => {
                             for node in nodes {
-                                match node {
-                                    WaveTreeNode::WaveVar(d) => {
-                                        self.signal_clicked(d.id, false);
-                                    }
-                                    _ => {}
+                                if let WaveTreeNode::WaveVar(d) = node {
+                                    self.signal_clicked(d.id, false);
                                 }
                             }
                         }
