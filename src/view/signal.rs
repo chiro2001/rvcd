@@ -250,6 +250,22 @@ impl WaveView {
                                         format!("{}+", &remains[0..(len - 2)])
                                     }
                                 };
+                            let text_font = FontId::monospace(self.signal_font_size);
+                            // TODO: limit text position
+                            // let text_rect = painter.text(
+                            //     Pos2::ZERO,
+                            //     Align2::RIGHT_BOTTOM,
+                            //     paint_text.as_str(),
+                            //     text_font.clone(),
+                            //     Color32::TRANSPARENT,
+                            // );
+                            // let pos = pos2(
+                            //     pos.x.clamp(
+                            //         rect.left(),
+                            //         rect.right() - text_rect.width(),
+                            //     ),
+                            //     pos.y,
+                            // );
                             painter.text(
                                 pos,
                                 match self.align {
@@ -258,7 +274,7 @@ impl WaveView {
                                     SignalViewAlign::Right => Align2::RIGHT_CENTER,
                                 },
                                 paint_text,
-                                FontId::monospace(self.signal_font_size),
+                                text_font,
                                 text_color,
                             );
                         }
