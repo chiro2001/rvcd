@@ -77,12 +77,19 @@ impl TreeView {
                 TreeAction::None
             }
         };
-        if tree.has_no_child()
-            || (!self.show_tail_leaves
-                && !tree.iter().any(|x| match x.data() {
-                    WaveTreeNode::WaveScope(_) => true,
-                    _ => false,
-                }))
+        if !tree.iter().any(|n| match n.data() {
+            WaveTreeNode::WaveRoot => false,
+            WaveTreeNode::WaveScope(s) => match &s.typ {
+                WaveScopeType::Module => true,
+                _ => !self.show_modules_only,
+            },
+            WaveTreeNode::WaveVar(_) => self.show_leaves,
+            WaveTreeNode::WaveId(_) => false,
+        }) || (!self.show_tail_leaves
+            && !tree.iter().any(|x| match x.data() {
+                WaveTreeNode::WaveScope(_) => true,
+                _ => false,
+            }))
         {
             // paint as leaf
             let node = tree.data();
