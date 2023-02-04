@@ -92,9 +92,6 @@ impl WaveView {
                 (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0) as f32;
             let percent_rect_right =
                 (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0) as f32;
-            let percent_text = (((item_now.timestamp + item_next.timestamp) as f32 / 2.0)
-                - info.range.0 as f32)
-                / (self.range.1 - self.range.0) as f32;
             let rect = Rect::from_min_max(
                 pos2(
                     signal_rect.left() + width * percent_rect_left,
@@ -105,6 +102,9 @@ impl WaveView {
                     signal_rect.top() + height,
                 ),
             );
+            if !ui.is_rect_visible(rect) {
+                return Rect::NOTHING;
+            }
             let radix = match &signal.mode {
                 SignalViewMode::Default => self.default_radix.clone(),
                 SignalViewMode::Number(r) => r.clone(),
@@ -178,30 +178,28 @@ impl WaveView {
                     let number: Option<BigUint> = (&item_now.value).into();
                     if text.contains('x') {
                         paint_x();
+                    } else if text.contains('z') {
+                        paint_z();
                     } else {
-                        if text.contains('z') {
-                            paint_z();
-                        } else {
-                            match number {
-                                Some(n) if n.is_zero() => {
-                                    painter.hline(
-                                        rect.x_range(),
-                                        rect.bottom(),
-                                        (LINE_WIDTH, Color32::GREEN),
-                                    );
-                                }
-                                _ => {
-                                    painter.rect(
-                                        rect,
-                                        0.0,
-                                        if self.background {
-                                            Color32::GREEN.linear_multiply(BG_MULTIPLY)
-                                        } else {
-                                            Color32::TRANSPARENT
-                                        },
-                                        (LINE_WIDTH, Color32::GREEN),
-                                    );
-                                }
+                        match number {
+                            Some(n) if n.is_zero() => {
+                                painter.hline(
+                                    rect.x_range(),
+                                    rect.bottom(),
+                                    (LINE_WIDTH, Color32::GREEN),
+                                );
+                            }
+                            _ => {
+                                painter.rect(
+                                    rect,
+                                    0.0,
+                                    if self.background {
+                                        Color32::GREEN.linear_multiply(BG_MULTIPLY)
+                                    } else {
+                                        Color32::TRANSPARENT
+                                    },
+                                    (LINE_WIDTH, Color32::GREEN),
+                                );
                             }
                         }
                     }
@@ -218,9 +216,7 @@ impl WaveView {
                                 SignalViewAlign::Left => {
                                     rect.left_center() + vec2(TEXT_ROUND_OFFSET, 0.0)
                                 }
-                                SignalViewAlign::Center => {
-                                    rect.left_center() + vec2(width * percent_text, 0.0)
-                                }
+                                SignalViewAlign::Center => rect.center(),
                                 SignalViewAlign::Right => {
                                     rect.right_center() - vec2(TEXT_ROUND_OFFSET, 0.0)
                                 }
@@ -262,7 +258,6 @@ impl WaveView {
                                     SignalViewAlign::Right => Align2::RIGHT_CENTER,
                                 },
                                 paint_text,
-                                // Default::default(),
                                 FontId::monospace(self.signal_font_size),
                                 text_color,
                             );
