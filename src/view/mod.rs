@@ -81,6 +81,8 @@ pub struct WaveView {
     pub last_pointer_state: ResponsePointerState,
     #[serde(skip)]
     pub range_seek_started: bool,
+    #[serde(skip)]
+    pub value_width_max: f32,
 }
 
 impl Default for WaveView {
@@ -112,6 +114,7 @@ impl Default for WaveView {
             round_pointer: true,
             last_pointer_state: Default::default(),
             range_seek_started: false,
+            value_width_max: 0.0,
         }
     }
 }

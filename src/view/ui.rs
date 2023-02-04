@@ -263,7 +263,6 @@ impl WaveView {
                     .unwrap_or(0.0),
                 DEFAULT_MIN_SIGNAL_WIDTH,
             );
-            const DEFAULT_MIN_VALUE_WIDTH: f32 = 32.0;
             let marker_value_pos = (if self.marker_temp.valid {
                 Some(self.marker_temp.pos)
             } else if self.marker.valid {
@@ -291,6 +290,7 @@ impl WaveView {
             } else {
                 vec!["".to_string(); self.signals.len()]
             };
+            const DEFAULT_MIN_VALUE_WIDTH: f32 = 32.0;
             let fixed_value_width = f32::max(
                 signal_values_text
                     .iter()
@@ -299,6 +299,8 @@ impl WaveView {
                     .unwrap_or(0.0),
                 DEFAULT_MIN_VALUE_WIDTH,
             );
+            let fixed_value_width = f32::max(fixed_value_width, self.value_width_max);
+            self.value_width_max = f32::max(fixed_value_width, self.value_width_max);
             self.wave_width = use_rect.width() - fixed_name_width - fixed_value_width;
             let mut wave_left: f32 =
                 fixed_name_width + fixed_value_width + use_rect.left() + UI_WIDTH_OFFSET;
