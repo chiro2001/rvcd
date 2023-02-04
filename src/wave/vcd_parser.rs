@@ -105,6 +105,7 @@ fn vcd_iterate_tree(
     on_var: fn(Box<Tree<WaveTreeNode>>, &Var) -> Tree<WaveTreeNode>,
     scope_id: u64,
 ) -> Tree<WaveTreeNode> {
+    let mut vars = vec![];
     for item in items.iter() {
         match item {
             ScopeItem::Scope(scope) => {
@@ -116,10 +117,13 @@ fn vcd_iterate_tree(
             }
             ScopeItem::Var(var) => {
                 let node = Box::new(Tree::new(WaveTreeNode::WaveVar(var.into())));
-                tree.push_back(on_var(node, var));
+                vars.push(on_var(node, var));
             }
             _ => {}
         }
+    }
+    for v in vars {
+        tree.push_back(v);
     }
     tree.deep_clone()
 }
