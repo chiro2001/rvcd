@@ -275,6 +275,7 @@ impl eframe::App for RvcdApp {
             }
         }
         preview_files_being_dropped(ctx);
+        // FIXME: wasm target cannot handle multi files
         for file in &ctx.input().raw.dropped_files {
             let file: &DroppedFile = file;
             let has_maximum_window = self.app_now_id.is_some();
