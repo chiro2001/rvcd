@@ -93,7 +93,11 @@ impl TreeView {
                 ),
                 Sense::click_and_drag(),
             );
-            let mut text_color = ui.visuals().text_color();
+            let mut text_color = if ui.rect_contains_pointer(response.rect) {
+                ui.visuals().strong_text_color()
+            } else {
+                ui.visuals().text_color()
+            };
             if let Some(highlight_scope_id) = self.highlight_scope_id {
                 text_color = match node {
                     WaveTreeNode::WaveScope((_, id)) => {
@@ -104,9 +108,9 @@ impl TreeView {
                                 Color32::YELLOW.linear_multiply(BG_MULTIPLY),
                             )
                         }
-                        ui.visuals().strong_text_color()
+                        ui.visuals().hyperlink_color
                     }
-                    _ => ui.visuals().text_color(),
+                    _ => text_color,
                 };
             }
             painter.text(

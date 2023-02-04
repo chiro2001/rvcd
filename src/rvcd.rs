@@ -225,7 +225,7 @@ impl Rvcd {
                         FileSizeUnit::from_bytes(self.load_progress.1)
                     ));
                     ProgressBar::new(self.load_progress.0).ui(ui);
-                    ui.centered_and_justified(|ui| {
+                    ui.vertical_centered_justified(|ui| {
                         if ui.button("Cancel").clicked() {
                             if let Some(channel) = &self.channel {
                                 info!("sent FileLoadCancel");
@@ -288,7 +288,7 @@ impl Rvcd {
                                             ui.max_rect().size(),
                                             Sense::click_and_drag(),
                                         );
-                                        let on_hover = ui.rect_contains_pointer(response.rect);
+                                        let on_hover = ui.ui_contains_pointer();
                                         let color = if on_hover {
                                             ui.visuals().strong_text_color()
                                         } else {
