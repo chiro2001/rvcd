@@ -1,4 +1,4 @@
-use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT};
+use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT, TEXT_BG_MULTIPLY};
 use crate::wave::WaveTreeNode;
 use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
 use trees::Node;
@@ -85,15 +85,22 @@ impl TreeView {
                 )
             };
             let text = node.to_string();
+            let text_right = match node {
+                WaveTreeNode::WaveScope(s) => s.typ.to_string(),
+                WaveTreeNode::WaveVar(s) => s.typ.to_string(),
+                _ => "".to_string(),
+            };
             let text_size = get_text_size(text.as_str()).size();
+            let text_right_size = get_text_size(text_right.as_str()).size();
             let (response, painter) = ui.allocate_painter(
                 vec2(
-                    f32::max(ui.max_rect().width(), text_size.x),
+                    f32::max(ui.max_rect().width(), text_size.x + text_right_size.x),
                     f32::max(SIGNAL_TREE_HEIGHT_DEFAULT, text_size.y),
                 ),
                 Sense::click_and_drag(),
             );
-            let mut text_color = if ui.rect_contains_pointer(response.rect) {
+            let on_hover = ui.rect_contains_pointer(response.rect);
+            let mut text_color = if on_hover {
                 ui.visuals().strong_text_color()
             } else {
                 ui.visuals().text_color()
@@ -108,7 +115,11 @@ impl TreeView {
                                 Color32::YELLOW.linear_multiply(BG_MULTIPLY),
                             )
                         }
-                        ui.visuals().hyperlink_color
+                        if on_hover {
+                            ui.visuals().hyperlink_color.linear_multiply(TEXT_BG_MULTIPLY)
+                        } else {
+                            ui.visuals().hyperlink_color
+                        }
                     }
                     _ => text_color,
                 };
@@ -117,6 +128,13 @@ impl TreeView {
                 response.rect.left_center(),
                 Align2::LEFT_CENTER,
                 text,
+                Default::default(),
+                text_color,
+            );
+            painter.text(
+                response.rect.right_center(),
+                Align2::RIGHT_CENTER,
+                text_right,
                 Default::default(),
                 text_color,
             );
