@@ -262,12 +262,16 @@ impl Rvcd {
                     .resizable(false)
                     .striped(true)
                     .cell_layout(Layout::left_to_right(Align::Center))
+                    .column(Column::auto())
                     .column(Column::remainder())
                     .min_scrolled_height(0.0)
                     .max_scroll_height(f32::infinity())
                     .header(SIGNAL_LEAF_HEIGHT_DEFAULT, |mut header| {
                         header.col(|ui| {
-                            ui.strong("Signals");
+                            ui.label("Type");
+                        });
+                        header.col(|ui| {
+                            ui.label("Signals");
                         });
                     })
                     .body(|body| {
@@ -275,8 +279,12 @@ impl Rvcd {
                             text_height,
                             self.signal_leaves.len(),
                             |row_index, mut row| {
-                                row.col(|ui| {
-                                    if let Some(signal) = self.signal_leaves.get(row_index) {
+                                if let Some(signal) = self.signal_leaves.get(row_index) {
+                                    row.col(|ui| {
+                                        ui.label(signal.typ.to_string());
+                                    });
+                                    let signal = signal.clone();
+                                    row.col(|ui| {
                                         let response = ui.add(
                                             egui::Label::new(signal.to_string())
                                                 .sense(Sense::click_and_drag()),
@@ -284,8 +292,15 @@ impl Rvcd {
                                         if response.double_clicked() {
                                             self.signal_clicked(signal.id, true);
                                         }
-                                    }
-                                });
+                                    });
+                                } else {
+                                    row.col(|ui| {
+                                        ui.label("-");
+                                    });
+                                    row.col(|ui| {
+                                        ui.label("-");
+                                    });
+                                }
                             },
                         );
                     });

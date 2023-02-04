@@ -1,5 +1,7 @@
 use crate::radix::Radix;
-use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, TEXT_ROUND_OFFSET, SIGNAL_HEIGHT_DEFAULT};
+use crate::view::{
+    WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
+};
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use egui::*;
 use num_bigint::BigUint;
@@ -40,14 +42,10 @@ pub struct SignalView {
 }
 impl SignalView {
     pub fn from_id(id: u64, info: &WaveInfo) -> Self {
-        let d = ("unknown".to_string(), 0);
-        let name_width = info.code_name_width.get(&id).unwrap_or(&d).clone();
+        let d = WaveSignalInfo::default();
+        let signal_info = info.code_signal_info.get(&id).unwrap_or(&d).clone();
         Self {
-            s: WaveSignalInfo {
-                id,
-                name: name_width.0,
-                width: name_width.1,
-            },
+            s: signal_info,
             height: SIGNAL_HEIGHT_DEFAULT,
             mode: Default::default(),
         }
@@ -82,9 +80,9 @@ impl WaveView {
         let mut paint_signal = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
             let single: bool = match &item_now.value {
                 WaveDataValue::Comp(_) => {
-                    let d = ("".to_string(), 0);
-                    let (_v, w) = info.code_name_width.get(&signal.s.id).unwrap_or(&d);
-                    *w == 1
+                    let d = Default::default();
+                    let s = info.code_signal_info.get(&signal.s.id).unwrap_or(&d);
+                    s.width == 1
                 }
                 WaveDataValue::Raw(v) => v.len() == 1,
             };

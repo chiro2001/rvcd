@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 use trees::Tree;
+use vcd::{IdCode, Var, VarType};
 
 pub mod utils;
 pub mod vcd_parser;
@@ -155,10 +156,64 @@ impl WaveDataItem {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
+pub enum WaveSignalType {
+    Event,
+    Integer,
+    Parameter,
+    Real,
+    #[default]
+    Reg,
+    Supply0,
+    Supply1,
+    Time,
+    Tri,
+    TriAnd,
+    TriOr,
+    TriReg,
+    Tri0,
+    Tri1,
+    WAnd,
+    Wire,
+    WOr,
+    String,
+}
+impl Display for WaveSignalType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl From<&VarType> for WaveSignalType {
+    fn from(value: &VarType) -> Self {
+        match value {
+            VarType::Event => Self::Event,
+            VarType::Integer => Self::Integer,
+            VarType::Parameter => Self::Parameter,
+            VarType::Real => Self::Real,
+            VarType::Reg => Self::Reg,
+            VarType::Supply0 => Self::Supply0,
+            VarType::Supply1 => Self::Supply1,
+            VarType::Time => Self::Time,
+            VarType::Tri => Self::Tri,
+            VarType::TriAnd => Self::TriAnd,
+            VarType::TriOr => Self::TriOr,
+            VarType::TriReg => Self::TriReg,
+            VarType::Tri0 => Self::Tri0,
+            VarType::Tri1 => Self::Tri1,
+            VarType::WAnd => Self::WAnd,
+            VarType::Wire => Self::Wire,
+            VarType::WOr => Self::WOr,
+            VarType::String => Self::String,
+            _ => panic!("error converting var type"),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Default, Debug, PartialEq)]
 pub struct WaveSignalInfo {
     pub id: u64,
     pub name: String,
     pub width: u64,
+    pub typ: WaveSignalType,
 }
 impl Display for WaveSignalInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -170,6 +225,17 @@ impl Display for WaveSignalInfo {
                 _ => format!("{}[{}:0]", self.name, self.width - 1),
             }
         )
+    }
+}
+impl From<&Var> for WaveSignalInfo {
+    fn from(value: &Var) -> Self {
+        let IdCode(id) = value.code;
+        Self {
+            id,
+            name: value.reference.to_string(),
+            width: value.size.into(),
+            typ: (&value.var_type).into(),
+        }
     }
 }
 
@@ -206,7 +272,7 @@ pub struct WaveInfo {
     /// Extra information
     pub headers: HashMap<String, String>,
     /// Signal info: (name, width) indexed by id
-    pub code_name_width: HashMap<u64, (String, u64)>,
+    pub code_signal_info: HashMap<u64, WaveSignalInfo>,
     /// Signal path indexed by id
     pub code_paths: HashMap<u64, Vec<String>>,
     /// Signal scope and vars tree
@@ -262,7 +328,7 @@ mod test {
             println!(
                 "code: {}, name: {:?}, path: {:?}",
                 id,
-                wave.info.code_name_width.get(id).unwrap(),
+                wave.info.code_signal_info.get(id).unwrap(),
                 path
             );
         }

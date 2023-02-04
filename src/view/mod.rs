@@ -136,7 +136,7 @@ impl WaveView {
             .signals
             .clone()
             .into_iter()
-            .filter(|signal| info.code_name_width.contains_key(&signal.s.id))
+            .filter(|signal| info.code_signal_info.contains_key(&signal.s.id))
             .collect();
         debug!("signals: {} => {}", self.signals.len(), signals.len());
         self.signals = signals;

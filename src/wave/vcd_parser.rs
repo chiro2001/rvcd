@@ -74,24 +74,22 @@ fn vcd_iterate_path(
     Ok(())
 }
 
-pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, (String, u64)> {
-    fn add_to_map(m: &mut HashMap<IdCode, (String, u64)>, it: Iter<'_, ScopeItem>) {
+pub fn vcd_code_name(header: &Header) -> HashMap<IdCode, WaveSignalInfo> {
+    fn add_to_map(m: &mut HashMap<IdCode, WaveSignalInfo>, it: Iter<'_, ScopeItem>) {
         it.for_each(|c| {
-            iterate(c).iter().for_each(|(k, (v, w))| {
-                m.insert(*k, (v.to_string(), *w));
+            iterate(c).iter().for_each(|(k, s)| {
+                m.insert(*k, s.clone());
             })
         });
     }
-    fn iterate(item: &ScopeItem) -> HashMap<IdCode, (String, u64)> {
+    fn iterate(item: &ScopeItem) -> HashMap<IdCode, WaveSignalInfo> {
         match item {
             ScopeItem::Scope(scope) => {
-                let mut m: HashMap<IdCode, (String, u64)> = HashMap::new();
+                let mut m: HashMap<IdCode, WaveSignalInfo> = HashMap::new();
                 add_to_map(&mut m, scope.children.iter());
                 m
             }
-            ScopeItem::Var(var) => {
-                HashMap::from([(var.code, (var.reference.to_string(), var.size as u64))])
-            }
+            ScopeItem::Var(var) => HashMap::from([(var.code, var.into())]),
             _ => HashMap::new(),
         }
     }
@@ -117,12 +115,7 @@ fn vcd_iterate_tree(
                 tree.push_back(on_scope(node, scope, scope_id));
             }
             ScopeItem::Var(var) => {
-                let IdCode(id) = var.code;
-                let node = Box::new(Tree::new(WaveTreeNode::WaveVar(WaveSignalInfo {
-                    id,
-                    name: var.reference.to_string(),
-                    width: var.size as u64,
-                })));
+                let node = Box::new(Tree::new(WaveTreeNode::WaveVar(var.into())));
                 tree.push_back(on_var(node, var));
             }
             _ => {}
@@ -232,7 +225,7 @@ impl WaveLoader for Vcd {
         let perf_start = std::time::Instant::now();
         let mut parser = vcd::Parser::new(reader);
         let header = parser.parse_header()?;
-        let code_names = vcd_code_name(&header)
+        let code_info = vcd_code_name(&header)
             .into_iter()
             .map(|i| {
                 let IdCode(id) = i.0;
@@ -319,7 +312,7 @@ impl WaveLoader for Vcd {
                 timescale,
                 range: (time_start, time_stop),
                 headers,
-                code_name_width: code_names,
+                code_signal_info: code_info,
                 code_paths,
                 tree,
             },
