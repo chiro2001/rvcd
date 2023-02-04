@@ -42,10 +42,10 @@ impl WaveCursor {
 impl WaveView {
     /// Find nearest cursor according to panel x position
     /// Will ignore `self.marker_temp` and distance larger than `CURSOR_NEAREST`
-    pub fn find_cursor(&self, x: f32) -> Option<i32> {
+    pub fn find_cursor(&self, x: f64) -> Option<i32> {
         let judge = |c: &WaveCursor| {
             let cursor_x = self.pos_to_x(c.pos);
-            f32::abs(x - cursor_x)
+            f64::abs(x - cursor_x)
         };
         // find dragging cursor to drag
         // marker_temp cannot drag
@@ -67,7 +67,7 @@ impl WaveView {
     }
     /// Paint a cursor.
     /// * `offset`: wave panel ui left + signal width + padding(`UI_WIDTH_OFFSET`)
-    pub fn paint_cursor(&self, ui: &mut Ui, offset: f32, info: &WaveInfo, cursor: &WaveCursor) {
+    pub fn paint_cursor(&self, ui: &mut Ui, offset: f64, info: &WaveInfo, cursor: &WaveCursor) {
         let paint_rect = ui.max_rect();
         let paint_rect = Rect::from_min_max(
             paint_rect.min
@@ -87,17 +87,17 @@ impl WaveView {
             false => Color32::BLUE.linear_multiply(TEXT_BG_MULTIPLY),
         };
         let x = self.pos_to_x(cursor.pos) + offset;
-        if x >= offset && x <= offset + self.wave_width {
-            painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, bg_color));
+        if x >= offset && x <= offset + self.wave_width as f64 {
+            painter.vline(x as f32, paint_rect.y_range(), (LINE_WIDTH, bg_color));
         }
-        let paint_text = |text: String, offset_y: f32, expect_width: f32| {
+        let paint_text = |text: String, offset_y: f64, expect_width: f64| {
             painter.text(
                 pos2(
                     x.clamp(
                         offset,
-                        f32::max(offset, offset + self.wave_width - expect_width),
-                    ),
-                    paint_rect.top() + offset_y,
+                        f64::max(offset, offset + self.wave_width as f64 - expect_width),
+                    ) as f32,
+                    paint_rect.top() + offset_y as f32,
                 ),
                 Align2::LEFT_TOP,
                 text,
@@ -109,25 +109,25 @@ impl WaveView {
         let time_rect = paint_text(
             time.to_string(),
             0.0,
-            get_text_size(ui, &time, Default::default()).x,
+            get_text_size(ui, &time, Default::default()).x as f64,
         );
         painter.rect_filled(time_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
         paint_text(
             time.to_string(),
             0.0,
-            get_text_size(ui, &time, Default::default()).x,
+            get_text_size(ui, &time, Default::default()).x as f64,
         );
         if !cursor.name.is_empty() {
             let name_rect = paint_text(
                 cursor.name.to_string(),
-                time_rect.height(),
-                get_text_size(ui, &cursor.name, Default::default()).x,
+                time_rect.height() as f64,
+                get_text_size(ui, &cursor.name, Default::default()).x as f64,
             );
             painter.rect_filled(name_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
             paint_text(
                 cursor.name.to_string(),
-                time_rect.height(),
-                get_text_size(ui, &cursor.name, Default::default()).x,
+                time_rect.height() as f64,
+                get_text_size(ui, &cursor.name, Default::default()).x as f64,
             );
         }
     }

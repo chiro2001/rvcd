@@ -81,7 +81,7 @@ impl WaveView {
         let text_color = ui.visuals().strong_text_color();
         let signal_rect = response.rect;
         // strange but works...
-        let wave_range_start_x = self.fpos_to_x(self.range.0 * 2.0);
+        let wave_range_start_x = self.fpos_to_x(self.range.0 * 2.0) as f32;
         let signal_rect = Rect::from_min_max(
             signal_rect.min - vec2(wave_range_start_x, 0.0),
             signal_rect.max - vec2(wave_range_start_x, 0.0),
@@ -122,16 +122,16 @@ impl WaveView {
             let width = signal_rect.width();
             let height = signal_rect.height();
             let percent_rect_left =
-                (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                (item_now.timestamp - info.range.0) as f64 / (self.range.1 - self.range.0);
             let percent_rect_right =
-                (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                (item_next.timestamp - info.range.0) as f64 / (self.range.1 - self.range.0);
             let rect = Rect::from_min_max(
                 pos2(
-                    signal_rect.left() + width * percent_rect_left,
+                    (signal_rect.left() as f64 + width as f64 * percent_rect_left) as f32,
                     signal_rect.top(),
                 ),
                 pos2(
-                    signal_rect.left() + width * percent_rect_right,
+                    (signal_rect.left() as f64 + width as f64 * percent_rect_right) as f32,
                     signal_rect.top() + height,
                 ),
             );
@@ -352,11 +352,11 @@ impl WaveView {
         // }
         // draw last
         if ignore_x_start >= 0.0 {
-            let right_pos = (self.x_to_pos(signal_rect.right()) + 1)
+            let right_pos = (self.x_to_pos(signal_rect.right() as f64) + 1)
                 .clamp(0, u64::min(self.range.1 as u64, info.range.1 + 1));
             painter.rect_filled(
                 Rect::from_x_y_ranges(
-                    RangeInclusive::new(ignore_x_start, self.pos_to_x(right_pos)),
+                    RangeInclusive::new(ignore_x_start, self.pos_to_x(right_pos) as f32),
                     signal_rect.y_range(),
                 ),
                 0.0,

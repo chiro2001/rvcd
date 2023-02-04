@@ -25,7 +25,7 @@ pub struct ResponsePointerState {
     pub move_drag_pos: Option<Pos2>,
 }
 impl ResponsePointerState {
-    pub fn handle_pointer_response(&mut self, response: &Response, wave_left: f32) {
+    pub fn handle_pointer_response(&mut self, response: &Response, wave_left: f64) {
         if let Some(_pointer_pos) = response.interact_pointer_pos() {
             self.drag_started = response.drag_started();
             self.drag_release = response.drag_released();
@@ -42,7 +42,7 @@ impl ResponsePointerState {
         if response.dragged_by(PointerButton::Middle) {
             let p = response
                 .interact_pointer_pos()
-                .map(|p| pos2(p.x - wave_left, p.y));
+                .map(|p| pos2(p.x - wave_left as f32, p.y));
             self.move_drag_pos = p;
             self.move_drag_start_pos = p;
         }
@@ -52,10 +52,10 @@ impl ResponsePointerState {
 #[derive(Default, Debug)]
 pub struct ResponseHandleState {
     pub pointer: ResponsePointerState,
-    pub new_range: (f32, f32),
+    pub new_range: (f64, f64),
 }
 impl ResponseHandleState {
-    pub fn new(old_range: (f32, f32)) -> Self {
+    pub fn new(old_range: (f64, f64)) -> Self {
         Self {
             new_range: old_range,
             ..Default::default()
@@ -131,7 +131,7 @@ impl WaveView {
                 self.signals.clear();
             }
             if ui.button("↩ Reset View").clicked() {
-                self.range = (info.range.0 as f32, info.range.1 as f32);
+                self.range = (info.range.0 as f64, info.range.1 as f64);
             }
             if ui.button("🔄 Reload File").clicked() {
                 if let Some(tx) = &self.tx {
@@ -141,24 +141,24 @@ impl WaveView {
                     warn!("no tx in view!");
                 }
             }
-            const EDIT_WIDTH: f32 = 100.0;
+            const EDIT_WIDTH: f64 = 100.0;
             ui.label("From:");
             let speed_min = 0.1;
             let old_range = self.range;
             let drag_value = DragValue::new(&mut self.range.0)
-                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min));
-            let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1);
+                .speed(f64::max((old_range.1 - old_range.0) / 100.0, speed_min));
+            let range_right = f64::min(info.range.1 as f64 * ZOOM_SIZE_MAX_SCALE, old_range.1);
             let drag_value = if self.limit_range_left {
                 drag_value.clamp_range(0.0..=range_right)
             } else {
-                drag_value.clamp_range((-(info.range.1 as f32) * ZOOM_SIZE_MAX_SCALE)..=range_right)
+                drag_value.clamp_range((-(info.range.1 as f64) * ZOOM_SIZE_MAX_SCALE)..=range_right)
             };
             drag_value.ui(ui);
             ui.label("To:");
             DragValue::new(&mut self.range.1)
-                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min))
+                .speed(f64::max((old_range.1 - old_range.0) / 100.0, speed_min))
                 .clamp_range(
-                    (old_range.0 + ZOOM_SIZE_MIN)..=(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE),
+                    (old_range.0 + ZOOM_SIZE_MIN)..=(info.range.1 as f64 * ZOOM_SIZE_MAX_SCALE),
                 )
                 .ui(ui);
         });
@@ -170,9 +170,9 @@ impl WaveView {
         &self,
         ui: &mut Ui,
         response: &Response,
-        wave_left: f32,
+        wave_left: f64,
         info: &WaveInfo,
-        old_range: (f32, f32),
+        old_range: (f64, f64),
     ) -> ResponseHandleState {
         let mut state = ResponseHandleState::new(old_range);
         // catch mouse wheel events
@@ -198,17 +198,18 @@ impl WaveView {
                     _ => None,
                 });
             if let Some(zoom) = zoom {
-                let zoom = 1.0 / zoom;
+                let zoom = 1.0 / (zoom as f64);
                 if let Some(pos) = response.hover_pos() {
                     let painter = ui.painter();
-                    let pos = pos2(pos.x - wave_left, pos.y);
+                    let pos = pos2(pos.x - wave_left as f32, pos.y);
                     // zoom from this pos
-                    let center_pos = (pos.x * (self.range.1 - self.range.0) / self.wave_width
+                    let center_pos = (pos.x as f64 * (self.range.1 - self.range.0)
+                        / self.wave_width as f64
                         + self.range.0)
-                        .clamp(info.range.0 as f32, info.range.1 as f32);
+                        .clamp(info.range.0 as f64, info.range.1 as f64);
                     painter.debug_rect(
                         Rect::from_center_size(
-                            pos2(self.fpos_to_x(center_pos) + wave_left, pos.y),
+                            pos2((self.fpos_to_x(center_pos) + wave_left) as f32, pos.y),
                             vec2(4.0, 4.0),
                         ),
                         Color32::RED,
@@ -219,13 +220,13 @@ impl WaveView {
                     let new_range_check = (center_pos - left, center_pos + right);
                     let d = new_range_check.1 - new_range_check.0;
                     if d > ZOOM_SIZE_MIN
-                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f64
                     {
                         state.new_range = new_range_check;
                     }
                 }
             } else if let Some(scroll) = scroll {
-                state.new_range = self.move_horizontal(-scroll.x, info);
+                state.new_range = self.move_horizontal(-scroll.x as f64, info);
             }
         }
         if self.limit_range_left && state.new_range.0 < 0.0 {
@@ -237,7 +238,7 @@ impl WaveView {
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
         let info: &WaveInfo = &wave.info;
         if self.range.0 == 0.0 && self.range.1 == 0.0 {
-            self.range = (info.range.0 as f32, info.range.1 as f32);
+            self.range = (info.range.0 as f64, info.range.1 as f64);
         }
         TopBottomPanel::top(format!("wave_top_{}", self.id))
             .resizable(false)
@@ -247,12 +248,14 @@ impl WaveView {
         CentralPanel::default().show_inside(ui, |ui| {
             // bugs by: https://github.com/emilk/egui/issues/2430
             let use_rect = ui.max_rect();
-            const DEFAULT_MIN_SIGNAL_WIDTH: f32 = 150.0;
-            let fixed_name_width = f32::max(
+            const DEFAULT_MIN_SIGNAL_WIDTH: f64 = 150.0;
+            let fixed_name_width = f64::max(
                 self.signals
                     .iter()
-                    .map(|x| get_text_size(ui, x.s.to_string().as_str(), Default::default()).x)
-                    .reduce(f32::max)
+                    .map(|x| {
+                        get_text_size(ui, x.s.to_string().as_str(), Default::default()).x as f64
+                    })
+                    .reduce(f64::max)
                     .unwrap_or(0.0),
                 DEFAULT_MIN_SIGNAL_WIDTH,
             );
@@ -282,20 +285,22 @@ impl WaveView {
             } else {
                 vec!["".to_string(); self.signals.len()]
             };
-            const DEFAULT_MIN_VALUE_WIDTH: f32 = 32.0;
-            let fixed_value_width = f32::max(
+            const DEFAULT_MIN_VALUE_WIDTH: f64 = 32.0;
+            let fixed_value_width = f64::max(
                 signal_values_text
                     .iter()
-                    .map(|s| get_text_size(ui, s, FontId::monospace(self.signal_font_size)).x)
-                    .reduce(f32::max)
+                    .map(|s| {
+                        get_text_size(ui, s, FontId::monospace(self.signal_font_size)).x as f64
+                    })
+                    .reduce(f64::max)
                     .unwrap_or(0.0),
                 DEFAULT_MIN_VALUE_WIDTH,
             );
-            let fixed_value_width = f32::max(fixed_value_width, self.value_width_max);
-            self.value_width_max = f32::max(fixed_value_width, self.value_width_max);
-            self.wave_width = use_rect.width() - fixed_name_width - fixed_value_width;
-            let mut wave_left: f32 =
-                fixed_name_width + fixed_value_width + use_rect.left() + UI_WIDTH_OFFSET;
+            let fixed_value_width = f64::max(fixed_value_width, self.value_width_max);
+            self.value_width_max = f64::max(fixed_value_width, self.value_width_max);
+            self.wave_width = use_rect.width() as f64 - fixed_name_width - fixed_value_width;
+            let mut wave_left: f64 =
+                fixed_name_width + fixed_value_width + use_rect.left() as f64 + UI_WIDTH_OFFSET;
             let mut new_signals = vec![];
             let mut last_paint_row_index = None;
             let mut dragging_pos = None;
@@ -308,9 +313,9 @@ impl WaveView {
                     .resizable(false)
                     // .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                     .cell_layout(Layout::centered_and_justified(Direction::TopDown))
-                    .column(Column::exact(fixed_name_width).resizable(false))
-                    .column(Column::exact(fixed_value_width).resizable(false))
-                    .column(Column::exact(self.wave_width).resizable(false))
+                    .column(Column::exact(fixed_name_width as f32).resizable(false))
+                    .column(Column::exact(fixed_value_width as f32).resizable(false))
+                    .column(Column::exact(self.wave_width as f32).resizable(false))
                     .min_scrolled_height(0.0)
                     .max_scroll_height(f32::infinity());
                 let table = if let Some(scrolling_last_index) = self.scrolling_last_index.take() {
@@ -375,9 +380,11 @@ impl WaveView {
                                             let response =
                                                 self.ui_signal_wave(signal, data, info, ui);
                                             if let Some(pos) = response.interact_pointer_pos() {
-                                                dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                                                dragging_pos =
+                                                    Some(pos - vec2(wave_left as f32, 0.0));
                                             }
-                                            wave_left = ui.available_rect_before_wrap().left();
+                                            wave_left =
+                                                ui.available_rect_before_wrap().left() as f64;
                                             pointer_state
                                                 .handle_pointer_response(&response, wave_left);
                                         }
@@ -391,7 +398,7 @@ impl WaveView {
                     Sense::click_and_drag(),
                 );
                 if let Some(pos) = response.interact_pointer_pos() {
-                    dragging_pos = Some(pos - vec2(wave_left, 0.0));
+                    dragging_pos = Some(pos - vec2(wave_left as f32, 0.0));
                 }
                 pointer_state.handle_pointer_response(&response, wave_left);
             });
@@ -419,14 +426,14 @@ impl WaveView {
             if let Some(pos) = dragging_pos {
                 let painter = ui.painter();
                 painter.text(
-                    pos + vec2(wave_left, 0.0),
+                    pos + vec2(wave_left as f32, 0.0),
                     Align2::RIGHT_BOTTOM,
                     format!("{pos:?}"),
                     Default::default(),
                     Color32::YELLOW,
                 );
                 if pointer_state.drag_by_primary || pointer_state.drag_by_secondary {
-                    let fpos = self.x_to_fpos(pos.x);
+                    let fpos = self.x_to_fpos(pos.x as f64);
                     let p = if self.round_pointer {
                         fpos.round() as u64
                     } else {
@@ -452,7 +459,7 @@ impl WaveView {
                         if let Some(move_drag_last_pos) = self.move_drag_last_pos {
                             // Handle drag move
                             let delta = move_drag_pos - move_drag_last_pos;
-                            let dx = -delta.x;
+                            let dx = -delta.x as f64;
                             self.range = self.move_horizontal(dx, info);
                         }
                         // natural direction
@@ -490,7 +497,7 @@ impl WaveView {
                         } else {
                             (&self.marker_temp, &self.marker)
                         };
-                        let range_new = (a.pos as f32, b.pos as f32);
+                        let range_new = (a.pos as f64, b.pos as f64);
                         debug!("range_new: {:?}", range_new);
                         if range_new.1 - range_new.0 > 1.0 {
                             self.range = range_new;
@@ -543,7 +550,7 @@ impl WaveView {
             self.last_pointer_state = pointer_state;
         });
     }
-    pub fn move_horizontal(&self, dx: f32, info: &WaveInfo) -> (f32, f32) {
+    pub fn move_horizontal(&self, dx: f64, info: &WaveInfo) -> (f64, f64) {
         let pos_delta = self.x_to_fpos(dx) - self.range.0;
         let new_range_check = (self.range.0 + pos_delta, self.range.1 + pos_delta);
         if new_range_check.0 < 0.0 {
@@ -553,7 +560,7 @@ impl WaveView {
                 new_range_check
             }
         } else {
-            let max_right = ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32;
+            let max_right = ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f64;
             if new_range_check.1 > max_right {
                 (
                     max_right - (new_range_check.1 - new_range_check.0),
@@ -568,7 +575,7 @@ impl WaveView {
     pub fn paint_span(
         &self,
         ui: &mut Ui,
-        offset: f32,
+        offset: f64,
         info: &WaveInfo,
         pos: Option<Pos2>,
         a: &WaveCursor,
@@ -591,10 +598,13 @@ impl WaveView {
         if a.valid && b.valid {
             let (a, b) = if a.pos < b.pos { (a, b) } else { (b, a) };
             let (x_a, x_b) = (
-                self.pos_to_x(a.pos).clamp(0.0, self.wave_width) + offset,
-                self.pos_to_x(b.pos).clamp(0.0, self.wave_width) + offset,
+                self.pos_to_x(a.pos).clamp(0.0, self.wave_width as f64) + offset,
+                self.pos_to_x(b.pos).clamp(0.0, self.wave_width as f64) + offset,
             );
-            let rect = Rect::from_min_max(pos2(x_a, paint_rect.min.y), pos2(x_b, paint_rect.max.y));
+            let rect = Rect::from_min_max(
+                pos2(x_a as f32, paint_rect.min.y),
+                pos2(x_b as f32, paint_rect.max.y),
+            );
             let color_bg = Color32::BLUE.linear_multiply(BG_MULTIPLY);
             // painter.rect(rect, 0.0, color_bg, (LINE_WIDTH, Color32::BLUE));
             painter.rect_filled(rect, 0.0, color_bg);
@@ -602,10 +612,14 @@ impl WaveView {
                 None => paint_rect.top(),
                 Some(pos) => pos.y,
             };
-            painter.hline(RangeInclusive::new(x_a, x_b), y, (LINE_WIDTH, color_bg));
+            painter.hline(
+                RangeInclusive::new(x_a as f32, x_b as f32),
+                y,
+                (LINE_WIDTH, color_bg),
+            );
             let time = self.pos_to_time(&info.timescale, b.pos - a.pos);
             painter.text(
-                pos2((x_a + x_b) / 2.0, y),
+                pos2(((x_a + x_b) / 2.0) as f32, y),
                 Align2::CENTER_BOTTOM,
                 if a.pos <= b.pos {
                     format!("+{time}")

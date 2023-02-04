@@ -8,12 +8,12 @@ use std::ops::RangeInclusive;
 impl WaveView {
     /// Paint time bar above the wave panel
     /// * `offset`: painting rect left
-    pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f32) {
+    pub fn time_bar(&mut self, ui: &mut Ui, info: &WaveInfo, offset: f64) {
         let rect = ui.max_rect();
         let (response, painter) = ui.allocate_painter(rect.size(), Sense::click_and_drag());
         let pos = response.interact_pointer_pos();
         let pos_new = pos.map(|pos| {
-            self.x_to_pos(pos.x - offset)
+            self.x_to_pos(pos.x as f64 - offset)
                 .clamp(self.range.0 as u64, self.range.1 as u64)
         });
         // allocate size for text
@@ -30,7 +30,7 @@ impl WaveView {
         } else {
             (1, 1)
         };
-        while step as f32 * rect.width() / (self.range.1 - self.range.0) > 80.0 && step > 1 {
+        while step as f64 * rect.width() as f64 / (self.range.1 - self.range.0) > 80.0 && step > 1 {
             step /= 10;
             unit /= 10;
         }
@@ -51,7 +51,7 @@ impl WaveView {
             };
             let x = self.pos_to_x(pos) + offset;
             painter.vline(
-                x,
+                x as f32,
                 RangeInclusive::new(
                     rect.top() + text_size.y,
                     rect.top() + text_size.y + line_height,
@@ -63,7 +63,7 @@ impl WaveView {
                     // let time_text = self.pos_to_time_fmt(&info.timescale, pos);
                     let time_text = self.pos_to_time(&info.timescale, pos);
                     painter.text(
-                        pos2(x, rect.top()),
+                        pos2(x as f32, rect.top()),
                         Align2::LEFT_TOP,
                         time_text,
                         Default::default(),
@@ -75,7 +75,7 @@ impl WaveView {
         }
         let mut cursor_id: Option<i32> = None;
         if let Some(pos) = pos {
-            cursor_id = self.find_cursor(pos.x - offset);
+            cursor_id = self.find_cursor(pos.x as f64 - offset);
         }
         // handle operations to cursors
         // primary drag cursors
@@ -104,14 +104,14 @@ impl WaveView {
         response.context_menu(|ui| {
             ui.add_enabled_ui(self.right_click_time_bar_pos.is_some(), |ui| {
                 if ui.button("Add cursor").clicked() {
-                    let pos_new = self.x_to_pos(self.right_click_time_bar_pos.unwrap().x - offset);
+                    let pos_new = self.x_to_pos(self.right_click_time_bar_pos.unwrap().x as f64 - offset);
                     self.cursors
                         .push(WaveCursor::new(self.next_cursor_id(), pos_new));
                     ui.close_menu();
                 }
             });
             if let Some(right_click_pos) = self.right_click_time_bar_pos {
-                if let Some(id) = self.find_cursor(right_click_pos.x - offset) {
+                if let Some(id) = self.find_cursor(right_click_pos.x as f64 - offset) {
                     if id >= 0 {
                         if ui.button("Remove cursor").clicked() {
                             if let Some(index) = self.cursors.iter().position(|x| x.id == id) {

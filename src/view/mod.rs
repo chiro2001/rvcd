@@ -20,11 +20,11 @@ pub const TEXT_ROUND_OFFSET: f32 = 4.0;
 pub const MIN_SIGNAL_WIDTH: f32 = -100.0;
 pub const BG_MULTIPLY: f32 = 0.05;
 pub const TEXT_BG_MULTIPLY: f32 = 0.4;
-pub const CURSOR_NEAREST: f32 = 20.0;
+pub const CURSOR_NEAREST: f64 = 20.0;
 // pub const UI_WIDTH_OFFSET: f32 = 8.0;
-pub const UI_WIDTH_OFFSET: f32 = 16.0;
-pub const ZOOM_SIZE_MIN: f32 = 12.0;
-pub const ZOOM_SIZE_MAX_SCALE: f32 = 5.0;
+pub const UI_WIDTH_OFFSET: f64 = 16.0;
+pub const ZOOM_SIZE_MIN: f64 = 12.0;
+pub const ZOOM_SIZE_MAX_SCALE: f64 = 5.0;
 pub const WAVE_MARGIN_TOP: f32 = 32.0;
 pub const WAVE_MARGIN_TOP2: f32 = -6.0;
 pub const SIGNAL_HEIGHT_DEFAULT: f32 = 30.0;
@@ -38,7 +38,7 @@ pub struct WaveView {
     /// Signals added to viewer
     pub signals: Vec<SignalView>,
     /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
-    pub range: (f32, f32),
+    pub range: (f64, f64),
     /// Text alignment, FIXME: center position error
     pub align: SignalViewAlign,
     /// Whether to show background in signals
@@ -61,7 +61,7 @@ pub struct WaveView {
     pub dragging_cursor_id: Option<i32>,
     /// remember display width to calculate position
     #[serde(skip)]
-    pub wave_width: f32,
+    pub wave_width: f64,
     /// Value text size
     pub signal_font_size: f32,
     /// Temporally use to store right click position
@@ -85,7 +85,7 @@ pub struct WaveView {
     #[serde(skip)]
     pub range_seek_started: bool,
     #[serde(skip)]
-    pub value_width_max: f32,
+    pub value_width_max: f64,
 }
 
 impl Default for WaveView {
@@ -149,21 +149,21 @@ impl WaveView {
     }
     /// Convert paint pos to wave position
     /// * `x`: x position to wave panel
-    pub fn x_to_pos(&self, x: f32) -> u64 {
+    pub fn x_to_pos(&self, x: f64) -> u64 {
         ((x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0) as u64
     }
-    pub fn x_to_fpos(&self, x: f32) -> f32 {
+    pub fn x_to_fpos(&self, x: f64) -> f64 {
         (x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0
     }
-    pub fn x_to_pos_delta(&self, x: f32) -> i64 {
+    pub fn x_to_pos_delta(&self, x: f64) -> i64 {
         ((x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0) as i64
     }
     /// Convert wave position to paint pos
     /// * `pos`: wave position defined in wave info
-    pub fn pos_to_x(&self, pos: u64) -> f32 {
-        (pos as f32 - self.range.0) * self.wave_width / (self.range.1 - self.range.0)
+    pub fn pos_to_x(&self, pos: u64) -> f64 {
+        (pos as f64 - self.range.0) * self.wave_width / (self.range.1 - self.range.0)
     }
-    pub fn fpos_to_x(&self, pos: f32) -> f32 {
+    pub fn fpos_to_x(&self, pos: f64) -> f64 {
         (pos - self.range.0) * self.wave_width / (self.range.1 - self.range.0)
     }
     /// Stringify wave position
