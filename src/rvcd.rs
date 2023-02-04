@@ -377,7 +377,7 @@ impl Rvcd {
                 }
                 #[cfg(target_arch = "wasm32")]
                 {
-                    self.toasts.error(text, ToastOptions::default());
+                    self.toasts.error(text, egui_toast::ToastOptions::default());
                 }
                 self.reset();
             }
@@ -452,7 +452,7 @@ impl Rvcd {
         self.view = self.view.reset();
         self.title = format!("Rvcd-{}", self.id);
     }
-    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, maximum: bool) {
+    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, _maximum: bool) {
         egui::widgets::global_dark_light_mode_switch(ui);
         ui.menu_button("File", |ui| {
             // #[cfg(not(target_arch = "wasm32"))]
@@ -480,7 +480,7 @@ impl Rvcd {
                 }
             });
             #[cfg(not(target_arch = "wasm32"))]
-            if maximum && ui.button("Quit").clicked() {
+            if _maximum && ui.button("Quit").clicked() {
                 _frame.close();
             }
         });

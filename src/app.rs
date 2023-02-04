@@ -150,6 +150,7 @@ impl eframe::App for RvcdApp {
                     }
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    #[cfg(not(target_arch = "wasm32"))]
                     if ui.button("Quit").clicked() {
                         frame.close();
                     }
