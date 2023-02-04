@@ -1,11 +1,12 @@
 use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT, TEXT_BG_MULTIPLY};
-use crate::wave::WaveTreeNode;
+use crate::wave::{WaveScopeType, WaveTreeNode};
 use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
 use trees::Node;
 
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct TreeView {
     pub show_leaves: bool,
+    pub show_modules_only: bool,
     pub highlight_scope_id: Option<u64>,
 }
 
@@ -90,74 +91,88 @@ impl TreeView {
                 WaveTreeNode::WaveVar(s) => s.typ.to_string(),
                 _ => "".to_string(),
             };
-            let text_size = get_text_size(text.as_str()).size();
-            let text_right_size = get_text_size(text_right.as_str()).size();
-            let (response, painter) = ui.allocate_painter(
-                vec2(
-                    f32::max(ui.max_rect().width(), text_size.x + text_right_size.x),
-                    f32::max(SIGNAL_TREE_HEIGHT_DEFAULT, text_size.y),
-                ),
-                Sense::click_and_drag(),
-            );
-            let on_hover = ui.rect_contains_pointer(response.rect);
-            let mut text_color = if on_hover {
-                ui.visuals().strong_text_color()
-            } else {
-                ui.visuals().text_color()
+            let show_item = match node {
+                WaveTreeNode::WaveScope(s) => match &s.typ {
+                    WaveScopeType::Module => true,
+                    _ => !self.show_modules_only,
+                },
+                WaveTreeNode::WaveVar(_) => true,
+                _ => false,
             };
-            if let Some(highlight_scope_id) = self.highlight_scope_id {
+            if show_item {
+                let text_size = get_text_size(text.as_str()).size();
+                let text_right_size = get_text_size(text_right.as_str()).size();
+                let (response, painter) = ui.allocate_painter(
+                    vec2(
+                        f32::max(ui.max_rect().width(), text_size.x + text_right_size.x),
+                        f32::max(SIGNAL_TREE_HEIGHT_DEFAULT, text_size.y),
+                    ),
+                    Sense::click_and_drag(),
+                );
+                let on_hover = ui.rect_contains_pointer(response.rect);
+                let mut text_color = if on_hover {
+                    ui.visuals().strong_text_color()
+                } else {
+                    ui.visuals().text_color()
+                };
                 text_color = match node {
                     WaveTreeNode::WaveScope(s) => {
-                        if s.id == highlight_scope_id {
-                            painter.rect_filled(
-                                response.rect,
-                                0.0,
-                                Color32::YELLOW.linear_multiply(BG_MULTIPLY),
-                            )
+                        if let Some(highlight_scope_id) = self.highlight_scope_id {
+                            if s.id == highlight_scope_id {
+                                painter.rect_filled(
+                                    response.rect,
+                                    0.0,
+                                    Color32::YELLOW.linear_multiply(BG_MULTIPLY),
+                                )
+                            }
                         }
                         if on_hover {
-                            ui.visuals().hyperlink_color.linear_multiply(TEXT_BG_MULTIPLY)
+                            ui.visuals()
+                                .hyperlink_color
+                                .linear_multiply(TEXT_BG_MULTIPLY)
                         } else {
                             ui.visuals().hyperlink_color
                         }
                     }
                     _ => text_color,
                 };
-            }
-            painter.text(
-                response.rect.left_center(),
-                Align2::LEFT_CENTER,
-                text,
-                Default::default(),
-                text_color,
-            );
-            painter.text(
-                response.rect.right_center(),
-                Align2::RIGHT_CENTER,
-                text_right,
-                Default::default(),
-                text_color,
-            );
-            match node {
-                WaveTreeNode::WaveScope(s) => {
-                    if response.clicked_by(PointerButton::Primary) {
-                        self.highlight_scope_id = Some(s.id);
-                        if response.double_clicked() {
-                            TreeAction::AddSignals(child_signals(tree))
+                painter.text(
+                    response.rect.left_center(),
+                    Align2::LEFT_CENTER,
+                    text,
+                    Default::default(),
+                    text_color,
+                );
+                painter.text(
+                    response.rect.right_center(),
+                    Align2::RIGHT_CENTER,
+                    text_right,
+                    Default::default(),
+                    text_color,
+                );
+                match node {
+                    WaveTreeNode::WaveScope(s) => {
+                        if response.clicked_by(PointerButton::Primary) {
+                            self.highlight_scope_id = Some(s.id);
+                            if response.double_clicked() {
+                                TreeAction::AddSignals(child_signals(tree))
+                            } else {
+                                TreeAction::SelectScope(child_signals(tree))
+                            }
                         } else {
-                            TreeAction::SelectScope(child_signals(tree))
+                            handle_scope_response(response)
                         }
-                    } else {
-                        handle_scope_response(response)
+                    }
+                    _ => {
+                        if response.double_clicked() {
+                            TreeAction::AddSignal(node.clone())
+                        } else {
+                            TreeAction::None
+                        }
                     }
                 }
-                _ => {
-                    if response.double_clicked() {
-                        TreeAction::AddSignal(node.clone())
-                    } else {
-                        TreeAction::None
-                    }
-                }
+            } else {
+                TreeAction::None
             }
         } else {
             match tree.data() {
@@ -192,6 +207,12 @@ impl TreeView {
     pub fn menu(&mut self, ui: &mut Ui) {
         if ui
             .checkbox(&mut self.show_leaves, "Show Tree Leaves")
+            .clicked()
+        {
+            ui.close_menu();
+        }
+        if ui
+            .checkbox(&mut self.show_modules_only, "Show Modules Only")
             .clicked()
         {
             ui.close_menu();
