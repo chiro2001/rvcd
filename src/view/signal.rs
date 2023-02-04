@@ -289,7 +289,10 @@ impl WaveView {
         for item in it {
             // let mut done = false;
             if let Some(item_last) = item_last {
-                let _value_rect = paint_signal(item_last, item);
+                let value_rect = paint_signal(item_last, item);
+                if value_rect.left() > response.rect.right() {
+                    break;
+                }
                 // if !ui.is_rect_visible(_value_rect) {
                 //     painter.rect_filled(_value_rect, 0.0, Color32::RED);
                 //     done = true;
