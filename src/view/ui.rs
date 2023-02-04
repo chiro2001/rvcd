@@ -11,6 +11,7 @@ use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
+use std::usize;
 use tracing::{debug, warn};
 
 #[derive(Default, Debug, Clone)]
@@ -476,14 +477,14 @@ impl WaveView {
                         if let Some(last_paint_row_index) = last_paint_row_index {
                             // simply use const
                             if dy < -SIGNAL_HEIGHT_DEFAULT {
-                                let index = i64::max(last_paint_row_index as i64 - 2, 0) as usize;
+                                let index = usize::max(last_paint_row_index - 1, 0);
                                 debug!("to last signal: {}", index);
                                 self.scrolling_next_index = Some(index);
                                 self.move_drag_start_pos = Some(move_drag_pos);
                             }
                             if dy > SIGNAL_HEIGHT_DEFAULT {
                                 let index =
-                                    usize::min(last_paint_row_index, self.signals.len() - 1);
+                                    usize::min(last_paint_row_index + 1, self.signals.len() - 1);
                                 debug!("to next signal: {}", index);
                                 self.scrolling_next_index = Some(index);
                                 self.move_drag_start_pos = Some(move_drag_pos);
