@@ -264,13 +264,39 @@ impl WaveView {
                 DEFAULT_MIN_SIGNAL_WIDTH,
             );
             const DEFAULT_MIN_VALUE_WIDTH: f32 = 32.0;
+            let marker_value_pos = (if self.marker_temp.valid {
+                Some(self.marker_temp.pos)
+            } else if self.marker.valid {
+                Some(self.marker.pos)
+            } else {
+                None
+            })
+            .map(|p| {
+                if p < info.range.0 || p > info.range.1 {
+                    None
+                } else {
+                    Some(p)
+                }
+            })
+            .flatten();
+            let signal_values_text = if let Some(marker_value_pos) = marker_value_pos {
+                self.signals
+                    .iter()
+                    .map(|s| {
+                        wave.find_value(s.s.id, marker_value_pos)
+                            .map(|v| v.value.as_radix(self.get_radix(s)))
+                            .unwrap_or("".to_string())
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec!["".to_string(); self.signals.len()]
+            };
             let fixed_value_width = f32::max(
-                // self.signals
-                //     .iter()
-                //     .map(|x| get_text_size(ui, x.s.to_string().as_str(), Default::default()).x)
-                //     .reduce(f32::max)
-                //     .unwrap_or(0.0),
-                32.0,
+                signal_values_text
+                    .iter()
+                    .map(|s| get_text_size(ui, s, Default::default()).x)
+                    .reduce(f32::max)
+                    .unwrap_or(0.0),
                 DEFAULT_MIN_VALUE_WIDTH,
             );
             self.wave_width = use_rect.width() - fixed_name_width - fixed_value_width;
@@ -333,7 +359,9 @@ impl WaveView {
                                         }
                                     });
                                     row.col(|ui| {
-                                        ui.label("value");
+                                        if let Some(value) = signal_values_text.get(row_index) {
+                                            ui.label(value);
+                                        }
                                     });
                                     row.col(|ui| {
                                         if let Some(data) = wave.data.get(&signal.s.id) {

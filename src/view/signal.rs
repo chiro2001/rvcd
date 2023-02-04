@@ -106,12 +106,7 @@ impl WaveView {
             if !ui.is_rect_visible(rect) {
                 return Rect::NOTHING;
             }
-            let radix = match &signal.mode {
-                SignalViewMode::Default => self.default_radix.clone(),
-                SignalViewMode::Number(r) => r.clone(),
-                SignalViewMode::Analog => Radix::Hex,
-            };
-            let text = item_now.value.as_radix(radix);
+            let text = item_now.value.as_radix(self.get_radix(signal));
             if rect.width() > MIN_SIGNAL_WIDTH {
                 if ignore_x_start >= 0.0 {
                     // paint a rect as ignored data
@@ -409,6 +404,13 @@ impl WaveView {
             Some((signal_new, index, to_remove))
         } else {
             None
+        }
+    }
+    pub fn get_radix(&self, signal: &SignalView) -> Radix {
+        match &signal.mode {
+            SignalViewMode::Default => self.default_radix.clone(),
+            SignalViewMode::Number(r) => r.clone(),
+            SignalViewMode::Analog => Radix::Hex,
         }
     }
 }

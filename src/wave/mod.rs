@@ -348,6 +348,27 @@ impl Display for Wave {
     }
 }
 
+impl Wave {
+    /// Find *nearest* value
+    pub fn find_value(&self, id: u64, pos: u64) -> Option<WaveDataItem> {
+        // assert: pos keeps increase
+        if let Some(data) = self.data.get(&id) {
+            match data.binary_search_by_key(&pos, |x| x.timestamp) {
+                Ok(index) => {
+                    if data[index].timestamp == pos {
+                        Some(data[index].clone())
+                    } else {
+                        data.get(index - 1).map(|x| x.clone())
+                    }
+                }
+                Err(index) => data.get(index - 1).map(|x| x.clone()),
+            }
+        } else {
+            None
+        }
+    }
+}
+
 /// To support other file formats
 pub trait WaveLoader {
     fn load(reader: &mut dyn Read) -> Result<Wave>;
