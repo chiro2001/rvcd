@@ -3,11 +3,22 @@ use crate::wave::{WaveScopeType, WaveTreeNode};
 use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
 use trees::Node;
 
-#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct TreeView {
+    pub show_tail_leaves: bool,
     pub show_leaves: bool,
     pub show_modules_only: bool,
     pub highlight_scope_id: Option<u64>,
+}
+impl Default for TreeView {
+    fn default() -> Self {
+        Self {
+            show_tail_leaves: false,
+            show_leaves: false,
+            show_modules_only: true,
+            highlight_scope_id: None,
+        }
+    }
 }
 
 #[derive(PartialEq)]
@@ -67,7 +78,7 @@ impl TreeView {
             }
         };
         if tree.has_no_child()
-            || (!self.show_leaves
+            || (!self.show_tail_leaves
                 && !tree.iter().any(|x| match x.data() {
                     WaveTreeNode::WaveScope(_) => true,
                     _ => false,
@@ -75,31 +86,31 @@ impl TreeView {
         {
             // paint as leaf
             let node = tree.data();
-            let painter = ui.painter();
-            let get_text_size = |text: &str| {
-                painter.text(
-                    Pos2::ZERO,
-                    Align2::RIGHT_BOTTOM,
-                    text,
-                    Default::default(),
-                    Color32::TRANSPARENT,
-                )
-            };
-            let text = node.to_string();
-            let text_right = match node {
-                WaveTreeNode::WaveScope(s) => s.typ.to_string(),
-                WaveTreeNode::WaveVar(s) => s.typ.to_string(),
-                _ => "".to_string(),
-            };
             let show_item = match node {
                 WaveTreeNode::WaveScope(s) => match &s.typ {
                     WaveScopeType::Module => true,
                     _ => !self.show_modules_only,
                 },
-                WaveTreeNode::WaveVar(_) => true,
+                WaveTreeNode::WaveVar(_) => self.show_leaves,
                 _ => false,
             };
             if show_item {
+                let painter = ui.painter();
+                let get_text_size = |text: &str| {
+                    painter.text(
+                        Pos2::ZERO,
+                        Align2::RIGHT_BOTTOM,
+                        text,
+                        Default::default(),
+                        Color32::TRANSPARENT,
+                    )
+                };
+                let text = node.to_string();
+                let text_right = match node {
+                    WaveTreeNode::WaveScope(s) => s.typ.to_string(),
+                    WaveTreeNode::WaveVar(s) => s.typ.to_string(),
+                    _ => "".to_string(),
+                };
                 let text_size = get_text_size(text.as_str()).size();
                 let text_right_size = get_text_size(text_right.as_str()).size();
                 let (response, painter) = ui.allocate_painter(
@@ -207,6 +218,12 @@ impl TreeView {
     pub fn menu(&mut self, ui: &mut Ui) {
         if ui
             .checkbox(&mut self.show_leaves, "Show Tree Leaves")
+            .clicked()
+        {
+            ui.close_menu();
+        }
+        if ui
+            .checkbox(&mut self.show_tail_leaves, "Show Tail Leaves")
             .clicked()
         {
             ui.close_menu();
