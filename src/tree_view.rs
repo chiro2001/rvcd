@@ -1,6 +1,7 @@
+use crate::utils::get_text_size;
 use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT, TEXT_BG_MULTIPLY};
 use crate::wave::{WaveScopeType, WaveTreeNode};
-use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Pos2, Response, Sense, Ui};
+use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Response, Sense, Ui};
 use trees::Node;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -102,24 +103,14 @@ impl TreeView {
                 _ => false,
             };
             if show_item {
-                let painter = ui.painter();
-                let get_text_size = |text: &str| {
-                    painter.text(
-                        Pos2::ZERO,
-                        Align2::RIGHT_BOTTOM,
-                        text,
-                        Default::default(),
-                        Color32::TRANSPARENT,
-                    )
-                };
                 let text = node.to_string();
                 let text_right = match node {
                     WaveTreeNode::WaveScope(s) => s.typ.to_string(),
                     WaveTreeNode::WaveVar(s) => s.typ.to_string(),
                     _ => "".to_string(),
                 };
-                let text_size = get_text_size(text.as_str()).size();
-                let text_right_size = get_text_size(text_right.as_str()).size();
+                let text_size = get_text_size(ui, text.as_str(), Default::default());
+                let text_right_size = get_text_size(ui, text_right.as_str(), Default::default());
                 let (response, painter) = ui.allocate_painter(
                     vec2(
                         f32::max(ui.max_rect().width(), text_size.x + text_right_size.x),

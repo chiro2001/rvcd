@@ -1,5 +1,6 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
+use crate::utils::get_text_size;
 use crate::view::cursor::WaveCursor;
 use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, SIGNAL_HEIGHT_DEFAULT, UI_WIDTH_OFFSET, WAVE_MARGIN_TOP,
@@ -257,10 +258,9 @@ impl WaveView {
             let fix_width = f32::max(
                 self.signals
                     .iter()
-                    .map(|x| x.s.name.len())
-                    .max()
-                    .unwrap_or(0) as f32
-                    * 8.0,
+                    .map(|x| get_text_size(ui, x.s.to_string().as_str(), Default::default()).x)
+                    .reduce(f32::max)
+                    .unwrap_or(0.0),
                 DEFAULT_MIN_SIGNAL_WIDTH,
             );
             self.wave_width = use_rect.width() - fix_width;

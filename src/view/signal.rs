@@ -1,4 +1,5 @@
 use crate::radix::Radix;
+use crate::utils::get_text_size;
 use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
 };
@@ -203,15 +204,10 @@ impl WaveView {
                             }
                         }
                     }
+                    let value_font = FontId::monospace(self.signal_font_size);
+                    let text_min_size = get_text_size(ui, "+", value_font.clone());
                     if self.show_text {
-                        let text_min_rect = painter.text(
-                            Pos2::ZERO,
-                            Align2::RIGHT_BOTTOM,
-                            "+",
-                            FontId::monospace(self.signal_font_size),
-                            Color32::TRANSPARENT,
-                        );
-                        if rect.width() >= text_min_rect.width() + TEXT_ROUND_OFFSET {
+                        if rect.width() >= text_min_size.x + TEXT_ROUND_OFFSET {
                             let pos = match self.align {
                                 SignalViewAlign::Left => {
                                     rect.left_center() + vec2(TEXT_ROUND_OFFSET, 0.0)
@@ -230,7 +226,7 @@ impl WaveView {
                                     SignalViewAlign::Right => Align2::RIGHT_CENTER,
                                 },
                                 text.as_str(),
-                                FontId::monospace(self.signal_font_size),
+                                value_font.clone(),
                                 Color32::TRANSPARENT,
                             );
                             let paint_text =
@@ -250,7 +246,7 @@ impl WaveView {
                                         format!("{}+", &remains[0..(len - 2)])
                                     }
                                 };
-                            let text_font = FontId::monospace(self.signal_font_size);
+                            // let text_font = FontId::monospace(self.signal_font_size);
                             // TODO: limit text position
                             // let text_rect = painter.text(
                             //     Pos2::ZERO,
@@ -274,7 +270,7 @@ impl WaveView {
                                     SignalViewAlign::Right => Align2::RIGHT_CENTER,
                                 },
                                 paint_text,
-                                text_font,
+                                value_font,
                                 text_color,
                             );
                         }

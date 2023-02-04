@@ -1,3 +1,4 @@
+use crate::utils::get_text_size;
 use crate::view::{
     WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
 };
@@ -85,17 +86,6 @@ impl WaveView {
             true => Color32::YELLOW,
             false => Color32::BLUE.linear_multiply(TEXT_BG_MULTIPLY),
         };
-        let get_text_size = |text: &str| {
-            painter
-                .text(
-                    Pos2::ZERO,
-                    Align2::RIGHT_BOTTOM,
-                    text,
-                    Default::default(),
-                    Color32::TRANSPARENT,
-                )
-                .size()
-        };
         let x = self.pos_to_x(cursor.pos) + offset;
         if x >= offset && x <= offset + self.wave_width {
             painter.vline(x, paint_rect.y_range(), (LINE_WIDTH, bg_color));
@@ -116,20 +106,28 @@ impl WaveView {
             )
         };
         let time = self.pos_to_time(&info.timescale, cursor.pos);
-        let time_rect = paint_text(time.to_string(), 0.0, get_text_size(&time).x);
+        let time_rect = paint_text(
+            time.to_string(),
+            0.0,
+            get_text_size(ui, &time, Default::default()).x,
+        );
         painter.rect_filled(time_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
-        paint_text(time.to_string(), 0.0, get_text_size(&time).x);
+        paint_text(
+            time.to_string(),
+            0.0,
+            get_text_size(ui, &time, Default::default()).x,
+        );
         if !cursor.name.is_empty() {
             let name_rect = paint_text(
                 cursor.name.to_string(),
                 time_rect.height(),
-                get_text_size(&cursor.name).x,
+                get_text_size(ui, &cursor.name, Default::default()).x,
             );
             painter.rect_filled(name_rect, 0.0, bg_color.linear_multiply(TEXT_BG_MULTIPLY));
             paint_text(
                 cursor.name.to_string(),
                 time_rect.height(),
-                get_text_size(&cursor.name).x,
+                get_text_size(ui, &cursor.name, Default::default()).x,
             );
         }
     }

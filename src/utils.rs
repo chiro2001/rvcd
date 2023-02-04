@@ -1,3 +1,4 @@
+use egui::{Align2, Color32, FontId, Pos2, Ui, Vec2};
 use std::future::Future;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -47,4 +48,16 @@ pub fn lorem_ipsum(ui: &mut egui::Ui) {
             );
         },
     );
+}
+
+pub fn get_text_size(ui: &Ui, text: &str, font: FontId) -> Vec2 {
+    ui.painter()
+        .text(
+            Pos2::ZERO,
+            Align2::RIGHT_BOTTOM,
+            text,
+            font,
+            Color32::TRANSPARENT,
+        )
+        .size()
 }

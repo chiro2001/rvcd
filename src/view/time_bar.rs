@@ -1,3 +1,4 @@
+use crate::utils::get_text_size;
 use crate::view::cursor::WaveCursor;
 use crate::view::{WaveView, BG_MULTIPLY, LINE_WIDTH};
 use crate::wave::WaveInfo;
@@ -16,15 +17,9 @@ impl WaveView {
                 .clamp(self.range.0 as u64, self.range.1 as u64)
         });
         // allocate size for text
-        let text_rect = painter.text(
-            Pos2::ZERO,
-            Align2::RIGHT_BOTTOM,
-            "0",
-            Default::default(),
-            Color32::TRANSPARENT,
-        );
+        let text_size = get_text_size(ui, "0", Default::default());
         let line_stroke = (LINE_WIDTH, Color32::GREEN.linear_multiply(BG_MULTIPLY));
-        painter.hline(rect.x_range(), rect.min.y + text_rect.height(), line_stroke);
+        painter.hline(rect.x_range(), rect.min.y + text_size.x, line_stroke);
         // let mut step: u64 = (self.range.1 - self.range.0) as u64 / 10;
         let total_range = (self.range.1 - self.range.0) as i32;
         let (mut step, mut unit) = if total_range > 0 {
@@ -48,7 +43,7 @@ impl WaveView {
         // paint time stamp labels
         for pos in range.step_by(step as usize) {
             let time = info.timescale.0 * pos;
-            let line_height_max = rect.height() - text_rect.height();
+            let line_height_max = rect.height() - text_size.y;
             let line_height = match time {
                 time if time % (unit * 5) == 0 => line_height_max,
                 time if time % (unit) == 0 => line_height_max / 2.0,
@@ -58,8 +53,8 @@ impl WaveView {
             painter.vline(
                 x,
                 RangeInclusive::new(
-                    rect.top() + text_rect.height(),
-                    rect.top() + text_rect.height() + line_height,
+                    rect.top() + text_size.y,
+                    rect.top() + text_size.y + line_height,
                 ),
                 line_stroke,
             );
