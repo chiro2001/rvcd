@@ -231,7 +231,7 @@ impl WaveView {
                     }
                 }
             } else if let Some(scroll) = scroll {
-                state.new_range = self.move_horizontal(-scroll.x);
+                state.new_range = self.move_horizontal(-scroll.x, info);
             }
         }
         if self.limit_range_left && state.new_range.0 < 0.0 {
@@ -407,7 +407,7 @@ impl WaveView {
                             // Handle drag move
                             let delta = move_drag_pos - move_drag_last_pos;
                             let dx = -delta.x;
-                            self.range = self.move_horizontal(dx);
+                            self.range = self.move_horizontal(dx, info);
                         }
                         // natural direction
                         let dy = -delta.y;
@@ -497,7 +497,7 @@ impl WaveView {
             self.last_pointer_state = pointer_state;
         });
     }
-    pub fn move_horizontal(&self, dx: f32) -> (f32, f32) {
+    pub fn move_horizontal(&self, dx: f32, info: &WaveInfo) -> (f32, f32) {
         let pos_delta = self.x_to_fpos(dx) - self.range.0;
         let new_range_check = (self.range.0 + pos_delta, self.range.1 + pos_delta);
         if new_range_check.0 < 0.0 {
@@ -507,7 +507,15 @@ impl WaveView {
                 new_range_check
             }
         } else {
-            new_range_check
+            let max_right = ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32;
+            if new_range_check.1 > max_right {
+                (
+                    max_right - (new_range_check.1 - new_range_check.0),
+                    max_right,
+                )
+            } else {
+                new_range_check
+            }
         }
     }
     /// Paint span between two cursors
