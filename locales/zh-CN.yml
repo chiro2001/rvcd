@@ -1,0 +1,54 @@
+sidebar:
+  leaf:
+    type: 类型
+    signals: 信号
+    no_file: 未加载文件
+debug:
+  mode: 模式
+  reactive:
+    text: 反应式
+    hover: 当有动画或输入（如鼠标移动）时，重绘
+  continuous:
+    text: 连续式
+    hover: 每一帧重绘所有内容
+  debug_mode: 调试模式
+  reset_this_rvcd: 重置当前 Rvcd 窗口
+  reset_app: 重置整个应用
+  reset_egui:
+    text: 重置 egui
+    hover: 重置滚动、位置、大小等信息
+  reset_everything: 重置 egui 一切内容
+  fps: "FPS: %{fps}"
+menu:
+  quit: 推出
+  close: 关闭
+  close_all: 关闭所有
+  new_window: 新窗口
+  minimize: 最小化
+  maximize: 最大化
+  debug_panel: 调试面板
+  sst: 波形树
+  file: 文件
+  open: 打开
+  vcd_file: VCD 文件
+  state: 状态
+dropping_file:
+  hover: 正在拖入文件
+frame_history:
+  total_frame:
+    text: "总绘制帧数: %{total}"
+    hover: 包括当前帧
+  mean_cpu_usage:
+    text: "平均 CPU 时间: %{ms}ms / 帧"
+    hover: |
+      包括 egui 布局和嵌片的时间。
+      不包括 GPU 的使用，也不包括向 GPU 发送数据的开销。
+  cpu_usage_history: CPU 使用历史
+loading:
+  title: 正在加载
+  progress: "加载进度: ${percent} / ${bytes} 字节"
+  cancel: 取消
+panel:
+  no_file: 没有加载文件。将文件拖到这里或在菜单中打开文件。
+msg:
+  open_file_failed: 打开文件失败！

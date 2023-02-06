@@ -397,7 +397,7 @@ impl Rvcd {
                 self.toasts.add(toast);
             }
             RvcdMsg::FileOpenFailed => {
-                let text = t!("msg.open_file.failed");
+                let text = t!("msg.open_file_failed");
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     self.toasts.error(text, std::time::Duration::from_secs(5));
