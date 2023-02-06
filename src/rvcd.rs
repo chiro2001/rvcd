@@ -14,7 +14,7 @@ use egui::{
 use egui_extras::{Column, TableBuilder};
 use egui_toast::Toasts;
 use num_traits::Float;
-use regex::{Captures, Error, Regex};
+use regex::Regex;
 use rfd::FileHandle;
 use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
@@ -263,7 +263,11 @@ impl Rvcd {
     }
     pub fn sidebar(&mut self, ui: &mut Ui) {
         // test if regex is valid
-        let test_regex = Regex::new(self.search_text.as_str());
+        let test_regex = Regex::new(if self.search_regex {
+            self.search_text.as_str()
+        } else {
+            ""
+        });
         egui::TopBottomPanel::bottom(format!("signal_search_{}", self.id))
             .resizable(false)
             .show_inside(ui, |ui| {
@@ -278,10 +282,7 @@ impl Rvcd {
                 match test_regex {
                     Ok(_) => {}
                     Err(e) => {
-                        ui.label(
-                            RichText::new(format!("Regex error: {}", e.to_string()))
-                                .color(Color32::RED),
-                        );
+                        ui.label(RichText::new(e.to_string()).color(Color32::RED));
                     }
                 };
                 ui.horizontal(|ui| {
@@ -335,7 +336,7 @@ impl Rvcd {
                             self.signal_leaves
                                 .iter()
                                 .filter(|x| {
-                                    if self.search_regex {
+                                    if !self.search_regex {
                                         x.name.contains(search_text)
                                     } else {
                                         if let Some(re) = &re {
