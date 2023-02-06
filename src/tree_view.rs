@@ -2,6 +2,7 @@ use crate::utils::get_text_size;
 use crate::view::{BG_MULTIPLY, SIGNAL_TREE_HEIGHT_DEFAULT, TEXT_BG_MULTIPLY};
 use crate::wave::{WaveScopeType, WaveTreeNode};
 use egui::{vec2, Align2, CollapsingHeader, Color32, PointerButton, Response, Sense, Ui};
+use regex::Regex;
 use trees::Node;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -31,7 +32,7 @@ pub enum TreeAction {
 }
 
 impl TreeView {
-    pub fn ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>) -> TreeAction {
+    pub fn ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>, re: Option<Regex>) -> TreeAction {
         let child_signals = |tree: &Node<WaveTreeNode>| {
             tree.iter()
                 .map(|n| n.data().clone())
@@ -91,6 +92,15 @@ impl TreeView {
         {
             // paint as leaf
             let node = tree.data();
+            let regex_show = if let Some(re) = re {
+                if re.captures(node.to_string().as_str()).is_none() {
+                    false
+                } else {
+                    true
+                }
+            } else {
+                true
+            };
             let show_item = match node {
                 WaveTreeNode::WaveScope(s) => match &s.typ {
                     WaveScopeType::Module => true,
@@ -99,7 +109,7 @@ impl TreeView {
                 WaveTreeNode::WaveVar(_) => self.show_leaves,
                 _ => false,
             };
-            if show_item {
+            if show_item && regex_show {
                 let text = node.to_string();
                 let text_right = match node {
                     WaveTreeNode::WaveScope(s) => s.typ.to_string(),
@@ -184,7 +194,7 @@ impl TreeView {
             match tree.data() {
                 WaveTreeNode::WaveRoot => tree
                     .iter()
-                    .map(|child| self.ui(ui, child))
+                    .map(|child| self.ui(ui, child, re.clone()))
                     .find(|a| *a != TreeAction::None)
                     .unwrap_or(TreeAction::None),
                 data => {
@@ -192,7 +202,7 @@ impl TreeView {
                         .default_open(true)
                         .show(ui, |ui| {
                             tree.iter()
-                                .map(|child| self.ui(ui, child))
+                                .map(|child| self.ui(ui, child, re.clone()))
                                 .find(|a| *a != TreeAction::None)
                         });
                     if scope.header_response.clicked_by(PointerButton::Primary) {

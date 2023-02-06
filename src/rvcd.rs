@@ -324,7 +324,7 @@ impl Rvcd {
                                 .collect::<Vec<_>>()
                         } else {
                             let search_text = self.search_text.as_str();
-                            let re = if self.search_regex {
+                            let re = if self.search_regex && !self.search_tree {
                                 if let Ok(re) = Regex::new(search_text) {
                                     Some(re)
                                 } else {
@@ -336,14 +336,14 @@ impl Rvcd {
                             self.signal_leaves
                                 .iter()
                                 .filter(|x| {
-                                    if !self.search_regex {
-                                        x.name.contains(search_text)
-                                    } else {
+                                    if self.search_regex && !self.search_tree {
                                         if let Some(re) = &re {
                                             re.captures(x.name.as_str()).is_some()
                                         } else {
                                             false
                                         }
+                                    } else {
+                                        x.name.contains(search_text)
                                     }
                                 })
                                 .map(|x| x.clone())
@@ -395,7 +395,18 @@ impl Rvcd {
             ScrollArea::both().show(ui, |ui| {
                 // ui.centered_and_justified(|ui| {
                 if let Some(wave) = &self.wave {
-                    match self.tree.ui(ui, wave.info.tree.root()) {
+                    match self.tree.ui(
+                        ui,
+                        wave.info.tree.root(),
+                        if self.search_tree && self.search_regex {
+                            match Regex::new(self.search_text.as_str()) {
+                                Ok(re) => Some(re),
+                                Err(_) => None,
+                            }
+                        } else {
+                            None
+                        },
+                    ) {
                         TreeAction::None => {}
                         TreeAction::AddSignal(node) => {
                             if let WaveTreeNode::WaveVar(d) = node {
