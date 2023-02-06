@@ -62,3 +62,7 @@ view:
   use_top_margin: Wave Panel Top Margin
   round_pointer: Round Pointer
   value_font_size: Value Font Size
+sst:
+  show_leaves: Show Tree Leaves
+  show_tail_leaves: Show Tail Leaves
+  show_modules_only: Show Modules Only

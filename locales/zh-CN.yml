@@ -62,3 +62,7 @@ view:
   use_top_margin: Wave Panel Top Margin
   round_pointer: 四舍五入指针位置
   value_font_size: 数值文本大小
+sst:
+  show_leaves: 树中显示信号
+  show_tail_leaves: 树中显示末尾叶子信号
+  show_modules_only: 只显示模块类型

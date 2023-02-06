@@ -212,19 +212,19 @@ impl TreeView {
     }
     pub fn menu(&mut self, ui: &mut Ui) {
         if ui
-            .checkbox(&mut self.show_leaves, "Show Tree Leaves")
+            .checkbox(&mut self.show_leaves, t!("sst.show_leaves"))
             .clicked()
         {
             ui.close_menu();
         }
         if ui
-            .checkbox(&mut self.show_tail_leaves, "Show Tail Leaves")
+            .checkbox(&mut self.show_tail_leaves, t!("sst.show_tail_leaves"))
             .clicked()
         {
             ui.close_menu();
         }
         if ui
-            .checkbox(&mut self.show_modules_only, "Show Modules Only")
+            .checkbox(&mut self.show_modules_only, t!("sst.show_modules_only"))
             .clicked()
         {
             ui.close_menu();
