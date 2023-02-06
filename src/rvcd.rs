@@ -52,6 +52,10 @@ pub struct Rvcd {
     pub filepath: String,
     #[serde(skip)]
     pub load_progress: (f32, usize),
+    #[serde(skip)]
+    pub parse_progress: (f32, u64),
+    #[serde(skip)]
+    pub last_progress_msg: RvcdMsg,
     /// Displaying signals in the tree leaves
     #[serde(skip)]
     pub signal_leaves: Vec<WaveSignalInfo>,
@@ -98,6 +102,8 @@ impl Default for Rvcd {
             channel: None,
             filepath: "".to_string(),
             load_progress: (0.0, 0),
+            parse_progress: (0.0, 0),
+            last_progress_msg: RvcdMsg::LoadingProgress(0.0, 0),
             signal_leaves: vec![],
             wave: None,
             view: Default::default(),
@@ -226,22 +232,37 @@ impl Rvcd {
                 .id(Id::from(format!("loading_rvcd_{}", self.id)))
                 .resizable(false)
                 .show(ctx, |ui| {
-                    ui.label(t!(
-                        "loading.progress",
-                        percent = format!("{:.1}", self.load_progress.0 * 100.0).as_str(),
-                        bytes = FileSizeUnit::from_bytes(self.load_progress.1)
-                            .to_string()
-                            .as_str()
-                    ));
-                    ProgressBar::new(self.load_progress.0).ui(ui);
-                    ui.vertical_centered_justified(|ui| {
-                        if ui.button(t!("loading.cancel")).clicked() {
-                            if let Some(channel) = &self.channel {
-                                info!("sent FileLoadCancel");
-                                channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
+                    let handle_cancel = |ui: &mut Ui| {
+                        ui.vertical_centered_justified(|ui| {
+                            if ui.button(t!("loading.cancel")).clicked() {
+                                if let Some(channel) = &self.channel {
+                                    info!("sent FileLoadCancel");
+                                    channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
+                                }
                             }
-                        }
-                    });
+                        });
+                    };
+                    if let RvcdMsg::LoadingProgress(..) = self.last_progress_msg {
+                        ui.label(t!(
+                            "loading.load_progress",
+                            percent = format!("{:.1}", self.load_progress.0 * 100.0).as_str(),
+                            bytes = FileSizeUnit::from_bytes(self.load_progress.1)
+                                .to_string()
+                                .as_str()
+                        ));
+                        ProgressBar::new(self.load_progress.0).ui(ui);
+                        handle_cancel(ui);
+                    } else {
+                        ui.label(t!(
+                            "loading.parse_progress",
+                            percent = format!("{:.1}", self.parse_progress.0 * 100.0).as_str(),
+                            pos = FileSizeUnit::from_bytes(self.load_progress.1)
+                                .to_string()
+                                .as_str()
+                        ));
+                        ProgressBar::new(self.parse_progress.0).ui(ui);
+                        handle_cancel(ui);
+                    }
                 });
             ctx.request_repaint();
         }
@@ -450,7 +471,12 @@ impl Rvcd {
     }
     pub fn message_handler(&mut self, msg: RvcdMsg) {
         match msg {
-            RvcdMsg::LoadingProgress(..) => {}
+            RvcdMsg::LoadingProgress(p, s) => {
+                self.last_progress_msg = RvcdMsg::LoadingProgress(p, s);
+            }
+            RvcdMsg::ParsingProgress(p, s) => {
+                self.last_progress_msg = RvcdMsg::ParsingProgress(p, s);
+            }
             _ => {
                 info!(
                     "ui handle msg: {:?}; signals: {}",
@@ -505,6 +531,9 @@ impl Rvcd {
             }
             RvcdMsg::LoadingProgress(progress, sz) => {
                 self.load_progress = (progress, sz);
+            }
+            RvcdMsg::ParsingProgress(progress, pos) => {
+                self.parse_progress = (progress, pos);
             }
             RvcdMsg::FileLoadStart(_filepath) => {
                 #[cfg(not(target_arch = "wasm32"))]

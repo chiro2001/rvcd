@@ -47,7 +47,8 @@ frame_history:
   cpu_usage_history: CPU Usage History
 loading:
   title: Loading
-  progress: "Loading Progress: %{percent} / %{bytes} bytes"
+  load_progress: "Loading Progress: %{percent}% / %{bytes} bytes"
+  parse_progress: "Parsing Progress: %{percent}% / %{pos}"
   cancel: Cancel
 panel:
   no_file: No file loaded. Drag file here or open file in menu.

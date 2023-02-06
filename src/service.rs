@@ -41,6 +41,7 @@ impl Service {
         let file = std::fs::File::open(path);
         match file {
             Ok(file) => {
+                // TODO: cancel progress that loading to memory first
                 let total_sz = file.metadata().unwrap().len();
                 let mut reader = std::io::BufReader::new(file);
                 if total_sz != 0 {

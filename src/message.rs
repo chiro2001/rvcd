@@ -12,6 +12,7 @@ pub enum RvcdMsg {
     FileDrag(FileHandle),
     FileOpenData(Arc<[u8]>),
     LoadingProgress(f32, usize),
+    ParsingProgress(f32, u64),
     FileOpenFailed,
     Reload,
     UpdateWave(Wave),
@@ -32,6 +33,9 @@ impl Debug for RvcdMsg {
             RvcdMsg::FileDrag(_) => write!(f, "RvcdMsg: FileDrag"),
             RvcdMsg::LoadingProgress(p, sz) => {
                 write!(f, "RvcdMsg: LoadingProgress({}%, {} bytes)", p * 100.0, sz)
+            }
+            RvcdMsg::ParsingProgress(p, pos) => {
+                write!(f, "RvcdMsg: ParsingProgress({}%, #{})", p * 100.0, pos)
             }
             RvcdMsg::FileLoadStart(filepath) => write!(f, "RvcdMsg: FileLoadStart({filepath})"),
             RvcdMsg::FileLoadCancel => write!(f, "RvcdMsg: FileLoadCancel"),

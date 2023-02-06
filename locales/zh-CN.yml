@@ -47,7 +47,8 @@ frame_history:
   cpu_usage_history: CPU 使用历史
 loading:
   title: 正在加载
-  progress: "加载进度: %{percent} / %{bytes} 字节"
+  load_progress: "加载进度: %{percent}% / %{bytes} 字节"
+  parse_progress: "解析进度: %{percent}% / %{pos}"
   cancel: 取消
 panel:
   no_file: 没有加载文件。将文件拖到这里或在菜单中打开文件。
