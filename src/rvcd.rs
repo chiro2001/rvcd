@@ -8,11 +8,13 @@ use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{
-    vec2, Align2, Direction, DroppedFile, Id, Layout, ProgressBar, ScrollArea, Sense, Ui, Widget,
+    vec2, Align2, Color32, Direction, DroppedFile, Id, Layout, ProgressBar, RichText, ScrollArea,
+    Sense, Ui, Widget,
 };
 use egui_extras::{Column, TableBuilder};
 use egui_toast::Toasts;
 use num_traits::Float;
+use regex::{Captures, Error, Regex};
 use rfd::FileHandle;
 use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
@@ -260,15 +262,31 @@ impl Rvcd {
         }
     }
     pub fn sidebar(&mut self, ui: &mut Ui) {
+        // test if regex is valid
+        let test_regex = Regex::new(self.search_text.as_str());
         egui::TopBottomPanel::bottom(format!("signal_search_{}", self.id))
             .resizable(false)
             .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label("🔍");
+                    if test_regex.is_err() {
+                        ui.label(RichText::new("❌").color(Color32::RED));
+                    } else {
+                        ui.label("🔍");
+                    }
                     ui.text_edit_singleline(&mut self.search_text);
                 });
+                match test_regex {
+                    Ok(_) => {}
+                    Err(e) => {
+                        ui.label(
+                            RichText::new(format!("Regex error: {}", e.to_string()))
+                                .color(Color32::RED),
+                        );
+                    }
+                };
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut self.search_tree, "Search In Tree");
+                    ui.checkbox(&mut self.search_regex, "Regex");
+                    ui.checkbox(&mut self.search_tree, "Tree");
                     if ui.button("Append").clicked() {}
                     if ui.button("Replace").clicked() {}
                 });
@@ -297,50 +315,79 @@ impl Rvcd {
                         });
                     })
                     .body(|body| {
-                        body.rows(
-                            text_height,
-                            self.signal_leaves.len(),
-                            |row_index, mut row| {
-                                if let Some(signal) = self.signal_leaves.get(row_index) {
-                                    let signal = signal.clone();
-                                    let mut handle_draw_response = |ui: &mut Ui, text: String| {
-                                        let (response, painter) = ui.allocate_painter(
-                                            ui.max_rect().size(),
-                                            Sense::click_and_drag(),
-                                        );
-                                        let on_hover = ui.ui_contains_pointer();
-                                        let color = if on_hover {
-                                            ui.visuals().strong_text_color()
-                                        } else {
-                                            ui.visuals().text_color()
-                                        };
-                                        painter.text(
-                                            response.rect.left_center(),
-                                            Align2::LEFT_CENTER,
-                                            text,
-                                            Default::default(),
-                                            color,
-                                        );
-                                        if response.double_clicked() {
-                                            self.signal_clicked(signal.id, true);
-                                        }
-                                    };
-                                    row.col(|ui| {
-                                        handle_draw_response(ui, signal.typ.to_string());
-                                    });
-                                    row.col(|ui| {
-                                        handle_draw_response(ui, signal.to_string());
-                                    });
+                        // TODO: reduce this clone
+                        let signal_leaves = if self.search_text.is_empty() {
+                            self.signal_leaves
+                                .iter()
+                                .map(|x| x.clone())
+                                .collect::<Vec<_>>()
+                        } else {
+                            let search_text = self.search_text.as_str();
+                            let re = if self.search_regex {
+                                if let Ok(re) = Regex::new(search_text) {
+                                    Some(re)
                                 } else {
-                                    row.col(|ui| {
-                                        ui.label("-");
-                                    });
-                                    row.col(|ui| {
-                                        ui.label("-");
-                                    });
+                                    None
                                 }
-                            },
-                        );
+                            } else {
+                                None
+                            };
+                            self.signal_leaves
+                                .iter()
+                                .filter(|x| {
+                                    if self.search_regex {
+                                        x.name.contains(search_text)
+                                    } else {
+                                        if let Some(re) = &re {
+                                            re.captures(x.name.as_str()).is_some()
+                                        } else {
+                                            false
+                                        }
+                                    }
+                                })
+                                .map(|x| x.clone())
+                                .collect::<Vec<_>>()
+                        };
+                        body.rows(text_height, signal_leaves.len(), |row_index, mut row| {
+                            if let Some(signal) = signal_leaves.get(row_index) {
+                                let signal = signal.clone();
+                                let mut handle_draw_response = |ui: &mut Ui, text: String| {
+                                    let (response, painter) = ui.allocate_painter(
+                                        ui.max_rect().size(),
+                                        Sense::click_and_drag(),
+                                    );
+                                    let on_hover = ui.ui_contains_pointer();
+                                    let color = if on_hover {
+                                        ui.visuals().strong_text_color()
+                                    } else {
+                                        ui.visuals().text_color()
+                                    };
+                                    painter.text(
+                                        response.rect.left_center(),
+                                        Align2::LEFT_CENTER,
+                                        text,
+                                        Default::default(),
+                                        color,
+                                    );
+                                    if response.double_clicked() {
+                                        self.signal_clicked(signal.id, true);
+                                    }
+                                };
+                                row.col(|ui| {
+                                    handle_draw_response(ui, signal.typ.to_string());
+                                });
+                                row.col(|ui| {
+                                    handle_draw_response(ui, signal.to_string());
+                                });
+                            } else {
+                                row.col(|ui| {
+                                    ui.label("-");
+                                });
+                                row.col(|ui| {
+                                    ui.label("-");
+                                });
+                            }
+                        });
                     });
             });
         egui::CentralPanel::default().show_inside(ui, |ui| {

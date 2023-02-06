@@ -2507,6 +2507,7 @@ dependencies = [
  "once_cell",
  "prost",
  "queues",
+ "regex",
  "rfd",
  "rust-i18n",
  "serde",
