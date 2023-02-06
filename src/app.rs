@@ -2,11 +2,14 @@ use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
-use crate::Rvcd;
+use crate::{available_locales, Rvcd};
 use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window};
+use egui::{
+    CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window,
+};
+use rust_i18n::locale;
 use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -43,7 +46,16 @@ impl Default for RvcdApp {
 impl RvcdApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // detect locate
-        rust_i18n::set_locale("zh-CN");
+        if let Ok(lang) = std::env::var("LANG") {
+            let lang = lang
+                .as_str()
+                .replace("_", "-")
+                .as_str()
+                .replace(".UTF-8", "");
+            if available_locales().iter().any(|x| x.to_string() == lang) {
+                rust_i18n::set_locale(lang.as_str());
+            }
+        }
         // load chinese font
         let mut fonts = FontDefinitions::default();
         let font_name = "ali";
@@ -170,6 +182,25 @@ impl eframe::App for RvcdApp {
                         app.menubar(ui, frame, true);
                     }
                 }
+                ui.menu_button("Language", |ui| {
+                    let locales = available_locales();
+                    let locale_now = locale();
+                    for locale in locales {
+                        if locale.to_string() == locale_now {
+                            let mut yes = true;
+                            if ui.checkbox(&mut yes, locale.to_string()).clicked() {
+                                rust_i18n::set_locale(locale);
+                                ui.close_menu();
+                            }
+                        } else {
+                            let mut not = false;
+                            if ui.checkbox(&mut not, locale.to_string()).clicked() {
+                                rust_i18n::set_locale(locale);
+                                ui.close_menu();
+                            }
+                        }
+                    }
+                });
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button(t!("menu.quit")).clicked() {
