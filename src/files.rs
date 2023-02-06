@@ -4,7 +4,7 @@ pub fn preview_files_being_dropped(ctx: &egui::Context) {
     use std::fmt::Write as _;
 
     if !ctx.input().raw.hovered_files.is_empty() {
-        let mut text = "Dropping files:\n".to_owned();
+        let mut text = format!("{}:\n", t!("dropping_file.hover")).to_owned();
         for file in &ctx.input().raw.hovered_files {
             if let Some(path) = &file.path {
                 write!(text, "\n{}", path.display()).ok();

@@ -15,4 +15,8 @@ pub mod utils;
 pub mod view;
 pub mod wave;
 
+#[macro_use]
+extern crate rust_i18n;
+i18n!("locales");
+
 pub use crate::rvcd::Rvcd;

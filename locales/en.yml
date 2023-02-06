@@ -1,0 +1,54 @@
+sidebar:
+  leaf:
+    type: Type
+    signals: Signals
+    no_file: No file loaded
+debug:
+  mode: Mode
+  reactive:
+    text: Reactive
+    hover: Repaint when there are animations or input (e.g. mouse movement)
+  continuous:
+    text: Continuous
+    hover: Repaint everything each frame
+  debug_mode: Debug mode
+  reset_this_rvcd: Reset this rvcd
+  reset_app: Reset app
+  reset_egui:
+    text: Reset egui
+    hover: Forget scroll, positions, sizes etc
+  reset_everything: Reset everything
+  fps: "FPS: %{fps}"
+menu:
+  quit: Quit
+  close: Close
+  close_all: Close All
+  new_window: New Window
+  minimize: minimize
+  maximize: Maximize
+  debug_panel: Debug Panel
+  sst: SST
+  file: File
+  open: Open
+  vcd_file: VCD File
+  state: State
+dropping_file:
+  hover: Dropping files
+frame_history:
+  total_frame:
+    text: "Total frames painted: %{total}"
+    hover: Includes this frame
+  mean_cpu_usage:
+    text: "Mean CPU usage: %{ms} / frame"
+    hover: |
+      Includes egui layout and tessellation time.
+      Does not include GPU usage, nor overhead for sending data to GPU.
+  cpu_usage_history: CPU Usage History
+loading:
+  title: Loading
+  progress: "Loading Progress: ${percent} / ${bytes}"
+  cancel: Cancel
+panel:
+  no_file: No file loaded. Drag file here or open file in menu.
+msg:
+  open_file_failed: Open file failed!

@@ -158,21 +158,21 @@ impl Rvcd {
         ui: &mut Ui,
         frame: &mut eframe::Frame,
         sst_enabled: bool,
-        maximum: bool,
+        maximize: bool,
         do_min_max: F,
     ) where
         F: FnOnce(),
     {
-        if !maximum {
+        if !maximize {
             egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
                 // The top panel is often a good place for a menu bar:
                 egui::menu::bar(ui, |ui| {
-                    self.menubar(ui, frame, maximum);
-                    if maximum {
-                        if ui.button("Minimum").clicked() {
+                    self.menubar(ui, frame, maximize);
+                    if maximize {
+                        if ui.button(t!("menu.minimize")).clicked() {
                             do_min_max();
                         }
-                    } else if ui.button("Maximum").clicked() {
+                    } else if ui.button(t!("menu.maximize")).clicked() {
                         do_min_max();
                     }
                 });
@@ -213,18 +213,20 @@ impl Rvcd {
 
         let ctx = ui.ctx();
         if self.state == State::Loading {
-            egui::Window::new("Loading")
+            egui::Window::new(t!("loading.title"))
                 .id(Id::from(format!("loading_rvcd_{}", self.id)))
                 .resizable(false)
                 .show(ctx, |ui| {
-                    ui.label(format!(
-                        "Loading Progress: {:.1}% / {}",
-                        self.load_progress.0 * 100.0,
-                        FileSizeUnit::from_bytes(self.load_progress.1)
+                    ui.label(t!(
+                        "loading.progress",
+                        prrcent = format!("{:.1}", self.load_progress.0 * 100.0).as_str(),
+                        bytes = FileSizeUnit::from_bytes(self.load_progress.1)
+                            .to_string()
+                            .as_str()
                     ));
                     ProgressBar::new(self.load_progress.0).ui(ui);
                     ui.vertical_centered_justified(|ui| {
-                        if ui.button("Cancel").clicked() {
+                        if ui.button(t!("loading.cancel")).clicked() {
                             if let Some(channel) = &self.channel {
                                 info!("sent FileLoadCancel");
                                 channel.tx.send(RvcdMsg::FileLoadCancel).unwrap();
@@ -268,10 +270,10 @@ impl Rvcd {
                     .max_scroll_height(f32::infinity())
                     .header(SIGNAL_LEAF_HEIGHT_DEFAULT, |mut header| {
                         header.col(|ui| {
-                            ui.label("Type");
+                            ui.label(t!("sidebar.leaf.type"));
                         });
                         header.col(|ui| {
-                            ui.label("Signals");
+                            ui.label(t!("sidebar.leaf.signals"));
                         });
                     })
                     .body(|body| {
@@ -350,7 +352,7 @@ impl Rvcd {
                         }
                     }
                 } else {
-                    ui.centered_and_justified(|ui| ui.label("No file loaded"));
+                    ui.centered_and_justified(|ui| ui.label(t!("sidebar.leaf.no_file")));
                 }
                 // });
             });
@@ -361,7 +363,7 @@ impl Rvcd {
             self.view.panel(ui, wave);
         } else {
             ui.centered_and_justified(|ui| {
-                ui.heading("No file loaded. Drag file here or open file in menu.");
+                ui.heading(t!("panel.no_file"));
             });
         }
     }
@@ -395,7 +397,7 @@ impl Rvcd {
                 self.toasts.add(toast);
             }
             RvcdMsg::FileOpenFailed => {
-                let text = "Open file failed!";
+                let text = t!("msg.open_file.failed");
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     self.toasts.error(text, std::time::Duration::from_secs(5));
@@ -480,12 +482,12 @@ impl Rvcd {
     }
     pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, _maximum: bool) {
         egui::widgets::global_dark_light_mode_switch(ui);
-        ui.menu_button("File", |ui| {
+        ui.menu_button(t!("menu.file"), |ui| {
             // #[cfg(not(target_arch = "wasm32"))]
-            if ui.button("Open").clicked() {
+            if ui.button(t!("menu.open")).clicked() {
                 if let Some(channel) = &self.channel {
                     let task = rfd::AsyncFileDialog::new()
-                        .add_filter("VCD File", &["vcd"])
+                        .add_filter(t!("menu.vcd_file").as_str(), &["vcd"])
                         .pick_file();
                     let sender = channel.tx.clone();
                     execute(async move {
@@ -500,18 +502,18 @@ impl Rvcd {
                 ui.close_menu();
             }
             ui.add_enabled_ui(self.state == State::Working, |ui| {
-                if ui.button("Close").clicked() {
+                if ui.button(t!("menu.close")).clicked() {
                     ui.close_menu();
                     self.reset();
                 }
             });
             #[cfg(not(target_arch = "wasm32"))]
-            if _maximum && ui.button("Quit").clicked() {
+            if _maximum && ui.button(t!("menu.quit")).clicked() {
                 _frame.close();
             }
         });
         self.view.menu(ui);
-        ui.menu_button("SST", |ui| {
+        ui.menu_button(t!("menu.sst"), |ui| {
             // if ui.checkbox(&mut self.sst_enabled, "Enable SST").clicked() {
             //     ui.close_menu();
             // };
@@ -523,7 +525,7 @@ impl Rvcd {
         // if ui.button("Test Toast").clicked() {
         //     self.toasts.info("Test Toast", ToastOptions::default());
         // }
-        ui.label(format!("State: {:?}", self.state));
+        ui.label(format!("{}: {:?}", t!("menu.state"), self.state));
     }
     pub fn handle_dropping_file(&mut self, dropped_file: &DroppedFile) {
         // Collect dropped files:

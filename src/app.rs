@@ -56,28 +56,34 @@ impl RvcdApp {
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
         let run_mode = &mut self.run_mode;
-        ui.label("Mode:");
-        ui.radio_value(run_mode, RunMode::Reactive, "Reactive")
-            .on_hover_text("Repaint when there are animations or input (e.g. mouse movement)");
-        ui.radio_value(run_mode, RunMode::Continuous, "Continuous")
-            .on_hover_text("Repaint everything each frame");
+        ui.label(t!("debug.mode"));
+        ui.radio_value(run_mode, RunMode::Reactive, t!("debug.reactive.text"))
+            .on_hover_text(t!("debug.reactive.hover"));
+        ui.radio_value(run_mode, RunMode::Continuous, t!("debug.continuous.text"))
+            .on_hover_text(t!("debug.continuous.hover"));
         if self.run_mode == RunMode::Continuous {
-            ui.label(format!("FPS: {:.1}", self.frame_history.fps()));
+            ui.label(t!(
+                "debug.fps",
+                fps = format!("{:.1}", self.frame_history.fps()).as_str()
+            ));
         } else {
             self.frame_history.ui(ui);
         }
         let mut debug_on_hover = ui.ctx().debug_on_hover();
-        ui.checkbox(&mut debug_on_hover, "🐛 Debug mode");
+        ui.checkbox(
+            &mut debug_on_hover,
+            format!("🐛 {}", t!("debug.debug_mode")),
+        );
         ui.ctx().set_debug_on_hover(debug_on_hover);
         ui.horizontal(|ui| {
             if let Some(id) = self.app_now_id {
-                if ui.button("Reset this rvcd").clicked() {
+                if ui.button(t!("debug.reset_this_rvcd")).clicked() {
                     if let Some(app) = self.apps.get_mut(id) {
                         app.reset();
                     }
                 }
             }
-            if ui.button("Reset app").clicked() {
+            if ui.button(t!("debug.reset_app")).clicked() {
                 for app in &mut self.apps {
                     app.on_exit();
                 }
@@ -86,14 +92,14 @@ impl RvcdApp {
         });
         ui.horizontal(|ui| {
             if ui
-                .button("Reset egui")
-                .on_hover_text("Forget scroll, positions, sizes etc")
+                .button(t!("debug.reset_egui.text"))
+                .on_hover_text(t!("debug.reset_egui.hover"))
                 .clicked()
             {
                 *ui.ctx().memory() = Default::default();
             }
 
-            if ui.button("Reset everything").clicked() {
+            if ui.button(t!("debug.reset_everything")).clicked() {
                 *ui.ctx().memory() = Default::default();
             }
         });
@@ -107,11 +113,11 @@ impl RvcdApp {
             .map(|x| x + 1)
             .unwrap_or(0)
     }
-    fn new_window(&mut self, maximum: bool) -> usize {
+    fn new_window(&mut self, maximize: bool) -> usize {
         let id = self.new_id();
         self.apps.push(Rvcd::new(id).init());
         self.open_apps.push((id, true));
-        if maximum {
+        if maximize {
             self.app_now_id = Some(id);
         }
         id
@@ -151,32 +157,32 @@ impl eframe::App for RvcdApp {
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     #[cfg(not(target_arch = "wasm32"))]
-                    if ui.button("Quit").clicked() {
+                    if ui.button(t!("menu.quit")).clicked() {
                         frame.close();
                     }
                     ui.add_enabled_ui(self.apps.len() > 1, |ui| {
-                        if ui.button("Close All").clicked() {
+                        if ui.button(t!("menu.close_all")).clicked() {
                             self.close_all();
                         }
                     });
-                    if ui.button("New Window").clicked() {
+                    if ui.button(t!("menu.new_window")).clicked() {
                         self.new_window(false);
                     }
                     if self.app_now_id.is_some() {
-                        if ui.button("Minimize").clicked() {
+                        if ui.button(t!("menu.minimize")).clicked() {
                             self.app_now_id = None;
                         }
                     } else {
                         ui.add_enabled_ui(self.apps.len() == 1, |ui| {
-                            if ui.button("Maximum").clicked() {
+                            if ui.button(t!("menu.maximize")).clicked() {
                                 if let Some(app) = self.apps.get(0) {
                                     self.app_now_id = Some(app.id);
                                 }
                             }
                         });
                     }
-                    ui.checkbox(&mut self.debug_panel, "Debug Panel");
-                    ui.checkbox(&mut self.sst_enabled, "SST");
+                    ui.checkbox(&mut self.debug_panel, t!("menu.debug_panel"));
+                    ui.checkbox(&mut self.sst_enabled, t!("menu.sst"));
                     // ui.label(format!("apps: {:?}", self.apps));
                 });
             });

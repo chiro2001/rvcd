@@ -33,23 +33,20 @@ impl FrameHistory {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.label(format!(
-            "Total frames painted: {}",
-            self.frame_times.total_count()
+        ui.label(t!(
+            "frame_history.total_frame.text",
+            total = self.frame_times.total_count().to_string().as_str()
         ))
-        .on_hover_text("Includes this frame.");
+        .on_hover_text(t!("frame_history.total_frame.hover"));
 
-        ui.label(format!(
-            "Mean CPU usage: {:.2} ms / frame",
-            1e3 * self.mean_frame_time()
+        ui.label(t!(
+            "frame_history.mean_cpu_usage.text",
+            ms = format!("{:.2}", 1e3 * self.mean_frame_time()).as_str()
         ))
-        .on_hover_text(
-            "Includes egui layout and tessellation time.\n\
-            Does not include GPU usage, nor overhead for sending data to GPU.",
-        );
+        .on_hover_text(t!("frame_history.mean_cpu_usage.hover"));
 
         if !cfg!(target_arch = "wasm32") {
-            egui::CollapsingHeader::new("📊 CPU usage history")
+            egui::CollapsingHeader::new(format!("📊 {}", t!("frame_history.cpu_usage_history")))
                 .default_open(false)
                 .show(ui, |ui| {
                     self.graph(ui);
@@ -60,7 +57,7 @@ impl FrameHistory {
     fn graph(&mut self, ui: &mut egui::Ui) -> egui::Response {
         use egui::*;
 
-        ui.label("egui CPU usage history");
+        ui.label(format!("egui {}", t!("frame_history.cpu_usage_history")));
 
         let history = &self.frame_times;
 
