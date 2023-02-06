@@ -32,7 +32,13 @@ pub enum TreeAction {
 }
 
 impl TreeView {
-    pub fn ui(&mut self, ui: &mut Ui, tree: &Node<WaveTreeNode>, re: Option<Regex>) -> TreeAction {
+    pub fn ui(
+        &mut self,
+        ui: &mut Ui,
+        tree: &Node<WaveTreeNode>,
+        search_text: &str,
+        is_regex: bool,
+    ) -> TreeAction {
         let child_signals = |tree: &Node<WaveTreeNode>| {
             tree.iter()
                 .map(|n| n.data().clone())
@@ -92,14 +98,19 @@ impl TreeView {
         {
             // paint as leaf
             let node = tree.data();
-            let regex_show = if let Some(re) = re {
-                if re.captures(node.to_string().as_str()).is_none() {
-                    false
+            let node_string = node.to_string();
+            let regex_show = if is_regex {
+                if let Ok(re) = Regex::new(search_text) {
+                    if re.captures(node_string.as_str()).is_none() {
+                        false
+                    } else {
+                        true
+                    }
                 } else {
                     true
                 }
             } else {
-                true
+                node_string.contains(search_text)
             };
             let show_item = match node {
                 WaveTreeNode::WaveScope(s) => match &s.typ {
@@ -194,7 +205,7 @@ impl TreeView {
             match tree.data() {
                 WaveTreeNode::WaveRoot => tree
                     .iter()
-                    .map(|child| self.ui(ui, child, re.clone()))
+                    .map(|child| self.ui(ui, child, search_text.clone(), is_regex))
                     .find(|a| *a != TreeAction::None)
                     .unwrap_or(TreeAction::None),
                 data => {
@@ -202,7 +213,7 @@ impl TreeView {
                         .default_open(true)
                         .show(ui, |ui| {
                             tree.iter()
-                                .map(|child| self.ui(ui, child, re.clone()))
+                                .map(|child| self.ui(ui, child, search_text.clone(), is_regex))
                                 .find(|a| *a != TreeAction::None)
                         });
                     if scope.header_response.clicked_by(PointerButton::Primary) {

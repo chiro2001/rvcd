@@ -228,7 +228,7 @@ impl Rvcd {
                 .show(ctx, |ui| {
                     ui.label(t!(
                         "loading.progress",
-                        prrcent = format!("{:.1}", self.load_progress.0 * 100.0).as_str(),
+                        percent = format!("{:.1}", self.load_progress.0 * 100.0).as_str(),
                         bytes = FileSizeUnit::from_bytes(self.load_progress.1)
                             .to_string()
                             .as_str()
@@ -336,14 +336,18 @@ impl Rvcd {
                             self.signal_leaves
                                 .iter()
                                 .filter(|x| {
-                                    if self.search_regex && !self.search_tree {
-                                        if let Some(re) = &re {
-                                            re.captures(x.name.as_str()).is_some()
+                                    if !self.search_tree {
+                                        if self.search_regex {
+                                            if let Some(re) = &re {
+                                                re.captures(x.name.as_str()).is_some()
+                                            } else {
+                                                false
+                                            }
                                         } else {
-                                            false
+                                            x.name.contains(search_text)
                                         }
                                     } else {
-                                        x.name.contains(search_text)
+                                        true
                                     }
                                 })
                                 .map(|x| x.clone())
@@ -398,14 +402,12 @@ impl Rvcd {
                     match self.tree.ui(
                         ui,
                         wave.info.tree.root(),
-                        if self.search_tree && self.search_regex {
-                            match Regex::new(self.search_text.as_str()) {
-                                Ok(re) => Some(re),
-                                Err(_) => None,
-                            }
+                        if self.search_tree {
+                            self.search_text.as_str()
                         } else {
-                            None
+                            ""
                         },
+                        self.search_regex,
                     ) {
                         TreeAction::None => {}
                         TreeAction::AddSignal(node) => {
