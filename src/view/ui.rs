@@ -66,18 +66,21 @@ impl ResponseHandleState {
 impl WaveView {
     /// Paint view menu
     pub fn menu(&mut self, ui: &mut Ui) {
-        ui.menu_button("View", |ui| {
-            ui.menu_button(format!("Default Radix: {:?}", self.default_radix), |ui| {
-                use Radix::*;
-                let data = [Hex, Oct, Dec, Bin];
-                data.into_iter().for_each(|r| {
-                    if ui.button(format!("{r:?}")).clicked() {
-                        self.default_radix = r;
-                        ui.close_menu();
-                    }
-                });
-            });
-            ui.menu_button(format!("Align: {:?}", self.align), |ui| {
+        ui.menu_button(t!("menu.view"), |ui| {
+            ui.menu_button(
+                format!("{}: {:?}", t!("view.default_radix"), self.default_radix),
+                |ui| {
+                    use Radix::*;
+                    let data = [Hex, Oct, Dec, Bin];
+                    data.into_iter().for_each(|r| {
+                        if ui.button(format!("{r:?}")).clicked() {
+                            self.default_radix = r;
+                            ui.close_menu();
+                        }
+                    });
+                },
+            );
+            ui.menu_button(format!("{}: {:?}", t!("view.align"), self.align), |ui| {
                 let data = [
                     super::SignalViewAlign::Left,
                     super::SignalViewAlign::Center,
@@ -90,32 +93,38 @@ impl WaveView {
                     }
                 });
             });
-            if ui.checkbox(&mut self.background, "Background").clicked() {
-                ui.close_menu();
-            }
-            if ui.checkbox(&mut self.show_text, "Show Text").clicked() {
-                ui.close_menu();
-            }
             if ui
-                .checkbox(&mut self.limit_range_left, "Limit Left Range")
+                .checkbox(&mut self.background, t!("view.background"))
                 .clicked()
             {
                 ui.close_menu();
             }
             if ui
-                .checkbox(&mut self.use_top_margin, "Wave Panel Top Margin")
+                .checkbox(&mut self.show_text, t!("view.show_text"))
                 .clicked()
             {
                 ui.close_menu();
             }
             if ui
-                .checkbox(&mut self.round_pointer, "Round Pointer")
+                .checkbox(&mut self.limit_range_left, t!("view.limit_range_left"))
+                .clicked()
+            {
+                ui.close_menu();
+            }
+            if ui
+                .checkbox(&mut self.use_top_margin, t!("view.use_top_margin"))
+                .clicked()
+            {
+                ui.close_menu();
+            }
+            if ui
+                .checkbox(&mut self.round_pointer, t!("view.round_pointer"))
                 .clicked()
             {
                 ui.close_menu();
             }
             ui.horizontal(|ui| {
-                ui.label("Value font size ");
+                ui.label(t!("view.value_font_size"));
                 DragValue::new(&mut self.signal_font_size)
                     .clamp_range(10.0..=20.0)
                     .speed(0.05)

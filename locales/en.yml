@@ -32,6 +32,7 @@ menu:
   open: Open
   vcd_file: VCD File
   state: State
+  view: View
 dropping_file:
   hover: Dropping files
 frame_history:
@@ -52,3 +53,12 @@ panel:
   no_file: No file loaded. Drag file here or open file in menu.
 msg:
   open_file_failed: Open file failed!
+view:
+  default_radix: Default Radix
+  align: Align
+  background: Background
+  show_text: Show Text
+  limit_range_left: Limit Left Range
+  use_top_margin: Wave Panel Top Margin
+  round_pointer: Round Pointer
+  value_font_size: Value Font Size
