@@ -69,6 +69,10 @@ pub struct Rvcd {
     pub file: Option<FileHandle>,
 
     pub tree: TreeView,
+
+    pub search_text: String,
+    pub search_tree: bool,
+    pub search_regex: bool,
 }
 
 impl Display for Rvcd {
@@ -101,6 +105,9 @@ impl Default for Rvcd {
             #[cfg(target_arch = "wasm32")]
             file: None,
             tree: Default::default(),
+            search_text: "".to_string(),
+            search_tree: false,
+            search_regex: false,
         }
     }
 }
@@ -253,6 +260,19 @@ impl Rvcd {
         }
     }
     pub fn sidebar(&mut self, ui: &mut Ui) {
+        egui::TopBottomPanel::bottom(format!("signal_search_{}", self.id))
+            .resizable(false)
+            .show_inside(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("🔍");
+                    ui.text_edit_singleline(&mut self.search_text);
+                });
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.search_tree, "Search In Tree");
+                    if ui.button("Append").clicked() {}
+                    if ui.button("Replace").clicked() {}
+                });
+            });
         egui::TopBottomPanel::bottom(format!("signal_leaf_{}", self.id))
             .min_height(200.0)
             .max_height(400.0)
