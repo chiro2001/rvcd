@@ -210,9 +210,15 @@ impl eframe::App for RvcdApp {
                     if ui.button(t!("menu.quit")).clicked() {
                         frame.close();
                     }
-                    ui.add_enabled_ui(self.apps.len() > 1, |ui| {
+                    ui.add_enabled_ui(self.apps.len() > 0, |ui| {
                         if ui.button(t!("menu.close_all")).clicked() {
-                            self.close_all();
+                            if self.apps.len() > 1 {
+                                self.close_all();
+                            } else {
+                                if let Some(app) = self.apps.first_mut() {
+                                    app.reset();
+                                }
+                            }
                         }
                     });
                     if ui.button(t!("menu.new_window")).clicked() {
