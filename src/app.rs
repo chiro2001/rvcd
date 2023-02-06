@@ -27,6 +27,7 @@ pub struct RvcdApp {
     pub frame_history: FrameHistory,
     pub debug_panel: bool,
     pub sst_enabled: bool,
+    pub locale: String,
 }
 
 impl Default for RvcdApp {
@@ -39,23 +40,13 @@ impl Default for RvcdApp {
             frame_history: Default::default(),
             debug_panel: false,
             sst_enabled: true,
+            locale: "".to_string(),
         }
     }
 }
 
 impl RvcdApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // detect locate
-        if let Ok(lang) = std::env::var("LANG") {
-            let lang = lang
-                .as_str()
-                .replace("_", "-")
-                .as_str()
-                .replace(".UTF-8", "");
-            if available_locales().iter().any(|x| x.to_string() == lang) {
-                rust_i18n::set_locale(lang.as_str());
-            }
-        }
         // load chinese font
         let mut fonts = FontDefinitions::default();
         let font_name = "ali";
@@ -74,6 +65,23 @@ impl RvcdApp {
         } else {
             Default::default()
         };
+        if def.locale.is_empty() {
+            // detect locate
+            // TODO: detect on windows
+            if let Ok(lang) = std::env::var("LANG") {
+                let locale = lang
+                    .as_str()
+                    .replace("_", "-")
+                    .as_str()
+                    .replace(".UTF-8", "");
+                if available_locales().iter().any(|x| x.to_string() == locale) {
+                    rust_i18n::set_locale(locale.as_str());
+                    def.locale = locale;
+                }
+            }
+        } else {
+            rust_i18n::set_locale(def.locale.as_str());
+        }
         if def.apps.is_empty() {
             def.apps = vec![Rvcd::new(0)];
         }
@@ -185,20 +193,16 @@ impl eframe::App for RvcdApp {
                 ui.menu_button("Language", |ui| {
                     let locales = available_locales();
                     let locale_now = locale();
-                    for locale in locales {
-                        if locale.to_string() == locale_now {
-                            let mut yes = true;
-                            if ui.checkbox(&mut yes, locale.to_string()).clicked() {
-                                rust_i18n::set_locale(locale);
-                                ui.close_menu();
-                            }
-                        } else {
-                            let mut not = false;
-                            if ui.checkbox(&mut not, locale.to_string()).clicked() {
-                                rust_i18n::set_locale(locale);
-                                ui.close_menu();
-                            }
+                    let mut set_locale = |source: bool, locale: &str| {
+                        let mut source = source;
+                        if ui.checkbox(&mut source, locale.to_string()).clicked() {
+                            rust_i18n::set_locale(locale);
+                            self.locale = locale.to_string();
+                            ui.close_menu();
                         }
+                    };
+                    for locale in locales {
+                        set_locale(locale.to_string() == locale_now, locale);
                     }
                 });
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
