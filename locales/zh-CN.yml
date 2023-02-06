@@ -20,7 +20,7 @@ debug:
   reset_everything: 重置 egui 一切内容
   fps: "FPS: %{fps}"
 menu:
-  quit: 推出
+  quit: 退出
   close: 关闭
   close_all: 关闭所有
   new_window: 新窗口

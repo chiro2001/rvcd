@@ -6,7 +6,7 @@ use crate::Rvcd;
 use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
-use egui::{CentralPanel, DroppedFile, Id, Layout, Ui, Window};
+use egui::{CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window};
 use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -42,6 +42,21 @@ impl Default for RvcdApp {
 
 impl RvcdApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        // detect locate
+        rust_i18n::set_locale("zh-CN");
+        // load chinese font
+        let mut fonts = FontDefinitions::default();
+        let font_name = "ali";
+        fonts.font_data.insert(
+            font_name.to_owned(),
+            FontData::from_static(include_bytes!("../assets/Ali_Puhui_Medium.ttf")),
+        );
+        fonts
+            .families
+            .get_mut(&FontFamily::Proportional)
+            .unwrap()
+            .insert(0, font_name.to_owned());
+        cc.egui_ctx.set_fonts(fonts);
         let mut def: RvcdApp = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
