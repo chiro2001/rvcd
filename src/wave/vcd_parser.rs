@@ -229,9 +229,23 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
     }
 }
 
+// TODO: vcd_get_last_timestamp; rev data input
+// pub fn vcd_get_last_timestamp(reader: &mut dyn Read, max_bytes: u64) -> Option<u64> {
+//     // trying to get last timestamp
+//     let bytes = reader.bytes().rev();
+//     let mut cnt = 0u64;
+//     while let Some(b) = bytes.next() {
+//
+//     }
+//     None
+// }
+
 pub struct Vcd;
 impl WaveLoader for Vcd {
-    fn load(reader: &mut dyn Read) -> Result<Wave> {
+    fn load<F>(reader: &mut dyn Read, progress_handler: F) -> Result<Wave>
+    where
+        F: Fn(f32, u64),
+    {
         info!("start parsing vcd file");
         #[cfg(not(target_arch = "wasm32"))]
         let perf_start = std::time::Instant::now();

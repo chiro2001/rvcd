@@ -371,7 +371,9 @@ impl Wave {
 
 /// To support other file formats
 pub trait WaveLoader {
-    fn load(reader: &mut dyn Read) -> Result<Wave>;
+    fn load<F>(reader: &mut dyn Read, progress_handler: F) -> Result<Wave>
+    where
+        F: Fn(f32, u64);
 }
 
 #[cfg(test)]

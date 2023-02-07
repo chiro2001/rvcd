@@ -10,7 +10,7 @@ use tracing::{info, warn};
 fn optimize_vcd_parser(path: &str) -> Result<()> {
     info!("optimize_vcd_parser({})", path);
     if let Ok(mut input) = File::open(path) {
-        Vcd::load(&mut input)?;
+        Vcd::load(&mut input, |_, _| {})?;
     } else {
         warn!("file not found: {}", path);
     }

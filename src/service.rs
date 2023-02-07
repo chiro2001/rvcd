@@ -18,7 +18,12 @@ unsafe impl Send for Service {}
 
 impl Service {
     fn parse_data_send(&self, reader: &mut dyn Read) -> bool {
-        if let Ok(wave) = Vcd::load(reader) {
+        if let Ok(wave) = Vcd::load(reader, |percent, pos| {
+            self.channel
+                .tx
+                .send(RvcdMsg::ParsingProgress(percent, pos))
+                .unwrap();
+        }) {
             info!("service load wave: {}", wave);
             self.channel.tx.send(RvcdMsg::UpdateWave(wave)).unwrap();
             true
