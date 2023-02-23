@@ -259,7 +259,7 @@ impl Rvcd {
                             pos = self.load_progress.1.to_string().as_str()
                         ));
                         ProgressBar::new(self.parse_progress.0).ui(ui);
-                        handle_cancel(ui);
+                        // handle_cancel(ui);
                     }
                 });
             ctx.request_repaint();
