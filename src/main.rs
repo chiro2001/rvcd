@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
             "Rvcd",
             native_options,
             Box::new(|cc| Box::new(RvcdApp::new(cc))),
-        );
+        ).expect("gui panic!");
     };
     let rpc = async move {
         let addr = "[::1]:50051".parse().unwrap();

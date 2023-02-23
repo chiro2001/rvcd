@@ -131,11 +131,11 @@ impl RvcdApp {
                 .on_hover_text(t!("debug.reset_egui.hover"))
                 .clicked()
             {
-                *ui.ctx().memory() = Default::default();
+                ui.ctx().memory_mut(|mem| *mem = Default::default());
             }
 
             if ui.button(t!("debug.reset_everything")).clicked() {
-                *ui.ctx().memory() = Default::default();
+                ui.ctx().memory_mut(|mem| *mem = Default::default());
             }
         });
         egui::warn_if_debug_build(ui);
@@ -170,7 +170,7 @@ impl eframe::App for RvcdApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         self.frame_history
-            .on_new_frame(ctx.input().time, frame.info().cpu_usage);
+            .on_new_frame(ctx.input(|i| i.time), frame.info().cpu_usage);
         match self.run_mode {
             RunMode::Continuous => {
                 // Tell the backend to repaint as soon as possible
@@ -333,7 +333,7 @@ impl eframe::App for RvcdApp {
         }
         preview_files_being_dropped(ctx);
         // FIXME: wasm target cannot handle multi files
-        for file in &ctx.input().raw.dropped_files {
+        for file in &ctx.input(|i| i.raw.dropped_files.clone()) {
             let file: &DroppedFile = file;
             let has_maximum_window = self.app_now_id.is_some();
             match self.app_now_id.and_then(|id| {

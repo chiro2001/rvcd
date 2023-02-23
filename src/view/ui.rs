@@ -188,8 +188,7 @@ impl WaveView {
         if ui.rect_contains_pointer(response.rect) {
             let scroll = ui
                 .ctx()
-                .input()
-                .events
+                .input(|i| i.events.clone())
                 .iter()
                 .find(|x| matches!(x, Event::Scroll(_)))
                 .and_then(|x| match x {
@@ -198,8 +197,7 @@ impl WaveView {
                 });
             let zoom = ui
                 .ctx()
-                .input()
-                .events
+                .input(|i| i.events.clone())
                 .iter()
                 .find(|x| matches!(x, Event::Zoom(_)))
                 .and_then(|x| match x {

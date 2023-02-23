@@ -8,8 +8,8 @@ default-run = "rvcd"
 
 
 [dependencies]
-egui = "0.20.1"
-eframe = { version = "0.20.1", default-features = false, features = [
+egui = "0.21.0"
+eframe = { version = "0.21.3", default-features = false, features = [
     #    "accesskit", # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow", # Use the glow rendering backend. Alternative: "wgpu".
@@ -24,7 +24,7 @@ anyhow = "1.0.68"
 num = "0.4.0"
 num-bigint = "0.4.3"
 num-traits = "0.2.15"
-egui_extras = "0.20.0"
+egui_extras = "0.21.0"
 futures = "0.3.25"
 queues = "1.1.0"
 trees = "0.4.2"
@@ -45,7 +45,7 @@ tracing-subscriber = "0.3"
 tonic = "0.8.3"
 prost = "0.11.6"
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }
-egui-toast = { git = "https://github.com/chiro2001/egui-toast", branch = "main" }
+egui-toast = { git = "https://github.com/chiro2001/egui-toast", rev = "bd005ca57f3401f1352dd7ef9a2c1b1ca660b972" }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -54,7 +54,12 @@ tracing-wasm = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3.60"
 web-sys = { version = "0.3.60", features = ["Window"] }
-egui-toast = { git = "https://github.com/chiro2001/egui-toast", branch = "main", default-features = false, features = [] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.egui-toast]
+git = "https://github.com/chiro2001/egui-toast"
+rev = "bd005ca57f3401f1352dd7ef9a2c1b1ca660b972"
+default-features = false
+features = []
 
 
 [profile.release]
