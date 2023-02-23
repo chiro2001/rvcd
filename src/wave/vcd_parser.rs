@@ -6,10 +6,11 @@ use crate::wave::{
 };
 use anyhow::{anyhow, Result};
 use queues::{IsQueue, Queue};
+use regex::Regex;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::io::Read;
+use std::io::{BufReader, Read};
 use std::slice::Iter;
 use tracing::info;
 use trees::Tree;
@@ -229,16 +230,39 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
     }
 }
 
-// TODO: vcd_get_last_timestamp; rev data input
-// pub fn vcd_get_last_timestamp(reader: &mut dyn Read, max_bytes: u64) -> Option<u64> {
-//     // trying to get last timestamp
-//     let bytes = reader.bytes().rev();
-//     let mut cnt = 0u64;
-//     while let Some(b) = bytes.next() {
-//
-//     }
-//     None
-// }
+/// Parse vcd file to get last timestamp
+/// ```rust
+/// let file = std::fs::File::open("data/cpu_ila_commit.vcd").unwrap();
+/// let rev_lines = rev_lines::RevLines::new(std::io::BufReader::new(file)).unwrap();
+/// for line in rev_lines {
+///     println!("{}", line);
+///     if line.starts_with("#") { break; }
+/// }
+/// ```
+pub fn vcd_get_last_timestamp<T>(reader: BufReader<T>) -> Option<u64>
+where
+    T: Read + std::io::Seek,
+{
+    // trying to get last timestamp
+    let limit_lines = 1024;
+    let mut result = None;
+    let re = Regex::new("^#(\\w+)$").unwrap();
+    if let Ok(lines) = rev_lines::RevLines::new(reader) {
+        let mut cnt = 0;
+        for line in lines {
+            if let Some(cap) = re.captures(line.as_str()) {
+                if let Some(number) = cap.get(0) {
+                    result = number.as_str().parse().ok();
+                }
+            }
+            if cnt >= limit_lines {
+                break;
+            }
+            cnt += 1;
+        }
+    }
+    result
+}
 
 pub struct Vcd;
 impl WaveLoader for Vcd {
