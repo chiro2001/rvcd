@@ -376,6 +376,13 @@ pub trait WaveLoader {
         F: Fn(f32, u64);
 }
 
+/// To support preloader
+pub trait WavePreLoader {
+    fn last_timestamp<T>(reader: std::io::BufReader<T>) -> Option<u64>
+        where
+            T: Read + std::io::Seek;
+}
+
 #[cfg(test)]
 mod test {
     use crate::wave::vcd_parser::Vcd;

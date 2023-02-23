@@ -1,8 +1,8 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::WaveTreeNode::WaveRoot;
 use crate::wave::{
-    Wave, WaveDataItem, WaveInfo, WaveLoader, WaveScopeInfo, WaveSignalInfo, WaveTimescaleUnit,
-    WaveTreeNode, WireValue,
+    Wave, WaveDataItem, WaveInfo, WaveLoader, WavePreLoader, WaveScopeInfo, WaveSignalInfo,
+    WaveTimescaleUnit, WaveTreeNode, WireValue,
 };
 use anyhow::{anyhow, Result};
 use queues::{IsQueue, Queue};
@@ -10,11 +10,13 @@ use regex::Regex;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek};
 use std::slice::Iter;
 use tracing::info;
 use trees::Tree;
 use vcd::{Command, Header, IdCode, Scope, ScopeItem, TimescaleUnit, Value, Var};
+
+pub struct Vcd;
 
 pub fn vcd_header_show(header: &Header) {
     if let Some(c) = header.comment.as_ref() {
@@ -275,7 +277,15 @@ where
     result
 }
 
-pub struct Vcd;
+impl WavePreLoader for Vcd {
+    fn last_timestamp<T>(reader: BufReader<T>) -> Option<u64>
+    where
+        T: Read + Seek,
+    {
+        vcd_get_last_timestamp(reader)
+    }
+}
+
 impl WaveLoader for Vcd {
     fn load<F>(reader: &mut dyn Read, progress_handler: F) -> Result<Wave>
     where
