@@ -38,6 +38,8 @@ rev_lines = { git = "https://github.com/chiro2001/rev_lines", rev = "5cafb676add
 
 [build-dependencies]
 tonic-build = "0.8.4"
+reqwest = "0.11.14"
+tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
