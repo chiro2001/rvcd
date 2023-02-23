@@ -38,8 +38,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "cargo:rerun-if-changed={}",
         std::fs::canonicalize(antlr_path).unwrap().to_str().unwrap()
     );
-    let grammars = vec!["tcl/Tcl", "verilog/VerilogLexer", "verilog/VerilogParser"];
-    let additional_args = vec![Some("-visitor"), Some("-visitor"), Some("-visitor")];
+    let grammars = vec!["verilog/VerilogLexer", "verilog/VerilogParser"];
+    let additional_args = vec![Some("-visitor"), Some("-visitor")];
     for (grammar, arg) in grammars.into_iter().zip(additional_args) {
         let grammar_path = format!("antlr/{}.g4", grammar);
         gen_for_grammar(grammar_path.as_str(), antlr_path_str.as_str(), arg)?;
