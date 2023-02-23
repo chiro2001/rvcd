@@ -252,7 +252,9 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
 /// Ok(())
 /// # }
 /// ```
-pub fn vcd_get_last_timestamp<T>(reader: BufReader<T>) -> Option<u64>
+pub fn vcd_get_last_timestamp<T>(
+    reader: BufReader<T>,
+) -> (Option<u64>, std::io::Result<BufReader<T>>)
 where
     T: Read + std::io::Seek,
 {
@@ -260,9 +262,9 @@ where
     let limit_lines = 1024;
     let mut result = None;
     let re = Regex::new("^#(\\w+)$").unwrap();
-    if let Ok(lines) = rev_lines::RevLines::new(reader) {
+    if let Ok(mut lines) = rev_lines::RevLines::new(reader) {
         let mut cnt = 0;
-        for line in lines {
+        for line in lines.iter() {
             if let Some(cap) = re.captures(line.as_str()) {
                 if let Some(number) = cap.get(1) {
                     result = number.as_str().parse().ok();
@@ -273,12 +275,20 @@ where
             }
             cnt += 1;
         }
+        (result, lines.move_reader_out())
+    } else {
+        (
+            result,
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                anyhow::anyhow!("Cannot find last timestamp"),
+            )),
+        )
     }
-    result
 }
 
 impl WavePreLoader for Vcd {
-    fn last_timestamp<T>(reader: BufReader<T>) -> Option<u64>
+    fn last_timestamp<T>(reader: BufReader<T>) -> (Option<u64>, std::io::Result<BufReader<T>>)
     where
         T: Read + Seek,
     {
@@ -287,7 +297,11 @@ impl WavePreLoader for Vcd {
 }
 
 impl WaveLoader for Vcd {
-    fn load<F>(reader: &mut dyn Read, progress_handler: F) -> Result<Wave>
+    fn load<F>(
+        reader: &mut dyn Read,
+        progress_handler: F,
+        last_timestamp: Option<u64>,
+    ) -> Result<Wave>
     where
         F: Fn(f32, u64),
     {
@@ -330,6 +344,12 @@ impl WaveLoader for Vcd {
         let mut timestamp = 0u64;
         let mut time_start = 0xfffffffffffffu64;
         let mut time_stop = 0u64;
+        let timestamp_skip = if let Some(last) = last_timestamp {
+            last / 1000
+        } else {
+            0
+        };
+        let mut timestamp_notified = 0u64;
         for command_result in parser {
             let command = command_result?;
             match command {
@@ -341,6 +361,16 @@ impl WaveLoader for Vcd {
                         time_stop = t;
                     }
                     timestamp = t;
+                    if timestamp_skip > 0 && timestamp > time_start {
+                        if let Some(last_timestamp) = last_timestamp {
+                            if timestamp_notified + timestamp_skip < timestamp {
+                                let progress =
+                                    (timestamp - time_start) as f32 / last_timestamp as f32;
+                                progress_handler(progress, timestamp);
+                                timestamp_notified = timestamp;
+                            }
+                        }
+                    }
                 }
                 Command::ChangeScalar(i, v) => {
                     let IdCode(id) = i;

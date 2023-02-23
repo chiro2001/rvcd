@@ -1,9 +1,9 @@
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::utils::{execute, sleep_ms};
 use crate::wave::vcd_parser::Vcd;
-use crate::wave::WaveLoader;
+use crate::wave::{WaveLoader, WavePreLoader};
 use anyhow::Result;
-use std::io::{Cursor, Read};
+use std::io::{BufReader, Cursor, Read};
 use std::sync::{mpsc, Arc, Mutex};
 use tracing::{debug, error, info};
 
@@ -17,13 +17,19 @@ pub struct Service {
 unsafe impl Send for Service {}
 
 impl Service {
-    fn parse_data_send(&self, reader: &mut dyn Read) -> bool {
-        if let Ok(wave) = Vcd::load(reader, |percent, pos| {
-            self.channel
-                .tx
-                .send(RvcdMsg::ParsingProgress(percent, pos))
-                .unwrap();
-        }) {
+    fn parse_data_send(&self, data: Vec<u8>) -> bool {
+        let (last_timestamp, reader) = Vcd::last_timestamp(BufReader::new(Cursor::new(data)));
+        let reader = reader.unwrap();
+        if let Ok(wave) = Vcd::load(
+            &mut reader.into_inner(),
+            |percent, pos| {
+                self.channel
+                    .tx
+                    .send(RvcdMsg::ParsingProgress(percent, pos))
+                    .unwrap();
+            },
+            last_timestamp,
+        ) {
             info!("service load wave: {}", wave);
             self.channel.tx.send(RvcdMsg::UpdateWave(wave)).unwrap();
             true
@@ -160,8 +166,7 @@ impl Service {
             }
             RvcdMsg::FileOpenData(data) => {
                 // TODO: reduce this data clone
-                let mut reader: Cursor<Vec<_>> = Cursor::new(data.to_vec());
-                if !self.parse_data_send(&mut reader) {
+                if !self.parse_data_send(data.to_vec()) {
                     self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                 }
             }
@@ -176,9 +181,7 @@ impl Service {
             RvcdMsg::ServiceDataReady(data) => {
                 *self.loading.lock().unwrap() = false;
                 info!("start parsing data");
-                // if let Ok(w) = Vcd::load(&mut file) {
-                let mut reader = Cursor::new(data);
-                if !self.parse_data_send(&mut reader) {
+                if !self.parse_data_send(data) {
                     self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
                 }
                 info!("stop parsing data");

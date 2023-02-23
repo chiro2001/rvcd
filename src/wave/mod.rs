@@ -371,16 +371,22 @@ impl Wave {
 
 /// To support other file formats
 pub trait WaveLoader {
-    fn load<F>(reader: &mut dyn Read, progress_handler: F) -> Result<Wave>
+    fn load<F>(
+        reader: &mut dyn Read,
+        progress_handler: F,
+        last_timestamp: Option<u64>,
+    ) -> Result<Wave>
     where
         F: Fn(f32, u64);
 }
 
 /// To support preloader
 pub trait WavePreLoader {
-    fn last_timestamp<T>(reader: std::io::BufReader<T>) -> Option<u64>
-        where
-            T: Read + std::io::Seek;
+    fn last_timestamp<T>(
+        reader: std::io::BufReader<T>,
+    ) -> (Option<u64>, std::io::Result<std::io::BufReader<T>>)
+    where
+        T: Read + std::io::Seek;
 }
 
 #[cfg(test)]

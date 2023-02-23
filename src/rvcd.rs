@@ -256,9 +256,7 @@ impl Rvcd {
                         ui.label(t!(
                             "loading.parse_progress",
                             percent = format!("{:.1}", self.parse_progress.0 * 100.0).as_str(),
-                            pos = FileSizeUnit::from_bytes(self.load_progress.1)
-                                .to_string()
-                                .as_str()
+                            pos = self.load_progress.1.to_string().as_str()
                         ));
                         ProgressBar::new(self.parse_progress.0).ui(ui);
                         handle_cancel(ui);

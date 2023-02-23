@@ -2241,8 +2241,7 @@ dependencies = [
 [[package]]
 name = "rev_lines"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18eb52b6664d331053136fcac7e4883bdc6f5fc04a6aab3b0f75eafb80ab88b3"
+source = "git+https://github.com/chiro2001/rev_lines?rev=5cafb676addbcace2f3954b2801e82077c13733c#5cafb676addbcace2f3954b2801e82077c13733c"
 
 [[package]]
 name = "rfd"
