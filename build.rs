@@ -61,7 +61,7 @@ fn gen_for_grammar(
         .arg("org.antlr.v4.Tool")
         .arg("-Dlanguage=Rust")
         .arg("-o")
-        .arg("target/antlr_gen")
+        .arg(env::var("OUT_DIR").unwrap())
         .arg(grammar_file_path)
         .args(additional_arg)
         .spawn()
