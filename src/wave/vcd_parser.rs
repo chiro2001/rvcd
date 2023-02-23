@@ -239,6 +239,17 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
 ///     if line.starts_with("#") { break; }
 /// }
 /// ```
+///
+/// # Example
+/// ```rust
+/// # fn main() -> anyhow::Result<()> {
+/// use rvcd::wave::vcd_parser::vcd_get_last_timestamp;
+/// let file = std::fs::File::open("data/cpu_ila_commit.vcd").unwrap();
+/// let stamp = vcd_get_last_timestamp(std::io::BufReader::new(file)).ok_or(anyhow::Error::msg("cannot get timestamp"))?;
+/// println!("got stamp: {}", stamp);
+/// Ok(())
+/// # }
+/// ```
 pub fn vcd_get_last_timestamp<T>(reader: BufReader<T>) -> Option<u64>
 where
     T: Read + std::io::Seek,
@@ -251,7 +262,7 @@ where
         let mut cnt = 0;
         for line in lines {
             if let Some(cap) = re.captures(line.as_str()) {
-                if let Some(number) = cap.get(0) {
+                if let Some(number) = cap.get(1) {
                     result = number.as_str().parse().ok();
                 }
             }
