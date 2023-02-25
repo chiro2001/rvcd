@@ -1,7 +1,7 @@
 module waterfall (
     input wire clk,
     input wire rst,
-    input wire start,
+    input start,
     input wire [1:0] freq_set,
     output reg [7:0] led
 );

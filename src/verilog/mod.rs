@@ -4,8 +4,9 @@ mod verilogparser;
 mod verilogparserlistener;
 mod verilogparservisitor;
 
+use antlr_rust::rule_context::CustomRuleContext;
+use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
 use antlr_rust::BaseParser;
-use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat};
 use tracing::info;
 pub use veriloglexer::*;
 pub use verilogparser::*;
@@ -24,42 +25,109 @@ impl<'i> ParseTreeVisitorCompat<'i> for VerilogModulesVisitor {
 }
 
 impl<'i> VerilogParserVisitorCompat<'i> for VerilogModulesVisitor {
-    fn visit_module_declaration(&mut self, ctx: &Module_declarationContext<'i>) -> Self::Return {
-        let name = ctx.get_text();
-        info!("visit module {}", name);
-        vec![name]
-    }
+    // fn visit_module_declaration(&mut self, ctx: &Module_declarationContext<'i>) -> Self::Return {
+    //     let name = ctx.get_text();
+    //     info!("visit module {}", name);
+    //     let mut v = self.visit_children(ctx);
+    //     // vec![name]
+    //     v.push(name);
+    //     v
+    // }
+
+    // fn visit_module_keyword(&mut self, ctx: &Module_keywordContext<'i>) -> Self::Return {
+    //     let name = ctx.get_text();
+    //     info!("visit module {}", name);
+    //     vec![name]
+    // }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
 }
+#[derive(Default, Debug)]
 pub struct VerilogModule {
+    pub name: String,
     pub ports: Vec<VerilogPort>,
     pub regs: Vec<VerilogReg>,
     pub wires: Vec<VerilogWire>,
 }
+#[derive(Default, Debug)]
 pub enum VerilogPortType {
-    Input, Output, Inout
+    #[default]
+    Input,
+    Output,
+    Inout,
 }
+#[derive(Default, Debug)]
 pub struct VerilogPort {
     pub typ: VerilogPortType,
-    pub name: String
+    pub name: String,
 }
+#[derive(Default, Debug)]
 pub struct VerilogReg {
     pub name: String,
 }
+#[derive(Default, Debug)]
 pub struct VerilogWire {
     pub name: String,
 }
-
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MyVerilogListener {
-    pub modules: Vec<VerilogModule>,
-    pub ports: Vec<VerilogPort>,
-    pub regs: Vec<VerilogReg>,
-    pub wires: Vec<VerilogWire>,
+    pub source: VerilogSource,
+    pub module: Option<VerilogModule>,
+    pub port: Option<VerilogPort>,
+    pub reg: Option<VerilogReg>,
+    pub wire: Option<VerilogWire>,
+}
+
+impl MyVerilogListener {
+    pub fn new() -> Self {
+        Self {
+            module: Some(VerilogModule::default()),
+            port: Some(VerilogPort::default()),
+            reg: Some(VerilogReg::default()),
+            wire: Some(VerilogWire::default()),
+            ..Self::default()
+        }
+    }
+}
+
+impl<'i> VerilogParserListener<'i> for MyVerilogListener {
+    fn exit_module_identifier(&mut self, ctx: &Module_identifierContext<'i>) {
+        info!("module identifier: {}", ctx.get_text());
+        self.module.as_mut().unwrap().name = ctx.get_text();
+    }
+
+    fn exit_port_declaration(&mut self, _ctx: &Port_declarationContext<'i>) {
+        self.module
+            .as_mut()
+            .unwrap()
+            .ports
+            .push(self.port.replace(Default::default()).unwrap());
+    }
+
+    fn exit_input_port_identifier(&mut self, _ctx: &Input_port_identifierContext<'i>) {
+        self.port.as_mut().unwrap().typ = VerilogPortType::Input;
+    }
+
+    fn exit_output_port_identifier(&mut self, _ctx: &Output_port_identifierContext<'i>) {
+        self.port.as_mut().unwrap().typ = VerilogPortType::Output;
+    }
+
+    fn exit_inout_port_identifier(&mut self, _ctx: &Inout_port_identifierContext<'i>) {
+        self.port.as_mut().unwrap().typ = VerilogPortType::Inout;
+    }
+
+    fn exit_port_identifier(&mut self, ctx: &Port_identifierContext<'i>) {
+        self.port.as_mut().unwrap().name = ctx.get_text();
+    }
+
+    fn exit_module_declaration(&mut self, ctx: &Module_declarationContext<'i>) {
+        self.source
+            .modules
+            .push(self.module.replace(Default::default()).unwrap());
+    }
 }
 
 impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
@@ -79,16 +147,6 @@ impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
                 .get(ctx.get_rule_index())
                 .unwrap_or(&"error")
         );
-    }
-}
-
-impl<'i> VerilogParserListener<'i> for MyVerilogListener {
-    fn exit_module_declaration(&mut self, _ctx: &Module_declarationContext<'i>) {
-
-    }
-
-    fn exit_list_of_ports(&mut self, _ctx: &List_of_portsContext<'i>) {
-
     }
 }
 
@@ -113,10 +171,13 @@ mod test {
         let lexer = VerilogLexer::new_with_token_factory(InputStream::new(data.as_str()), &tf);
         let token_source = CommonTokenStream::new(lexer);
         let mut parser = VerilogParser::new(token_source);
-        parser.add_parse_listener(Box::new(MyVerilogListener::default()));
+        let listener = MyVerilogListener::new();
+        let listener_id = parser.add_parse_listener(Box::new(listener));
         let result = parser.source_text().expect("parsed unsuccessfully");
         let mut visitor = VerilogModulesVisitor(Vec::new());
         let visitor_result = visitor.visit(&*result);
         info!("modules: {:?}", visitor_result);
+        let listener = parser.remove_parse_listener(listener_id);
+        info!("tree: {:?}", listener);
     }
 }
