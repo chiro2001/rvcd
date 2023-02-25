@@ -1,6 +1,11 @@
 use std::io::Read;
 use tracing::info;
 
+// mod antlr_gen {
+//     include!(concat!(env!("OUT_DIR"), "/antlr/verilog/veriloglexer.rs"));
+//     include!(concat!(env!("OUT_DIR"), "/antlr/verilog/verilogparser.rs"));
+// }
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let mut file = std::fs::File::open("data/code-sample/waterfall_tb.v")?;
