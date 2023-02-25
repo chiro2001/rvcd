@@ -14,7 +14,7 @@ pub mod tree_view;
 pub mod utils;
 pub mod view;
 pub mod wave;
-pub mod gen;
+pub mod verilog;
 
 #[macro_use]
 extern crate rust_i18n;
