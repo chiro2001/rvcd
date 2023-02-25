@@ -48,7 +48,7 @@ tracing-subscriber = "0.3"
 tonic = "0.8.3"
 prost = "0.11.6"
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }
-egui-toast = { git = "https://github.com/chiro2001/egui-toast", rev = "bd005ca57f3401f1352dd7ef9a2c1b1ca660b972" }
+egui-toast = { git = "https://github.com/chiro2001/egui-toast", rev = "2f3adaab2e7b1512b9d6101ba5d668351e224056" }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -60,7 +60,7 @@ web-sys = { version = "0.3.60", features = ["Window"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.egui-toast]
 git = "https://github.com/chiro2001/egui-toast"
-rev = "bd005ca57f3401f1352dd7ef9a2c1b1ca660b972"
+rev = "2f3adaab2e7b1512b9d6101ba5d668351e224056"
 default-features = false
 features = []
 
