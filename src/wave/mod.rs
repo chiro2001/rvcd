@@ -400,7 +400,7 @@ mod test {
     #[test]
     fn test_load_wave() -> anyhow::Result<()> {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
-        let wave = Vcd::load(&mut input)?;
+        let wave = Vcd::load(&mut input, |_, _| {}, None)?;
         println!("loaded wave: {wave}");
         // for item in &wave.data {
         //     println!("item: {}", item);

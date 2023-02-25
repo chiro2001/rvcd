@@ -247,7 +247,7 @@ impl From<TimescaleUnit> for WaveTimescaleUnit {
 /// # fn main() -> anyhow::Result<()> {
 /// use rvcd::wave::vcd_parser::vcd_get_last_timestamp;
 /// let file = std::fs::File::open("data/cpu_ila_commit.vcd").unwrap();
-/// let stamp = vcd_get_last_timestamp(std::io::BufReader::new(file)).ok_or(anyhow::Error::msg("cannot get timestamp"))?;
+/// let stamp = vcd_get_last_timestamp(std::io::BufReader::new(file)).0.ok_or(anyhow::Error::msg("cannot get timestamp"))?;
 /// println!("got stamp: {}", stamp);
 /// Ok(())
 /// # }
