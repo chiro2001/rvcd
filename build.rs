@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grammars = vec!["VerilogLexer", "VerilogParser"];
     let additional_args = vec![Some("-visitor"), Some("-visitor")];
     for (grammar, arg) in grammars.into_iter().zip(additional_args) {
-        let grammar_path = format!("antlr/verilog/{}.g4", grammar);
+        let grammar_path = format!("{}.g4", grammar);
         gen_for_grammar(grammar_path.as_str(), antlr_path_abs, arg)?;
         println!("cargo:rerun-if-changed={}", grammar_path);
     }
@@ -44,7 +44,7 @@ fn gen_for_grammar(
     antlr_path: &str,
     additional_arg: Option<&str>,
 ) -> Result<(), Box<dyn Error>> {
-    let input = env::current_dir().unwrap(); //.join("antlr");
+    let input = env::current_dir().unwrap().join("antlr");
     let mut child = Command::new("java")
         .current_dir(input)
         .arg("-cp")
@@ -52,7 +52,8 @@ fn gen_for_grammar(
         .arg("org.antlr.v4.Tool")
         .arg("-Dlanguage=Rust")
         .arg("-o")
-        .arg(env::var("OUT_DIR").unwrap())
+        // .arg(env::var("OUT_DIR").unwrap())
+        .arg("../src/verilog")
         .arg(grammar_file_path)
         .args(additional_arg)
         .spawn()
