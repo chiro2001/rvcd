@@ -1,6 +1,7 @@
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
 use crate::utils::{execute, get_text_size};
+use crate::verilog::VerilogGotoSource;
 use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
 };
@@ -447,13 +448,24 @@ impl WaveView {
                                         // select longest match
                                         results.sort_by_key(|x| x.1 .0.len());
                                         results.reverse();
-                                        if let Some(result) = results.pop() {
-                                            tx.send(RvcdMsg::CallGotoSources((
-                                                result.0.source_path.clone(),
-                                                result.1 .0,
-                                                result.1 .1,
-                                            )))
-                                            .unwrap();
+                                        let mut results = results
+                                            .into_iter()
+                                            .map(|result| VerilogGotoSource {
+                                                file: result.0.source_path.clone(),
+                                                path: result.1 .0,
+                                                location: result.1 .1,
+                                            })
+                                            .collect::<Vec<_>>();
+                                        if !results.is_empty() {
+                                            if results.len() == 1 {
+                                                let result = results.pop().unwrap();
+                                                tx.send(RvcdMsg::CallGotoSources(result)).unwrap();
+                                            } else {
+                                                tx.send(RvcdMsg::SetAlternativeGotoSources(
+                                                    results,
+                                                ))
+                                                .unwrap();
+                                            }
                                         }
                                     });
                                 }

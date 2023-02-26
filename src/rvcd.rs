@@ -4,13 +4,14 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
+use crate::verilog::VerilogGotoSource;
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
 use egui::{
-    vec2, Align2, Color32, Direction, DroppedFile, Id, Layout, ProgressBar, RichText, ScrollArea,
-    Sense, Ui, Widget,
+    vec2, Align2, Color32, Direction, DroppedFile, Id, Label, Layout, ProgressBar, RichText,
+    ScrollArea, Sense, Ui, Widget,
 };
 use egui_extras::{Column, TableBuilder};
 use egui_toast::Toasts;
@@ -87,6 +88,9 @@ pub struct Rvcd {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub sources_updated: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub alternative_goto_sources: Vec<VerilogGotoSource>,
 
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
@@ -135,6 +139,7 @@ impl Default for Rvcd {
             sources_update_started: false,
             #[cfg(not(target_arch = "wasm32"))]
             sources_updated: false,
+            alternative_goto_sources: vec![],
             #[cfg(not(target_arch = "wasm32"))]
             client: Arc::new(Default::default()),
         }
@@ -304,6 +309,42 @@ impl Rvcd {
                 tx.send(RvcdMsg::UpdateSourceDir(self.source_dir.to_string()))
                     .unwrap();
             }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.alternative_goto_sources.is_empty() {
+            egui::Window::new("选择要跳转到的目标").show(ctx, |ui| {
+                TableBuilder::new(ui)
+                    .column(Column::remainder())
+                    .body(|body| {
+                        body.heterogeneous_rows(
+                            (0..self.alternative_goto_sources.len()).map(|_| 40.0),
+                            |index, mut row| {
+                                if let Some(a) = self.alternative_goto_sources.get(index) {
+                                    row.col(|ui| {
+                                        if ui
+                                            .add(
+                                                Label::new(format!(
+                                                    "{}:{}:{}",
+                                                    a.file, a.location.line, a.location.column
+                                                ))
+                                                .sense(Sense::click()),
+                                            )
+                                            .clicked()
+                                        {
+                                            if let Some(loop_self) = &self.loop_self {
+                                                loop_self
+                                                    .send(RvcdMsg::CallGotoSources(a.clone()))
+                                                    .unwrap();
+                                                self.alternative_goto_sources.clear();
+                                            }
+                                        };
+                                    });
+                                }
+                            },
+                        );
+                    });
+            });
         }
 
         self.toasts
@@ -622,6 +663,9 @@ impl Rvcd {
             RvcdMsg::CallGotoSources(_g) => {
                 // todo!();
                 info!("ui CallGotoSources({:?})", _g);
+            }
+            RvcdMsg::SetAlternativeGotoSources(v) => {
+                self.alternative_goto_sources = v;
             }
         };
     }

@@ -83,7 +83,10 @@ impl VerilogSource {
             let mut do_if_insert =
                 |queue: &mut Vec<&str>, result: &mut R, location: &CodeLocation| {
                     if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
-                        info!("insert result: queue {:?}, query {:?}, location: {:?}", queue, query, location);
+                        info!(
+                            "insert result: queue {:?}, query {:?}, location: {:?}",
+                            queue, query, location
+                        );
                         result.push((
                             queue.iter().map(|x| x.to_string()).collect(),
                             location.clone(),
@@ -389,6 +392,13 @@ impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
                 .unwrap_or(&"error")
         );
     }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct VerilogGotoSource {
+    pub file: String,
+    pub path: Vec<String>,
+    pub location: CodeLocation,
 }
 
 #[cfg(not(target_arch = "wasm32"))]

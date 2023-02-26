@@ -1,4 +1,4 @@
-use crate::verilog::{CodeLocation, VerilogSource};
+use crate::verilog::{VerilogGotoSource, VerilogSource};
 use crate::wave::Wave;
 use egui_toast::Toast;
 use rfd::FileHandle;
@@ -22,7 +22,8 @@ pub enum RvcdMsg {
     StopService,
     UpdateSourceDir(String),
     UpdateSources(Vec<VerilogSource>),
-    CallGotoSources((String, Vec<String>, CodeLocation)),
+    SetAlternativeGotoSources(Vec<VerilogGotoSource>),
+    CallGotoSources(VerilogGotoSource),
 }
 
 impl Debug for RvcdMsg {
@@ -50,6 +51,9 @@ impl Debug for RvcdMsg {
             RvcdMsg::UpdateSources(s) => write!(f, "RvcdMsg: UpdateSources({})", s.len()),
             RvcdMsg::UpdateSourceDir(path) => write!(f, "RvcdMsg: UpdateSourceDir({})", path),
             RvcdMsg::CallGotoSources(g) => write!(f, "RvcdMg: GotoSource({:?})", g),
+            RvcdMsg::SetAlternativeGotoSources(g) => {
+                write!(f, "RvcdMg: SetAlternativeGotoSources({:?})", g)
+            }
         }
     }
 }
