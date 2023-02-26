@@ -753,5 +753,6 @@ impl Rvcd {
                 Err(e) => warn!("cannot send stop msg: {}", e),
             };
         }
+        *self.client.stop.lock().unwrap() = true;
     }
 }

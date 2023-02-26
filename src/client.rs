@@ -28,6 +28,7 @@ impl Default for RvcdManagedClientData {
 #[derive(Debug, Default)]
 pub struct RvcdManagedClient {
     pub data: Arc<Mutex<RvcdManagedClientData>>,
+    pub stop: Arc<Mutex<bool>>,
 }
 
 #[tonic::async_trait]
@@ -37,6 +38,13 @@ impl RvcdClient for RvcdManagedClient {
             client_port: self.data.lock().unwrap().port as u32,
             paths: self.data.lock().unwrap().paths.clone(),
         }))
+    }
+
+    async fn ping(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        if *self.stop.lock().unwrap() {
+            panic!("will panic this thread!");
+        }
+        Ok(Response::new(()))
     }
 }
 
@@ -50,6 +58,7 @@ impl RvcdManagedClient {
             let rpc_server = Server::builder()
                 .add_service(RvcdClientServer::new(Self {
                     data: self.data.clone(),
+                    stop: self.stop.clone(),
                 }))
                 .serve(addr);
             let stop = Arc::new(Mutex::new(false));

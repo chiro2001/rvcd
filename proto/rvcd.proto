@@ -16,6 +16,7 @@ service RvcdRpc {
 
 service RvcdClient {
     rpc Info (google.protobuf.Empty) returns (RvcdManagedInfo);
+    rpc Ping (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message RvcdManagedInfo {
