@@ -54,6 +54,10 @@ impl RvcdRpc for RvcdManager {
                 }
             }
         }
+        for k in to_remove_keys {
+            info!("removing port {}", k);
+            self.managed_files.lock().unwrap().remove(&k);
+        }
         Ok(Response::new(()))
     }
 }

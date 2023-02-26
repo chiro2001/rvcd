@@ -43,6 +43,8 @@ impl RvcdClient for RvcdManagedClient {
     async fn ping(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         if *self.stop.lock().unwrap() {
             panic!("will panic this thread!");
+        } else {
+            info!("valid ping : {}", self.data.lock().unwrap().port);
         }
         Ok(Response::new(()))
     }
@@ -68,13 +70,13 @@ impl RvcdManagedClient {
                     info!("rpc_server done with {:?}", r);
                     ok = Some(r.is_ok());
                 },
-                r = Self::streaming_info(self.data.clone(), stop.clone()) => {
+                r = Self::streaming_info(self.data.clone(), stop.clone(), self.stop.clone()) => {
                     info!("streaming_info done with {:?}", r);
                     ok = Some(false);
                 }
             };
             *stop.lock().unwrap() = true;
-            if !ok.unwrap() {
+            if !ok.unwrap() && !*self.stop.lock().unwrap() {
                 self.data.lock().as_mut().unwrap().port += 1;
             } else {
                 break;
@@ -91,7 +93,11 @@ impl RvcdManagedClient {
             d.paths.extend_from_slice(paths);
         }
     }
-    pub async fn streaming_info(data: Arc<Mutex<RvcdManagedClientData>>, stop: Arc<Mutex<bool>>) {
+    pub async fn streaming_info(
+        data: Arc<Mutex<RvcdManagedClientData>>,
+        stop: Arc<Mutex<bool>>,
+        global_stop: Arc<Mutex<bool>>,
+    ) {
         // let (tx, rx) = mpsc::channel();
         // tokio::spawn(async move {
         let mut client = RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
@@ -118,6 +124,9 @@ impl RvcdManagedClient {
                 break;
             }
             if *stop.lock().unwrap() {
+                break;
+            }
+            if *global_stop.lock().unwrap() {
                 break;
             }
             sleep_ms(500).await;
