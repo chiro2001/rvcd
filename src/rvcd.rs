@@ -84,6 +84,9 @@ pub struct Rvcd {
     pub sources: Vec<VerilogSource>,
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
+    pub sources_update_started: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
     pub sources_updated: bool,
 }
 
@@ -126,6 +129,8 @@ impl Default for Rvcd {
             source_dir: "".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
             sources: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
+            sources_update_started: false,
             #[cfg(not(target_arch = "wasm32"))]
             sources_updated: false,
         }
@@ -628,6 +633,36 @@ impl Rvcd {
                     });
                 }
                 ui.close_menu();
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            if ui.button(t!("menu.open_source_dir")).clicked() {
+                if let Some(channel) = &self.channel {
+                    self.sources_update_started = true;
+                    let task = rfd::AsyncFileDialog::new().pick_folder();
+                    let tx = channel.tx.clone();
+                    execute(async move {
+                        let dir = task.await;
+                        if let Some(path) = dir {
+                            tx.send(RvcdMsg::UpdateSourceDir(
+                                path.path().to_str().unwrap().to_string(),
+                            ))
+                            .unwrap();
+                        }
+                    });
+                }
+            }
+            // auto update sources
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Some(channel) = &self.channel {
+                if !self.sources_update_started
+                    && !self.sources_updated
+                    && !self.source_dir.is_empty()
+                {
+                    self.sources_update_started = true;
+                    let tx = &channel.tx;
+                    tx.send(RvcdMsg::UpdateSourceDir(self.source_dir.to_string()))
+                        .unwrap();
+                }
             }
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if ui.button(t!("menu.close")).clicked() {

@@ -30,6 +30,7 @@ menu:
   sst: SST
   file: File
   open: Open
+  open_source_dir: Open Source Directory
   vcd_file: VCD File
   state: State
   view: View

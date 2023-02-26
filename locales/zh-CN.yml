@@ -30,6 +30,7 @@ menu:
   sst: 波形树
   file: 文件
   open: 打开
+  open_source_dir: 打开源代码文件夹
   vcd_file: VCD 文件
   state: 状态
   view: 视图
