@@ -407,7 +407,7 @@ pub struct VerilogViewSource {
     pub file: String,
     pub path: Vec<String>,
     pub text: String,
-    pub location: CodeLocation,
+    pub offset: usize,
 }
 
 #[cfg(not(target_arch = "wasm32"))]

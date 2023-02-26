@@ -355,12 +355,24 @@ impl Rvcd {
                                                 .map(|x| x.source_code.0.as_str())
                                                 .collect::<Vec<_>>();
                                             if let Some(f) = f.first() {
+                                                let code = f.to_string();
+                                                let mut line = 0isize;
+                                                let mut offset = 0usize;
+                                                for (i, c) in code.chars().enumerate() {
+                                                    if c == '\n' {
+                                                        line += 1;
+                                                    }
+                                                    if line == a.location.line {
+                                                        offset = i;
+                                                        break;
+                                                    }
+                                                }
                                                 self.alternative_view_source =
                                                     Some(VerilogViewSource {
                                                         file: a.file,
                                                         path: a.path,
-                                                        text: f.to_string(),
-                                                        location: a.location,
+                                                        text: code,
+                                                        offset,
                                                     });
                                             }
                                         }
@@ -370,7 +382,7 @@ impl Rvcd {
                         );
                     });
                     if let Some(v) = &mut self.alternative_view_source {
-                        code_view_ui(ui, &mut v.text);
+                        code_view_ui(ui, &mut v.text, Some(v.offset));
                     }
                 });
             });

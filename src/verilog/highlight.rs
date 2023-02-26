@@ -1,7 +1,8 @@
 use egui::text::LayoutJob;
+use egui::text_edit::CursorRange;
 
 /// View some code with syntax highlighting and selection.
-pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String) {
+pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>) {
     let language = "rs";
     // let theme = CodeTheme::from_memory(ui.ctx());
     let theme = CodeTheme::default();
@@ -12,14 +13,23 @@ pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String) {
         ui.fonts(|f| f.layout_job(layout_job))
     };
 
-    ui.add(
-        egui::TextEdit::multiline(code)
-            .font(egui::TextStyle::Monospace) // for cursor height
-            .code_editor()
-            .desired_rows(1)
-            .lock_focus(true)
-            .layouter(&mut layouter),
-    );
+    let output = egui::TextEdit::multiline(code)
+        .font(egui::TextStyle::Monospace) // for cursor height
+        .code_editor()
+        .desired_rows(1)
+        .lock_focus(true)
+        .layouter(&mut layouter)
+        .show(ui);
+
+    let text_edit_id = output.response.id;
+    if let Some(offset) = offset {
+        if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), text_edit_id) {
+            let ccursor = egui::text::CCursor::new(offset);
+            state.set_ccursor_range(Some(egui::text::CCursorRange::one(ccursor)));
+            state.store(ui.ctx(), text_edit_id);
+            ui.ctx().memory_mut(|mem| mem.request_focus(text_edit_id)); // give focus back to the [`TextEdit`].
+        }
+    }
 }
 
 /// Memoized Code highlighting
