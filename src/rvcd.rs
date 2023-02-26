@@ -320,7 +320,9 @@ impl Rvcd {
                         body.heterogeneous_rows(
                             (0..self.alternative_goto_sources.len()).map(|_| 40.0),
                             |index, mut row| {
-                                if let Some(a) = self.alternative_goto_sources.get(index) {
+                                if let Some(a) =
+                                    self.alternative_goto_sources.get(index).map(|x| x.clone())
+                                {
                                     row.col(|ui| {
                                         if ui
                                             .add(
@@ -334,7 +336,7 @@ impl Rvcd {
                                         {
                                             if let Some(loop_self) = &self.loop_self {
                                                 loop_self
-                                                    .send(RvcdMsg::CallGotoSources(a.clone()))
+                                                    .send(RvcdMsg::CallGotoSources(a))
                                                     .unwrap();
                                                 self.alternative_goto_sources.clear();
                                             }

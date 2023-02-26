@@ -8,7 +8,7 @@ default-run = "rvcd"
 
 
 [dependencies]
-egui = "0.21.0"
+egui = { version = "0.21.0", features = ["serde"] }
 eframe = { version = "0.21.3", default-features = false, features = [
     #    "accesskit", # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
@@ -38,6 +38,7 @@ rev_lines = { git = "https://github.com/chiro2001/rev_lines", rev = "5cafb676add
 antlr-rust = "0.3.0-beta"
 debug-ignore = "1.0.5"
 clap = { version = "4.1.6", features = ["derive"] }
+enum-map = "2.4.2"
 
 [build-dependencies]
 tonic-build = "0.8.4"
