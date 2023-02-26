@@ -4,9 +4,12 @@ mod verilogparser;
 mod verilogparserlistener;
 mod verilogparservisitor;
 
+use antlr_rust::common_token_stream::CommonTokenStream;
 use antlr_rust::rule_context::CustomRuleContext;
+use antlr_rust::token_factory::CommonTokenFactory;
 use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
-use antlr_rust::BaseParser;
+use antlr_rust::{BaseParser, InputStream};
+use std::io::Read;
 use tracing::info;
 pub use veriloglexer::*;
 pub use verilogparser::*;
@@ -60,6 +63,7 @@ impl<'i> VerilogParserVisitorCompat<'i> for VerilogSimpleVisitor {}
 #[derive(Default, Debug)]
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
+    pub source: String,
 }
 #[derive(Default, Debug)]
 pub struct VerilogModule {
@@ -190,9 +194,32 @@ impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn parse_verilog_file(path: &str) -> anyhow::Result<VerilogSource> {
+    let mut file = std::fs::File::open(path)?;
+    let mut data = "".to_string();
+    file.read_to_string(&mut data)?;
+    let tf = CommonTokenFactory::default();
+    let lexer = VerilogLexer::new_with_token_factory(InputStream::new(data.as_str()), &tf);
+    let token_source = CommonTokenStream::new(lexer);
+    let mut parser = VerilogParser::new(token_source);
+    let listener = MyVerilogListener::new();
+    let listener_id = parser.add_parse_listener(Box::new(listener));
+    let result = parser.source_text().expect("parsed unsuccessfully");
+    let mut visitor = VerilogSimpleVisitor::default();
+    let _visitor_result = visitor.visit(&*result);
+    let listener = parser.remove_parse_listener(listener_id);
+    let mut parsed = listener.source;
+    parsed.source = path.to_string();
+    Ok(parsed)
+}
+
 #[cfg(test)]
 mod test {
-    use crate::verilog::{MyVerilogListener, VerilogLexer, VerilogModulesVisitor, VerilogParser, VerilogSimpleVisitor};
+    use crate::verilog::{
+        parse_verilog_file, MyVerilogListener, VerilogLexer, VerilogModulesVisitor, VerilogParser,
+        VerilogSimpleVisitor,
+    };
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::token_factory::CommonTokenFactory;
     use antlr_rust::tree::ParseTreeVisitorCompat;
@@ -219,5 +246,11 @@ mod test {
         // info!("modules: {:?}", visitor_result);
         let listener = parser.remove_parse_listener(listener_id);
         info!("tree: {:?}", listener);
+    }
+
+    #[test]
+    fn test_parse_verilog_file() {
+        let r = parse_verilog_file("data/code-sample/waterfall.v").unwrap();
+        println!("data: {:?}", r);
     }
 }
