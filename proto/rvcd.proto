@@ -11,7 +11,7 @@ service RvcdRpc {
     // For scaleda to request goto signal by path
     rpc GotoSignal (RvcdSignalPath) returns (google.protobuf.Empty) {}
     // For clients to sync data with manager
-    rpc ClientInfo (stream RvcdManagedInfo) returns (google.protobuf.Empty) {}
+    rpc ClientInfo (RvcdManagedInfo) returns (google.protobuf.Empty) {}
 }
 
 service RvcdClient {

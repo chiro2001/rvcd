@@ -19,7 +19,7 @@ use rfd::FileHandle;
 use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
@@ -87,9 +87,9 @@ pub struct Rvcd {
     #[serde(skip)]
     pub sources_updated: bool,
 
-    // #[cfg(not(target_arch = "wasm32"))]
-    // #[serde(skip)]
-    // pub client:
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub client: Arc<crate::client::RvcdManagedClient>,
 }
 
 impl Display for Rvcd {
@@ -134,6 +134,8 @@ impl Default for Rvcd {
             sources_update_started: false,
             #[cfg(not(target_arch = "wasm32"))]
             sources_updated: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            client: Arc::new(Default::default()),
         }
     }
 }
@@ -173,6 +175,10 @@ impl Rvcd {
                     )))
                     .unwrap();
             }
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                client.run().await;
+            });
         }
         let loop_self = channel_resp_tx.clone();
         self.loop_self = Some(loop_self);
@@ -603,6 +609,11 @@ impl Rvcd {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     info!("self.sources updated");
+                    let paths = _sources
+                        .iter()
+                        .map(|x| x.source_path.to_string())
+                        .collect::<Vec<_>>();
+                    self.client.set_paths(&paths);
                     self.view.set_sources(_sources);
                     self.sources_updated = true;
                 }

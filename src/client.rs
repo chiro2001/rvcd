@@ -5,11 +5,10 @@ use crate::rpc::rvcd_client_server::{RvcdClient, RvcdClientServer};
 use crate::rpc::rvcd_rpc_client::RvcdRpcClient;
 use crate::rpc::RvcdManagedInfo;
 use crate::utils::sleep_ms;
-use std::ops::Deref;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 #[derive(Debug)]
 pub struct RvcdManagedClientData {
@@ -42,25 +41,36 @@ impl RvcdClient for RvcdManagedClient {
 }
 
 impl RvcdManagedClient {
-    pub async fn run(&mut self) {
+    pub async fn run(&self) {
         let max_port = MANAGER_PORT + 1024;
         while self.data.lock().unwrap().port < max_port {
-            let addr = format!("0.0.0.0:{}", self.data.lock().unwrap().port)
-                .parse()
-                .unwrap();
+            let port = self.data.lock().unwrap().port;
+            warn!("child binding at port: {}", port);
+            let addr = format!("0.0.0.0:{}", port).parse().unwrap();
             let rpc_server = Server::builder()
                 .add_service(RvcdClientServer::new(Self {
                     data: self.data.clone(),
                 }))
                 .serve(addr);
             let stop = Arc::new(Mutex::new(false));
+            let ok;
             tokio::select! {
-                _ = rpc_server => {},
-                _ = Self::streaming_info(self.data.clone(), stop.clone()) => {}
+                r = rpc_server => {
+                    info!("rpc_server done with {:?}", r);
+                    ok = Some(r.is_ok());
+                },
+                r = Self::streaming_info(self.data.clone(), stop.clone()) => {
+                    info!("streaming_info done with {:?}", r);
+                    ok = Some(false);
+                }
             };
             *stop.lock().unwrap() = true;
-            sleep_ms(10).await;
-            self.data.lock().as_mut().unwrap().port += 1;
+            if !ok.unwrap() {
+                self.data.lock().as_mut().unwrap().port += 1;
+            } else {
+                break;
+            }
+            sleep_ms(100).await;
         }
         if self.data.lock().unwrap().port >= max_port {
             warn!("managed client runs out of ports!");
@@ -73,32 +83,36 @@ impl RvcdManagedClient {
         }
     }
     pub async fn streaming_info(data: Arc<Mutex<RvcdManagedClientData>>, stop: Arc<Mutex<bool>>) {
+        // let (tx, rx) = mpsc::channel();
+        // tokio::spawn(async move {
         let mut client = RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
             .await
             .unwrap();
-
-        let (tx, rx) = mpsc::channel();
-        tokio::spawn(async move {
-            loop {
-                if let Ok(data) = data.lock() {
-                    let paths = data.paths.clone();
-                    if tx
-                        .send(RvcdManagedInfo {
-                            client_port: data.port as u32,
-                            paths,
-                        })
-                        .is_err()
-                    {
-                        break;
-                    }
-                } else {
+        loop {
+            let r = if let Ok(data) = data.lock() {
+                trace!("client sending info: {:?}", data);
+                let paths = data.paths.clone();
+                let port = data.port.clone();
+                // drop(data);
+                Some(RvcdManagedInfo {
+                    client_port: port as u32,
+                    paths,
+                })
+            } else {
+                None
+            };
+            if let Some(r) = r {
+                if client.client_info(r).await.is_err() {
                     break;
                 }
-                if *stop.lock().unwrap() {
-                    break;
-                }
+            } else {
+                break;
             }
-        });
-        client.client_info(futures::stream::iter(rx)).await.unwrap();
+            if *stop.lock().unwrap() {
+                break;
+            }
+            sleep_ms(500).await;
+        }
+        // });
     }
 }

@@ -2,11 +2,10 @@
 
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
 use crate::rpc::{RvcdManagedInfo, RvcdSignalPath};
-use futures::StreamExt;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tonic::{Request, Response, Status, Streaming};
-use tracing::debug;
+use tonic::{Request, Response, Status};
+use tracing::{debug, info, trace};
 
 pub const MANAGER_PORT: u16 = 5411;
 
@@ -26,17 +25,12 @@ impl RvcdRpc for RvcdManager {
         todo!()
     }
 
-    async fn client_info(
-        &self,
-        request: Request<Streaming<RvcdManagedInfo>>,
-    ) -> Result<Response<()>, Status> {
-        let mut stream = request.into_inner();
-        while let Some(result) = stream.next().await {
-            if let Ok(r) = result {
-                let mut m = self.managed_files.lock().unwrap();
-                m.insert(r.client_port, r.paths);
-            }
-        }
+    async fn client_info(&self, request: Request<RvcdManagedInfo>) -> Result<Response<()>, Status> {
+        trace!("client_info");
+        let r = request.into_inner();
+        trace!("manager recv client: {:?}", r);
+        let mut m = self.managed_files.lock().unwrap();
+        m.insert(r.client_port, r.paths);
         Ok(Response::new(()))
     }
 }

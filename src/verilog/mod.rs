@@ -13,6 +13,7 @@ use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tre
 use antlr_rust::{BaseParser, DefaultErrorStrategy, InputStream};
 use queues::IsQueue;
 use std::io::Read;
+use antlr_rust::parser_rule_context::ParserRuleContext;
 use tracing::info;
 pub use veriloglexer::*;
 pub use verilogparser::*;
@@ -160,6 +161,7 @@ impl VerilogSource {
     // }
 }
 
+// TODO
 #[derive(Debug, Clone)]
 pub struct CodeInterval {
     pub a: isize,
@@ -327,6 +329,7 @@ impl<'i> VerilogParserListener<'i> for MyVerilogListener {
             .unwrap()
             .wires
             .push(self.wire.replace(Default::default()).unwrap());
+        let s = _ctx.start();
     }
 
     fn exit_variable_identifier(&mut self, ctx: &Variable_identifierContext<'i>) {
