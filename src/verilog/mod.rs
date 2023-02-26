@@ -68,7 +68,7 @@ pub struct VerilogSource {
 }
 
 impl VerilogSource {
-    pub fn search_path(&self, query: &[&str]) -> Vec<Vec<String>> {
+    pub fn search_path(&self, query: &Vec<String>) -> Vec<Vec<String>> {
         let mut result = vec![];
         let mut query = query.iter().map(|x| x.clone()).collect::<Vec<_>>();
         while result.is_empty() && !query.is_empty() {

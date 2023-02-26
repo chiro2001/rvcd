@@ -22,6 +22,7 @@ pub enum RvcdMsg {
     StopService,
     UpdateSourceDir(String),
     UpdateSources(Vec<VerilogSource>),
+    CallGotoSources((String, u64, u64)),
 }
 
 impl Debug for RvcdMsg {
@@ -47,7 +48,8 @@ impl Debug for RvcdMsg {
             }
             RvcdMsg::StopService => write!(f, "RvcdMsg: StopService"),
             RvcdMsg::UpdateSources(s) => write!(f, "RvcdMsg: UpdateSources({})", s.len()),
-            RvcdMsg::UpdateSourceDir(path) => write!(f, "RvcdMsg: UpdateSorceDir({})", path),
+            RvcdMsg::UpdateSourceDir(path) => write!(f, "RvcdMsg: UpdateSourceDir({})", path),
+            RvcdMsg::CallGotoSources(g) => write!(f, "RvcdMg: GotoSource({:?})", g),
         }
     }
 }

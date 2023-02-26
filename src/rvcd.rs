@@ -603,6 +603,9 @@ impl Rvcd {
                     self.sources_updated = true;
                 }
             }
+            RvcdMsg::CallGotoSources(_g) => {
+                todo!();
+            }
         };
     }
     pub fn reload(&mut self) {

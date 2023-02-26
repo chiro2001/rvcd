@@ -1,5 +1,6 @@
+use crate::message::RvcdMsg;
 use crate::radix::Radix;
-use crate::utils::get_text_size;
+use crate::utils::{execute, get_text_size};
 use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
 };
@@ -424,10 +425,24 @@ impl WaveView {
                     if !self.sources.is_empty() {
                         if ui.button("To Source").clicked() {
                             let id = signal.s.id;
-                            if let Some(path) = info.code_paths.get(&id) {
-                                let mut path = path.clone();
-                                path.push(signal.s.name.to_string());
-                                info!("got path: {:?}", path);
+                            let tx = self.tx.clone();
+                            if let Some(tx) = tx {
+                                if let Some(path) = info.code_paths.get(&id) {
+                                    let mut path = path.clone();
+                                    path.push(signal.s.name.to_string());
+                                    let sources = self.sources.clone();
+                                    execute(async move {
+                                        info!("got path: {:?}", path);
+                                        let mut results = vec![];
+                                        for source in sources {
+                                            let result = source.search_path(&path);
+                                            results.extend_from_slice(&result);
+                                        }
+                                        info!("got search result: {:?}", results);
+                                        tx.send(RvcdMsg::CallGotoSources("".to_string(), 0, 0))
+                                            .unwrap();
+                                    });
+                                }
                             }
                             ui.close_menu();
                         }
