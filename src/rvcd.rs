@@ -5,7 +5,7 @@ use crate::message::{RvcdChannel, RvcdMsg};
 use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
-use crate::utils::execute;
+use crate::utils::{execute, file_basename};
 use crate::verilog::{VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
@@ -330,9 +330,9 @@ impl Rvcd {
         #[cfg(not(target_arch = "wasm32"))]
         if !self.alternative_goto_sources.is_empty() {
             egui::Window::new("选择要跳转到的目标")
-                .min_height(480.0)
                 .open(&mut _open_alternative_goto_sources)
                 .show(ctx, |ui| {
+                    ui.set_min_height(480.0);
                     ui.horizontal(|ui| {
                         ScrollArea::vertical()
                             .id_source("alternative-file-table")
@@ -350,7 +350,7 @@ impl Rvcd {
                                                     let resp = ui.add(
                                                         Label::new(format!(
                                                             "{}:{}:{}",
-                                                            a.file,
+                                                            file_basename(a.file.as_str()),
                                                             a.location.line,
                                                             a.location.column
                                                         ))

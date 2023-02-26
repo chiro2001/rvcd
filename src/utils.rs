@@ -87,3 +87,16 @@ pub fn scan_sources_recursive(path: &str) -> Vec<String> {
     }
     result
 }
+
+pub fn file_basename(file: &str) -> &str {
+    let sp = std::path::MAIN_SEPARATOR;
+    if file.ends_with(sp) {
+        file_basename(&file[..file.len() - 1])
+    } else {
+        if let Some(p) = file.rfind(sp) {
+            &file[p + 1..]
+        } else {
+            file
+        }
+    }
+}

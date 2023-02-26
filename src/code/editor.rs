@@ -1,6 +1,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use crate::code::highlight::code_view_ui;
+use crate::utils::file_basename;
 use crate::verilog::CodeLocation;
 use egui::{Label, RichText};
 use std::io::Read;
@@ -46,7 +47,7 @@ impl CodeEditor {
             } else {
                 ""
             },
-            self.file
+            file_basename(self.file.as_str())
         ))
         .id(format!("code-editor-{}", self.file).into())
         .open(&mut self.open)
