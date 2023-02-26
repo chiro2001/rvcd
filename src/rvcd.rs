@@ -362,7 +362,7 @@ impl Rvcd {
                                                     if c == '\n' {
                                                         line += 1;
                                                     }
-                                                    if line == a.location.line {
+                                                    if line >= a.location.line {
                                                         offset = i;
                                                         break;
                                                     }
