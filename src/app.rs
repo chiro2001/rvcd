@@ -1,5 +1,6 @@
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
+use crate::manager::RvcdRpcMessage;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::{available_locales, Rvcd};
@@ -10,6 +11,7 @@ use egui::{
     CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window,
 };
 use rust_i18n::locale;
+use std::sync::mpsc;
 use tracing::info;
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -28,6 +30,8 @@ pub struct RvcdApp {
     pub debug_panel: bool,
     pub sst_enabled: bool,
     pub locale: String,
+    #[serde(skip)]
+    pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
 }
 
 impl Default for RvcdApp {
@@ -46,7 +50,7 @@ impl Default for RvcdApp {
 }
 
 impl RvcdApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, rpc_rx: mpsc::Receiver<RvcdRpcMessage>) -> Self {
         // load chinese font
         let mut fonts = FontDefinitions::default();
         let font_name = "ali";
@@ -86,10 +90,15 @@ impl RvcdApp {
             def.apps = vec![Rvcd::new(0)];
         }
         def.open_apps = def.apps.iter().map(|x| (x.id, true)).collect();
-        def.apps = def.apps.into_iter().map(|mut a| {
-            a.init();
-            a
-        }).collect();
+        def.apps = def
+            .apps
+            .into_iter()
+            .map(|mut a| {
+                a.init();
+                a
+            })
+            .collect();
+        def.rpc_rx = Some(rpc_rx);
         def
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
@@ -254,24 +263,23 @@ impl eframe::App for RvcdApp {
             });
         }
         let app_now_id = self.app_now_id;
-        let mut show_app_in_window =
-            |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
-                let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
-                if let Some((id, open)) = open_app {
-                    Window::new(app.title())
-                        .min_height(200.0)
-                        .default_width(ctx.used_size().x / 2.0)
-                        .vscroll(false)
-                        .open(open)
-                        .id(Id::new(*id))
-                        .title_bar(true)
-                        .show(ctx, |ui| {
-                            app.update(ui, frame, self.sst_enabled, false, || {
-                                self.app_now_id = Some(*id)
-                            });
+        let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
+            let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
+            if let Some((id, open)) = open_app {
+                Window::new(app.title())
+                    .min_height(200.0)
+                    .default_width(ctx.used_size().x / 2.0)
+                    .vscroll(false)
+                    .open(open)
+                    .id(Id::new(*id))
+                    .title_bar(true)
+                    .show(ctx, |ui| {
+                        app.update(ui, frame, self.sst_enabled, false, || {
+                            self.app_now_id = Some(*id)
                         });
-                }
-            };
+                    });
+            }
+        };
         let mut will_minimum_this = false;
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
@@ -359,6 +367,17 @@ impl eframe::App for RvcdApp {
         // if empty, create new main window
         if self.apps.is_empty() {
             self.new_window(true);
+        }
+        let mut messages = vec![];
+        if let Some(rx) = &self.rpc_rx {
+            if let Ok(r) = rx.try_recv() {
+                messages.push(r);
+            }
+        }
+        for app in &mut self.apps {
+            for message in &messages {
+                app.handle_rpc_message(message.clone());
+            }
         }
     }
     /// Called by the frame work to save state before shutdown.

@@ -4,6 +4,7 @@
 #[allow(unused_imports)]
 use anyhow::Result;
 use rvcd::app::RvcdApp;
+use std::sync::mpsc;
 use tracing::info;
 
 use clap::Parser;
@@ -42,21 +43,23 @@ async fn main() -> Result<()> {
         // renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };
+    let (rpc_tx, rpc_rx) = mpsc::channel();
     let gui = async move {
         eframe::run_native(
             "Rvcd",
             native_options,
-            Box::new(|cc| Box::new(RvcdApp::new(cc))),
+            Box::new(|cc| Box::new(RvcdApp::new(cc, rpc_rx))),
         )
         .expect("gui panic!");
     };
     let rpc = async move {
         loop {
+            let rpc_tx = rpc_tx.clone();
             let addr = format!("0.0.0.0:{}", args.port).parse().unwrap();
             info!("[Manager] rpc server at {}", addr);
             match Server::builder()
                 .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(
-                    RvcdManager::default(),
+                    RvcdManager::new(rpc_tx),
                 ))
                 .serve(addr)
                 .await

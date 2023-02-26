@@ -1,3 +1,4 @@
+use crate::manager::RvcdRpcMessage;
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::service::Service;
 use crate::size::FileSizeUnit;
@@ -623,6 +624,13 @@ impl Rvcd {
                 info!("ui CallGotoSources({:?})", _g);
             }
         };
+    }
+    pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {
+        match msg {
+            RvcdRpcMessage::GotoPath(path) => {
+                todo!();
+            }
+        }
     }
     pub fn reload(&mut self) {
         info!("reloading file");

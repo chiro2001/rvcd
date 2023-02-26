@@ -4,7 +4,7 @@ use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
 use crate::rpc::{RvcdManagedInfo, RvcdSignalPath};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
@@ -12,9 +12,25 @@ use tracing::{debug, info, trace};
 
 pub const MANAGER_PORT: u16 = 5411;
 
-#[derive(Debug, Default)]
+#[derive(Clone)]
+pub enum RvcdRpcMessage {
+    GotoPath(RvcdSignalPath),
+}
+unsafe impl Send for RvcdRpcMessage {}
+
+#[derive(Debug)]
 pub struct RvcdManager {
     pub managed_files: Mutex<HashMap<u32, (Vec<String>, std::time::Instant)>>,
+    pub tx: Arc<Mutex<mpsc::Sender<RvcdRpcMessage>>>,
+}
+
+impl RvcdManager {
+    pub fn new(tx: mpsc::Sender<RvcdRpcMessage>) -> Self {
+        Self {
+            tx: Arc::new(Mutex::new(tx)),
+            managed_files: Default::default(),
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -24,8 +40,18 @@ impl RvcdRpc for RvcdManager {
         Ok(Response::new(()))
     }
 
-    async fn goto_signal(&self, _request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
-        todo!()
+    async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
+        let data = request.into_inner();
+        for (k, v) in self.managed_files.lock().unwrap().iter() {
+            if v.0.contains(&data.file) {
+                self.tx
+                    .lock()
+                    .unwrap()
+                    .send(RvcdRpcMessage::GotoPath(data.clone()))
+                    .unwrap();
+            }
+        }
+        Ok(Response::new(()))
     }
 
     async fn client_info(&self, request: Request<RvcdManagedInfo>) -> Result<Response<()>, Status> {
