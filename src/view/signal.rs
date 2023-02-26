@@ -466,6 +466,8 @@ impl WaveView {
                                                 ))
                                                 .unwrap();
                                             }
+                                        } else {
+                                            tx.send(RvcdMsg::GotNoSource).unwrap();
                                         }
                                     });
                                 }

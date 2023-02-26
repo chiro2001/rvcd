@@ -726,6 +726,9 @@ impl Rvcd {
             RvcdMsg::SetAlternativeGotoSources(v) => {
                 self.alternative_goto_sources = v;
             }
+            RvcdMsg::GotNoSource => {
+                self.toasts.warning("找不到对应源文件", egui_toast::ToastOptions::default());
+            }
         };
     }
     pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {

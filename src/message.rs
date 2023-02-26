@@ -22,6 +22,7 @@ pub enum RvcdMsg {
     StopService,
     UpdateSourceDir(String),
     UpdateSources(Vec<VerilogSource>),
+    GotNoSource,
     SetAlternativeGotoSources(Vec<VerilogGotoSource>),
     CallGotoSources(VerilogGotoSource),
 }
@@ -54,6 +55,7 @@ impl Debug for RvcdMsg {
             RvcdMsg::SetAlternativeGotoSources(g) => {
                 write!(f, "RvcdMg: SetAlternativeGotoSources({:?})", g)
             }
+            RvcdMsg::GotNoSource => write!(f, "RvcdMg: GotNoSource"),
         }
     }
 }
