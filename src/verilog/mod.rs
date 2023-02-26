@@ -123,6 +123,30 @@ impl<'i> VerilogParserListener<'i> for MyVerilogListener {
         self.port.as_mut().unwrap().name = ctx.get_text();
     }
 
+    fn exit_net_identifier(&mut self, ctx: &Net_identifierContext<'i>) {
+        self.wire.as_mut().unwrap().name = ctx.get_text();
+    }
+
+    fn exit_net_declaration(&mut self, _ctx: &Net_declarationContext<'i>) {
+        self.module
+            .as_mut()
+            .unwrap()
+            .wires
+            .push(self.wire.replace(Default::default()).unwrap());
+    }
+
+    fn exit_variable_identifier(&mut self, ctx: &Variable_identifierContext<'i>) {
+        self.reg.as_mut().unwrap().name = ctx.get_text();
+    }
+
+    fn exit_reg_declaration(&mut self, _ctx: &Reg_declarationContext<'i>) {
+        self.module
+            .as_mut()
+            .unwrap()
+            .regs
+            .push(self.reg.replace(Default::default()).unwrap());
+    }
+
     fn exit_module_declaration(&mut self, ctx: &Module_declarationContext<'i>) {
         self.source
             .modules

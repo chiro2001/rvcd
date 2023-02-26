@@ -9,6 +9,7 @@ module waterfall (
 reg [31:0] clock_cnt_limit;
 reg [31:0] clock_cnt;
 reg has_started;
+wire test;
 
 always @(posedge clk or posedge rst) begin
     if (rst) begin
