@@ -434,13 +434,29 @@ impl WaveView {
                                     execute(async move {
                                         info!("got path: {:?}", path);
                                         let mut results = vec![];
-                                        for source in sources {
+                                        for source in &sources {
                                             let result = source.search_path(&path);
+                                            let result = result
+                                                .into_iter()
+                                                .map(|x| (source, x.0, x.1))
+                                                .collect::<Vec<_>>();
                                             results.extend_from_slice(&result);
                                         }
                                         info!("got search result: {:?}", results);
-                                        tx.send(RvcdMsg::CallGotoSources("".to_string(), 0, 0))
+                                        // select longest match
+                                        results.retain(|x| x.2.a >= 0);
+                                        results.sort_by_key(|x| x.1.len());
+                                        results.reverse();
+                                        if let Some(result) = results.first() {
+                                            let (line, line_offset) =
+                                                result.0.offset_to_line_no(result.2.a as u64);
+                                            tx.send(RvcdMsg::CallGotoSources((
+                                                result.0.source_path.clone(),
+                                                line,
+                                                line_offset,
+                                            )))
                                             .unwrap();
+                                        }
                                     });
                                 }
                             }

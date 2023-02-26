@@ -5,6 +5,7 @@ mod verilogparserlistener;
 mod verilogparservisitor;
 
 use antlr_rust::common_token_stream::CommonTokenStream;
+use antlr_rust::interval_set::Interval;
 use antlr_rust::rule_context::CustomRuleContext;
 use antlr_rust::token_factory::CommonTokenFactory;
 use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
@@ -64,42 +65,64 @@ impl<'i> VerilogParserVisitorCompat<'i> for VerilogSimpleVisitor {}
 #[derive(Default, Debug, Clone)]
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
-    pub source: String,
+    pub source_path: String,
+    pub source_code: String,
 }
 
+type VerilogSourceSearchResultType = Vec<(Vec<String>, CodeInterval)>;
 impl VerilogSource {
-    pub fn search_path(&self, query: &Vec<String>) -> Vec<Vec<String>> {
-        let mut result = vec![];
+    pub fn search_path(&self, query: &Vec<String>) -> VerilogSourceSearchResultType {
+        type R = VerilogSourceSearchResultType;
+        let mut result: R = vec![];
         let mut query = query.iter().map(|x| x.clone()).collect::<Vec<_>>();
         while result.is_empty() && !query.is_empty() {
             let mut queue = vec![];
-            let mut do_if_insert = |queue: &mut Vec<&str>, result: &mut Vec<Vec<String>>| {
-                if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
-                    result.push(query.iter().map(|x| x.to_string()).collect());
-                }
-                queue.pop().unwrap();
-            };
+            let mut do_if_insert =
+                |queue: &mut Vec<&str>, result: &mut R, interval: &CodeInterval| {
+                    if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
+                        result.push((
+                            query.iter().map(|x| x.to_string()).collect(),
+                            interval.clone(),
+                        ));
+                    }
+                    queue.pop().unwrap();
+                };
             fn do_push_insert_pop<'t1: 't2, 't2, F>(
-                s: &'t1 str,
+                s: VerilogNameInterval<'t1>,
                 queue: &'t2 mut std::vec::Vec<&'t1 str>,
-                result: &mut Vec<Vec<String>>,
+                result: &mut R,
                 do_if_insert: F,
             ) where
-                F: Fn(&'t2 mut Vec<&str>, &mut Vec<Vec<String>>),
+                F: Fn(&'t2 mut Vec<&str>, &mut R, &'t1 CodeInterval),
             {
-                queue.push(s);
-                do_if_insert(queue, result);
+                queue.push(s.name);
+                do_if_insert(queue, result, s.interval);
             }
             for module in &self.modules {
                 queue.push(module.name.as_str());
                 for r in &module.ports {
-                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                    do_push_insert_pop(
+                        r.get_name_interval(),
+                        &mut queue,
+                        &mut result,
+                        do_if_insert,
+                    );
                 }
                 for r in &module.regs {
-                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                    do_push_insert_pop(
+                        r.get_name_interval(),
+                        &mut queue,
+                        &mut result,
+                        do_if_insert,
+                    );
                 }
                 for r in &module.wires {
-                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                    do_push_insert_pop(
+                        r.get_name_interval(),
+                        &mut queue,
+                        &mut result,
+                        do_if_insert,
+                    );
                 }
                 queue.pop().unwrap();
             }
@@ -108,11 +131,51 @@ impl VerilogSource {
         }
         result
     }
+
+    pub fn offset_to_line_no(&self, offset: u64) -> (u64, u64) {
+        // TODO: optimize source code
+        let line_length = self
+            .source_code
+            .lines()
+            .map(|x| x.len())
+            .collect::<Vec<_>>();
+        let mut line = 0u64;
+        let mut offset_now = 0u64;
+        while line < line_length.len() as u64 {
+            offset_now += line_length[line as usize] as u64 + 1;
+            line += 1;
+            if line < line_length.len() as u64 {
+                if offset_now + line_length[line as usize] as u64 + 1 > offset {
+                    break;
+                }
+            }
+        }
+        (line, offset - offset_now)
+    }
 }
 
+#[derive(Debug, Clone)]
+pub struct CodeInterval {
+    pub a: isize,
+    pub b: isize,
+}
+impl Default for CodeInterval {
+    fn default() -> Self {
+        Self { a: -1, b: -2 }
+    }
+}
+impl From<Interval> for CodeInterval {
+    fn from(value: Interval) -> Self {
+        Self {
+            a: value.a,
+            b: value.b,
+        }
+    }
+}
 #[derive(Default, Debug, Clone)]
 pub struct VerilogModule {
     pub name: String,
+    pub interval: CodeInterval,
     pub ports: Vec<VerilogPort>,
     pub regs: Vec<VerilogReg>,
     pub wires: Vec<VerilogWire>,
@@ -128,14 +191,17 @@ pub enum VerilogPortType {
 pub struct VerilogPort {
     pub typ: VerilogPortType,
     pub name: String,
+    pub interval: CodeInterval,
 }
 #[derive(Default, Debug, Clone)]
 pub struct VerilogReg {
     pub name: String,
+    pub interval: CodeInterval,
 }
 #[derive(Default, Debug, Clone)]
 pub struct VerilogWire {
     pub name: String,
+    pub interval: CodeInterval,
 }
 #[derive(Default, Debug, Clone)]
 pub struct MyVerilogListener {
@@ -158,10 +224,61 @@ impl MyVerilogListener {
     }
 }
 
+pub struct VerilogNameInterval<'i> {
+    pub name: &'i str,
+    pub interval: &'i CodeInterval,
+}
+trait HaveNameInterval {
+    fn get_name(&self) -> &str;
+    fn get_interval(&self) -> &CodeInterval;
+    fn get_name_interval<'i>(&'i self) -> VerilogNameInterval<'i> {
+        VerilogNameInterval {
+            name: self.get_name(),
+            interval: self.get_interval(),
+        }
+    }
+}
+impl HaveNameInterval for VerilogModule {
+    fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+    fn get_interval(&self) -> &CodeInterval {
+        &self.interval
+    }
+}
+impl HaveNameInterval for VerilogPort {
+    fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+    fn get_interval(&self) -> &CodeInterval {
+        &self.interval
+    }
+}
+impl HaveNameInterval for VerilogReg {
+    fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+    fn get_interval(&self) -> &CodeInterval {
+        &self.interval
+    }
+}
+impl HaveNameInterval for VerilogWire {
+    fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+    fn get_interval(&self) -> &CodeInterval {
+        &self.interval
+    }
+}
+
 impl<'i> VerilogParserListener<'i> for MyVerilogListener {
     fn exit_module_identifier(&mut self, ctx: &Module_identifierContext<'i>) {
         info!("module identifier: {}", ctx.get_text());
-        self.module.as_mut().unwrap().name = ctx.get_text();
+        let interval = ctx.get_source_interval();
+        if let Some(s) = self.module.as_mut() {
+            s.name = ctx.get_text();
+            s.interval = ctx.get_source_interval().into();
+        }
     }
 
     fn exit_port_declaration(&mut self, _ctx: &Port_declarationContext<'i>) {
@@ -185,11 +302,17 @@ impl<'i> VerilogParserListener<'i> for MyVerilogListener {
     }
 
     fn exit_port_identifier(&mut self, ctx: &Port_identifierContext<'i>) {
-        self.port.as_mut().unwrap().name = ctx.get_text();
+        if let Some(s) = self.port.as_mut() {
+            s.name = ctx.get_text();
+            s.interval = ctx.get_source_interval().into();
+        }
     }
 
     fn exit_net_identifier(&mut self, ctx: &Net_identifierContext<'i>) {
-        self.wire.as_mut().unwrap().name = ctx.get_text();
+        if let Some(s) = self.wire.as_mut() {
+            s.name = ctx.get_text();
+            s.interval = ctx.get_source_interval().into();
+        }
     }
 
     fn exit_net_declaration(&mut self, _ctx: &Net_declarationContext<'i>) {
@@ -201,7 +324,10 @@ impl<'i> VerilogParserListener<'i> for MyVerilogListener {
     }
 
     fn exit_variable_identifier(&mut self, ctx: &Variable_identifierContext<'i>) {
-        self.reg.as_mut().unwrap().name = ctx.get_text();
+        if let Some(s) = self.reg.as_mut() {
+            s.name = ctx.get_text();
+            s.interval = ctx.get_source_interval().into();
+        }
     }
 
     fn exit_reg_declaration(&mut self, _ctx: &Reg_declarationContext<'i>) {
@@ -255,7 +381,8 @@ pub fn parse_verilog_file(path: &str) -> anyhow::Result<VerilogSource> {
     let _visitor_result = visitor.visit(&*result);
     let listener = parser.remove_parse_listener(listener_id);
     let mut parsed = listener.source;
-    parsed.source = path.to_string();
+    parsed.source_path = path.to_string();
+    parsed.source_code = data.clone();
     Ok(parsed)
 }
 

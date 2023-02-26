@@ -604,7 +604,8 @@ impl Rvcd {
                 }
             }
             RvcdMsg::CallGotoSources(_g) => {
-                todo!();
+                // todo!();
+                info!("ui CallGotoSources({:?})", _g);
             }
         };
     }
