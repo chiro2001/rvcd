@@ -1,8 +1,10 @@
+use crate::code::editor::CodeEditor;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::manager::RvcdRpcMessage;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
+use crate::verilog::CodeLocation;
 use crate::{available_locales, Rvcd};
 use eframe::emath::Align;
 use eframe::glow::Context;
@@ -13,6 +15,11 @@ use egui::{
 use rust_i18n::locale;
 use std::sync::mpsc;
 use tracing::info;
+
+#[derive(Debug)]
+pub enum RvcdAppMessage {
+    CreateCodeEditor((String, Option<CodeLocation>)),
+}
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
 
@@ -32,6 +39,12 @@ pub struct RvcdApp {
     pub locale: String,
     #[serde(skip)]
     pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
+    #[serde(skip)]
+    pub loop_tx: Option<mpsc::Sender<RvcdAppMessage>>,
+    #[serde(skip)]
+    pub app_rx: Option<mpsc::Receiver<RvcdAppMessage>>,
+    #[serde(skip)]
+    pub editors: Vec<CodeEditor>,
 }
 
 impl Default for RvcdApp {
@@ -46,6 +59,9 @@ impl Default for RvcdApp {
             sst_enabled: true,
             locale: "".to_string(),
             rpc_rx: None,
+            loop_tx: None,
+            app_rx: None,
+            editors: vec![],
         }
     }
 }
@@ -100,6 +116,12 @@ impl RvcdApp {
             })
             .collect();
         def.rpc_rx = Some(rpc_rx);
+        let (tx, rx) = mpsc::channel();
+        def.apps
+            .iter_mut()
+            .for_each(|app| app.set_upper_tx(tx.clone()));
+        def.loop_tx = Some(tx);
+        def.app_rx = Some(rx);
         def
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
@@ -165,6 +187,9 @@ impl RvcdApp {
         let id = self.new_id();
         let mut n = Rvcd::new(id);
         n.init();
+        if let Some(tx) = self.loop_tx.clone() {
+            n.set_upper_tx(tx);
+        }
         self.apps.push(n);
         self.open_apps.push((id, true));
         if maximize {
@@ -177,6 +202,14 @@ impl RvcdApp {
         self.app_now_id = None;
         self.open_apps.clear();
         self.apps.clear();
+    }
+    pub fn message_handler(&mut self, msg: RvcdAppMessage) {
+        info!("app message handle: {:?}", msg);
+        match msg {
+            RvcdAppMessage::CreateCodeEditor(p) => {
+                self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+            }
+        }
     }
 }
 
@@ -371,7 +404,7 @@ impl eframe::App for RvcdApp {
         }
         let mut messages = vec![];
         if let Some(rx) = &self.rpc_rx {
-            if let Ok(r) = rx.try_recv() {
+            while let Ok(r) = rx.try_recv() {
                 messages.push(r);
             }
         }
@@ -379,6 +412,19 @@ impl eframe::App for RvcdApp {
             for message in &messages {
                 app.handle_rpc_message(message.clone());
             }
+        }
+        let mut messages = vec![];
+        if let Some(rx) = &self.app_rx {
+            while let Ok(r) = rx.try_recv() {
+                messages.push(r);
+            }
+        }
+        for message in messages {
+            self.message_handler(message);
+        }
+        self.editors.retain(|x| x.open);
+        for editor in &mut self.editors {
+            editor.ui(ctx);
         }
     }
     /// Called by the frame work to save state before shutdown.

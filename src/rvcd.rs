@@ -1,10 +1,11 @@
+use crate::app::RvcdAppMessage;
+use crate::code::highlight::code_view_ui;
 use crate::manager::RvcdRpcMessage;
 use crate::message::{RvcdChannel, RvcdMsg};
 use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
-use crate::code::highlight::code_view_ui;
 use crate::verilog::{VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
@@ -99,6 +100,9 @@ pub struct Rvcd {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub client: Arc<crate::client::RvcdManagedClient>,
+
+    #[serde(skip)]
+    pub upper_tx: Option<mpsc::Sender<RvcdAppMessage>>,
 }
 
 impl Display for Rvcd {
@@ -149,6 +153,7 @@ impl Default for Rvcd {
             alternative_view_source: None,
             #[cfg(not(target_arch = "wasm32"))]
             client: Arc::new(Default::default()),
+            upper_tx: None,
         }
     }
 }
@@ -209,6 +214,9 @@ impl Rvcd {
             State::Working => self.title.to_string(),
             _ => format!("Rvcd-{}", self.id),
         }
+    }
+    pub fn set_upper_tx(&mut self, tx: mpsc::Sender<RvcdAppMessage>) {
+        self.upper_tx = Some(tx);
     }
     pub fn update<F>(
         &mut self,
@@ -701,9 +709,15 @@ impl Rvcd {
                     self.sources_updated = true;
                 }
             }
-            RvcdMsg::CallGotoSources(_g) => {
-                // todo!();
-                info!("ui CallGotoSources({:?})", _g);
+            RvcdMsg::CallGotoSources(goto) => {
+                info!("ui CallGotoSources({:?})", goto);
+                if let Some(tx) = &self.upper_tx {
+                    tx.send(RvcdAppMessage::CreateCodeEditor((
+                        goto.file,
+                        Some(goto.location),
+                    )))
+                    .unwrap();
+                }
             }
             RvcdMsg::SetAlternativeGotoSources(v) => {
                 self.alternative_goto_sources = v;

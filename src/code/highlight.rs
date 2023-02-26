@@ -1,7 +1,10 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use egui::text::LayoutJob;
+use egui::text_edit::TextEditOutput;
 
 /// View some code with syntax highlighting and selection.
-pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>) {
+pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>) -> TextEditOutput {
     let language = "rs";
     // let theme = CodeTheme::from_memory(ui.ctx());
     let theme = CodeTheme::default();
@@ -29,6 +32,7 @@ pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>)
             ui.ctx().memory_mut(|mem| mem.request_focus(text_edit_id)); // give focus back to the [`TextEdit`].
         }
     }
+    output
 }
 
 /// Memoized Code highlighting
