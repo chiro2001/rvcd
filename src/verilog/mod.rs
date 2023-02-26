@@ -399,7 +399,7 @@ mod test {
         VerilogSimpleVisitor,
     };
     use antlr_rust::common_token_stream::CommonTokenStream;
-    use antlr_rust::token_factory::CommonTokenFactory;
+    use antlr_rust::token_factory::{ArenaOwningFactory, CommonTokenFactory};
     use antlr_rust::tree::ParseTreeVisitorCompat;
     use antlr_rust::InputStream;
     use std::io::Read;
@@ -413,6 +413,7 @@ mod test {
         file.read_to_string(&mut data).unwrap();
         info!("code: {data:?}");
         let tf = CommonTokenFactory::default();
+        // let tf = ArenaOwningFactory::default();
         let lexer = VerilogLexer::new_with_token_factory(InputStream::new(data.as_str()), &tf);
         let token_source = CommonTokenStream::new(lexer);
         let mut parser = VerilogParser::new(token_source);

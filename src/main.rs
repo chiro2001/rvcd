@@ -6,13 +6,30 @@ use anyhow::Result;
 use rvcd::app::RvcdApp;
 use tracing::info;
 
+use clap::Parser;
+use rvcd::manager::MANAGER_PORT;
+use rvcd::utils::sleep_ms;
+
+/// Simple program to greet a person
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct RvcdArgs {
+    /// Default source path
+    #[arg(short, long, default_value = "")]
+    src: String,
+    /// Manager port
+    #[arg(short, long, default_value_t = MANAGER_PORT)]
+    port: u16,
+}
+
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use rvcd::server::rvcd_rpc_server::RvcdRpcServer;
-    use rvcd::server::RvcdRemote;
+    use rvcd::manager::RvcdManager;
     use tonic::transport::Server;
+
+    let args = RvcdArgs::parse();
 
     // Log to stdout (if you run with `RUST_LOG=debug`).
     tracing_subscriber::fmt::init();
@@ -30,16 +47,24 @@ async fn main() -> Result<()> {
             "Rvcd",
             native_options,
             Box::new(|cc| Box::new(RvcdApp::new(cc))),
-        ).expect("gui panic!");
+        )
+        .expect("gui panic!");
     };
     let rpc = async move {
-        let addr = "[::1]:50051".parse().unwrap();
-        info!("starting rpc server at {}", addr);
-        Server::builder()
-            .add_service(RvcdRpcServer::new(RvcdRemote::default()))
-            .serve(addr)
-            .await
-            .unwrap();
+        loop {
+            let addr = format!("0.0.0.0:{}", args.port).parse().unwrap();
+            match Server::builder()
+                .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(RvcdManager::default()))
+                .serve(addr)
+                .await
+            {
+                Ok(_) => {
+                    info!("[Manager] started rpc server at {}", addr);
+                }
+                Err(_) => {}
+            }
+            sleep_ms(1000).await;
+        }
     };
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;

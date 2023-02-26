@@ -37,6 +37,7 @@ regex = "1.7.1"
 rev_lines = { git = "https://github.com/chiro2001/rev_lines", rev = "5cafb676addbcace2f3954b2801e82077c13733c" }
 antlr-rust = "0.3.0-beta"
 debug-ignore = "1.0.5"
+clap = { version = "4.1.6", features = ["derive"] }
 
 [build-dependencies]
 tonic-build = "0.8.4"

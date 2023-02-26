@@ -1,9 +1,29 @@
 syntax = "proto3";
+
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
 package rvcd;
 
 service RvcdRpc {
-    rpc OpenFile(google.protobuf.StringValue) returns (google.protobuf.Empty) {}
+    // When scaleda wants to open vcd file
+    rpc OpenFile (google.protobuf.StringValue) returns (google.protobuf.Empty) {}
+    // For scaleda to request goto signal by path
+    rpc GotoSignal (RvcdSignalPath) returns (google.protobuf.Empty) {}
+    // For clients to sync data with manager
+    rpc ClientInfo (stream RvcdManagedInfo) returns (google.protobuf.Empty) {}
+}
+
+service RvcdClient {
+    rpc Info (google.protobuf.Empty) returns (RvcdManagedInfo);
+}
+
+message RvcdManagedInfo {
+    uint32 client_port = 1;
+    repeated string paths = 2;
+}
+
+message RvcdSignalPath {
+    string file = 1;
+    repeated string path = 2;
 }
