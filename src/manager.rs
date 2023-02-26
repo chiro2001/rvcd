@@ -42,7 +42,7 @@ impl RvcdRpc for RvcdManager {
 
     async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
         let data = request.into_inner();
-        for (k, v) in self.managed_files.lock().unwrap().iter() {
+        for (_k, v) in self.managed_files.lock().unwrap().iter() {
             if v.0.contains(&data.file) {
                 self.tx
                     .lock()

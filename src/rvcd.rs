@@ -627,7 +627,7 @@ impl Rvcd {
     }
     pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {
         match msg {
-            RvcdRpcMessage::GotoPath(path) => {
+            RvcdRpcMessage::GotoPath(_path) => {
                 todo!();
             }
         }

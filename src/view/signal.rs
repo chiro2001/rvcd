@@ -435,21 +435,23 @@ impl WaveView {
                                         info!("got path: {:?}", path);
                                         let mut results = vec![];
                                         for source in &sources {
+                                            info!("searching: {:#?}", source);
                                             let result = source.search_path(&path);
                                             let result = result
                                                 .into_iter()
-                                                .map(|x| (source, x))
+                                                .map(|x| (debug_ignore::DebugIgnore(source), x))
                                                 .collect::<Vec<_>>();
                                             results.extend_from_slice(&result);
                                         }
                                         info!("got search result: {:?}", results);
                                         // select longest match
-                                        results.sort_by_key(|x| x.1.len());
+                                        results.sort_by_key(|x| x.1 .0.len());
                                         results.reverse();
                                         if let Some(result) = results.pop() {
                                             tx.send(RvcdMsg::CallGotoSources((
                                                 result.0.source_path.clone(),
-                                                result.1,
+                                                result.1 .0,
+                                                result.1 .1,
                                             )))
                                             .unwrap();
                                         }

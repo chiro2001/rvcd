@@ -1,4 +1,4 @@
-use crate::verilog::VerilogSource;
+use crate::verilog::{CodeLocation, VerilogSource};
 use crate::wave::Wave;
 use egui_toast::Toast;
 use rfd::FileHandle;
@@ -22,7 +22,7 @@ pub enum RvcdMsg {
     StopService,
     UpdateSourceDir(String),
     UpdateSources(Vec<VerilogSource>),
-    CallGotoSources((String, Vec<String>)),
+    CallGotoSources((String, Vec<String>, CodeLocation)),
 }
 
 impl Debug for RvcdMsg {
