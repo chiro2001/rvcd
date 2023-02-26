@@ -367,12 +367,12 @@ impl Rvcd {
                                                 let mut line = 0isize;
                                                 let mut offset = 0usize;
                                                 for (i, c) in code.chars().enumerate() {
+                                                    if line >= a.location.line {
+                                                        offset = i as usize;
+                                                        break;
+                                                    }
                                                     if c == '\n' {
                                                         line += 1;
-                                                    }
-                                                    if line >= a.location.line {
-                                                        offset = i;
-                                                        break;
                                                     }
                                                 }
                                                 self.alternative_view_source =
@@ -390,7 +390,11 @@ impl Rvcd {
                         );
                     });
                     if let Some(v) = &mut self.alternative_view_source {
-                        code_view_ui(ui, &mut v.text, Some(v.offset));
+                        egui::ScrollArea::both()
+                            .id_source("code-preview")
+                            .show(ui, |ui| {
+                                code_view_ui(ui, &mut v.text, Some(v.offset));
+                            });
                     }
                 });
             });

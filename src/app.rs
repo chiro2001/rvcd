@@ -207,7 +207,11 @@ impl RvcdApp {
         info!("app message handle: {:?}", msg);
         match msg {
             RvcdAppMessage::CreateCodeEditor(p) => {
-                self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+                if let Some(editor) = self.editors.iter_mut().find(|x| x.file == p.0.as_str()) {
+                    editor.goto = p.1;
+                } else {
+                    self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+                }
             }
         }
     }

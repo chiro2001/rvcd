@@ -50,6 +50,7 @@ impl CodeEditor {
         ))
         .id(format!("code-editor-{}", self.file).into())
         .open(&mut self.open)
+        .resizable(true)
         .show(ctx, |ui| match &self.state {
             CodeEditorState::FirstLoad => {
                 if let Ok(mut f) = std::fs::File::open(self.file.as_str()) {
@@ -79,20 +80,24 @@ impl CodeEditor {
                     let mut line = 0isize;
                     let mut offset = 0usize;
                     for (i, c) in self.text.chars().enumerate() {
-                        if c == '\n' {
-                            line += 1;
-                        }
                         if line >= goto.line {
                             offset = i + goto.column as usize;
+                        }
+                        if c == '\n' {
+                            line += 1;
                         }
                     }
                     self.goto_offset = Some(offset);
                 }
                 let goto_offset = self.goto_offset.take();
-                let output = code_view_ui(ui, &mut self.text, goto_offset);
-                if output.response.changed() && self.state != CodeEditorState::NeedReload {
-                    self.state = CodeEditorState::Modified;
-                }
+                egui::ScrollArea::both()
+                    .id_source(format!("code-window-{}", self.file))
+                    .show(ui, |ui| {
+                        let output = code_view_ui(ui, &mut self.text, goto_offset);
+                        if output.response.changed() && self.state != CodeEditorState::NeedReload {
+                            self.state = CodeEditorState::Modified;
+                        }
+                    });
             }
         });
     }

@@ -20,6 +20,7 @@ pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>)
         .code_editor()
         .desired_rows(1)
         .lock_focus(true)
+        .desired_width(f32::INFINITY)
         .layouter(&mut layouter)
         .show(ui);
 
