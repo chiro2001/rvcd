@@ -4,7 +4,8 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
-use crate::verilog::VerilogGotoSource;
+use crate::verilog::highlight::code_view_ui;
+use crate::verilog::{VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
@@ -91,6 +92,9 @@ pub struct Rvcd {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub alternative_goto_sources: Vec<VerilogGotoSource>,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub alternative_view_source: Option<VerilogViewSource>,
 
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
@@ -139,7 +143,10 @@ impl Default for Rvcd {
             sources_update_started: false,
             #[cfg(not(target_arch = "wasm32"))]
             sources_updated: false,
+            #[cfg(not(target_arch = "wasm32"))]
             alternative_goto_sources: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
+            alternative_view_source: None,
             #[cfg(not(target_arch = "wasm32"))]
             client: Arc::new(Default::default()),
         }
@@ -314,9 +321,8 @@ impl Rvcd {
         #[cfg(not(target_arch = "wasm32"))]
         if !self.alternative_goto_sources.is_empty() {
             egui::Window::new("选择要跳转到的目标").show(ctx, |ui| {
-                TableBuilder::new(ui)
-                    .column(Column::remainder())
-                    .body(|body| {
+                ui.horizontal(|ui| {
+                    TableBuilder::new(ui).column(Column::auto()).body(|body| {
                         body.heterogeneous_rows(
                             (0..self.alternative_goto_sources.len()).map(|_| 40.0),
                             |index, mut row| {
@@ -324,28 +330,49 @@ impl Rvcd {
                                     self.alternative_goto_sources.get(index).map(|x| x.clone())
                                 {
                                     row.col(|ui| {
-                                        if ui
-                                            .add(
-                                                Label::new(format!(
-                                                    "{}:{}:{}",
-                                                    a.file, a.location.line, a.location.column
-                                                ))
-                                                .sense(Sense::click()),
-                                            )
-                                            .clicked()
-                                        {
+                                        let resp = ui.add(
+                                            Label::new(format!(
+                                                "{}:{}:{}",
+                                                a.file, a.location.line, a.location.column
+                                            ))
+                                            .sense(Sense::click()),
+                                        );
+                                        if resp.double_clicked() {
                                             if let Some(loop_self) = &self.loop_self {
                                                 loop_self
                                                     .send(RvcdMsg::CallGotoSources(a))
                                                     .unwrap();
                                                 self.alternative_goto_sources.clear();
                                             }
-                                        };
+                                        } else if resp.clicked()
+                                            || self.alternative_view_source.is_none()
+                                        {
+                                            let f = self
+                                                .view
+                                                .sources
+                                                .iter()
+                                                .filter(|x| x.source_path == a.file)
+                                                .map(|x| x.source_code.0.as_str())
+                                                .collect::<Vec<_>>();
+                                            if let Some(f) = f.first() {
+                                                self.alternative_view_source =
+                                                    Some(VerilogViewSource {
+                                                        file: a.file,
+                                                        path: a.path,
+                                                        text: f.to_string(),
+                                                        location: a.location,
+                                                    });
+                                            }
+                                        }
                                     });
                                 }
                             },
                         );
                     });
+                    if let Some(v) = &self.alternative_view_source {
+                        code_view_ui(ui, v.text.as_str());
+                    }
+                });
             });
         }
 

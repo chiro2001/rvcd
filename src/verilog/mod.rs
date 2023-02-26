@@ -402,6 +402,13 @@ pub struct VerilogGotoSource {
     pub path: Vec<String>,
     pub location: CodeLocation,
 }
+#[derive(Default, Debug, Clone)]
+pub struct VerilogViewSource {
+    pub file: String,
+    pub path: Vec<String>,
+    pub text: String,
+    pub location: CodeLocation,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn parse_verilog_file(path: &str) -> anyhow::Result<VerilogSource> {
