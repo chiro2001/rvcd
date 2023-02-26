@@ -8,6 +8,7 @@ use antlr_rust::common_token_stream::CommonTokenStream;
 use antlr_rust::interval_set::Interval;
 use antlr_rust::rule_context::CustomRuleContext;
 use antlr_rust::token_factory::CommonTokenFactory;
+use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
 use antlr_rust::{BaseParser, DefaultErrorStrategy, InputStream};
 use queues::IsQueue;
@@ -69,34 +70,31 @@ pub struct VerilogSource {
     pub source_code: debug_ignore::DebugIgnore<String>,
 }
 
-type VerilogSourceSearchResultType = Vec<(Vec<String>, CodeInterval)>;
+type VerilogSourceSearchResultType = Vec<Vec<String>>;
 impl VerilogSource {
     pub fn search_path(&self, query: &Vec<String>) -> VerilogSourceSearchResultType {
+        info!("search_path(query={:?})", query);
         type R = VerilogSourceSearchResultType;
         let mut result: R = vec![];
         let mut query = query.iter().map(|x| x.clone()).collect::<Vec<_>>();
         while result.is_empty() && !query.is_empty() {
             let mut queue = vec![];
-            let mut do_if_insert =
-                |queue: &mut Vec<&str>, result: &mut R, interval: &CodeInterval| {
-                    if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
-                        result.push((
-                            query.iter().map(|x| x.to_string()).collect(),
-                            interval.clone(),
-                        ));
-                    }
-                    queue.pop().unwrap();
-                };
+            let mut do_if_insert = |queue: &mut Vec<&str>, result: &mut R| {
+                if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
+                    result.push((queue.iter().map(|x| x.to_string()).collect()));
+                }
+                queue.pop().unwrap();
+            };
             fn do_push_insert_pop<'t1: 't2, 't2, F>(
                 s: VerilogNameInterval<'t1>,
                 queue: &'t2 mut std::vec::Vec<&'t1 str>,
                 result: &mut R,
                 do_if_insert: F,
             ) where
-                F: Fn(&'t2 mut Vec<&str>, &mut R, &'t1 CodeInterval),
+                F: Fn(&'t2 mut Vec<&str>, &mut R),
             {
                 queue.push(s.name);
-                do_if_insert(queue, result, s.interval);
+                do_if_insert(queue, result);
             }
             for module in &self.modules {
                 queue.push(module.name.as_str());
@@ -152,6 +150,14 @@ impl VerilogSource {
         }
         (line, offset - offset_now)
     }
+
+    // pub fn get_code_from_interval(&self, interval: &CodeInterval) -> u64 {
+    //     let data = &self.source_code.0;
+    //     let tf = CommonTokenFactory::default();
+    //     let lexer = VerilogLexer::new_with_token_factory(InputStream::new(data.as_str()), &tf);
+    //     let token_source = CommonTokenStream::new(lexer);
+    //     token_source.get_text_from_interval()
+    // }
 }
 
 #[derive(Debug, Clone)]

@@ -438,23 +438,18 @@ impl WaveView {
                                             let result = source.search_path(&path);
                                             let result = result
                                                 .into_iter()
-                                                .map(|x| (source, x.0, x.1))
+                                                .map(|x| (source, x))
                                                 .collect::<Vec<_>>();
                                             results.extend_from_slice(&result);
                                         }
                                         info!("got search result: {:?}", results);
                                         // select longest match
-                                        results.retain(|x| x.2.a >= 0);
                                         results.sort_by_key(|x| x.1.len());
                                         results.reverse();
-                                        if let Some(result) = results.first() {
-                                            info!("result: {:?}", result);
-                                            let (line, line_offset) =
-                                                result.0.offset_to_line_no(result.2.a as u64);
+                                        if let Some(result) = results.pop() {
                                             tx.send(RvcdMsg::CallGotoSources((
                                                 result.0.source_path.clone(),
-                                                line,
-                                                line_offset,
+                                                result.1,
                                             )))
                                             .unwrap();
                                         }

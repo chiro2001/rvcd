@@ -22,7 +22,7 @@ pub enum RvcdMsg {
     StopService,
     UpdateSourceDir(String),
     UpdateSources(Vec<VerilogSource>),
-    CallGotoSources((String, u64, u64)),
+    CallGotoSources((String, Vec<String>)),
 }
 
 impl Debug for RvcdMsg {
