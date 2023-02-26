@@ -77,7 +77,7 @@ impl CodeEditor {
             }
             CodeEditorState::NeedReload | CodeEditorState::Idle | CodeEditorState::Modified => {
                 if let Some(goto) = self.goto.take() {
-                    let mut line = 0isize;
+                    let mut line = 1isize;
                     let mut offset = 0usize;
                     for (i, c) in self.text.chars().enumerate() {
                         if line >= goto.line {

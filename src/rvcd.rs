@@ -364,11 +364,11 @@ impl Rvcd {
                                                 .collect::<Vec<_>>();
                                             if let Some(f) = f.first() {
                                                 let code = f.to_string();
-                                                let mut line = 0isize;
+                                                let mut line = 1isize;
                                                 let mut offset = 0usize;
                                                 for (i, c) in code.chars().enumerate() {
                                                     if line >= a.location.line {
-                                                        offset = i as usize;
+                                                        offset = i + a.location.column as usize;
                                                         break;
                                                     }
                                                     if c == '\n' {
