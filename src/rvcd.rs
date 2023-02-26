@@ -3,7 +3,6 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
-use crate::verilog::VerilogSource;
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
@@ -83,9 +82,6 @@ pub struct Rvcd {
     pub source_dir: String,
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
-    pub sources: Vec<VerilogSource>,
-    #[cfg(not(target_arch = "wasm32"))]
-    #[serde(skip)]
     pub sources_update_started: bool,
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
@@ -131,8 +127,6 @@ impl Default for Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             source_dir: "".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
-            sources: vec![],
-            #[cfg(not(target_arch = "wasm32"))]
             sources_update_started: false,
             #[cfg(not(target_arch = "wasm32"))]
             sources_updated: false,
@@ -150,7 +144,7 @@ impl Rvcd {
             ..Default::default()
         }
     }
-    pub fn init(mut self) -> Self {
+    pub fn init(&mut self) {
         let (channel_req_tx, channel_req_rx) = mpsc::channel();
         let (channel_resp_tx, channel_resp_rx) = mpsc::channel();
 
@@ -164,7 +158,10 @@ impl Rvcd {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let filepath = &self.filepath;
-            info!("last file: {}; last source dir: {}", filepath, self.source_dir);
+            info!(
+                "last file: {}; last source dir: {}",
+                filepath, self.source_dir
+            );
             if !filepath.is_empty() {
                 channel_req_tx
                     .send(RvcdMsg::FileOpen(rfd::FileHandle::from(
@@ -181,8 +178,8 @@ impl Rvcd {
         });
         self.view.set_id(self.id);
         self.view.set_tx(channel_resp_tx);
+        // self.view.set_sources(self.);
         info!("last loaded {} signals", self.view.signals.len());
-        self
     }
     pub fn title(&self) -> String {
         match self.state {
@@ -602,7 +599,7 @@ impl Rvcd {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     info!("self.sources updated");
-                    self.sources = _sources;
+                    self.view.set_sources(_sources);
                     self.sources_updated = true;
                 }
             }

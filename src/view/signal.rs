@@ -419,6 +419,7 @@ impl WaveView {
                             ui.close_menu();
                         }
                     });
+
                 });
             });
         });

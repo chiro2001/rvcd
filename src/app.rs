@@ -86,7 +86,10 @@ impl RvcdApp {
             def.apps = vec![Rvcd::new(0)];
         }
         def.open_apps = def.apps.iter().map(|x| (x.id, true)).collect();
-        def.apps = def.apps.into_iter().map(|a| a.init()).collect();
+        def.apps = def.apps.into_iter().map(|mut a| {
+            a.init();
+            a
+        }).collect();
         def
     }
     pub fn debug_panel(&mut self, ui: &mut Ui) {
@@ -150,7 +153,9 @@ impl RvcdApp {
     }
     fn new_window(&mut self, maximize: bool) -> usize {
         let id = self.new_id();
-        self.apps.push(Rvcd::new(id).init());
+        let mut n = Rvcd::new(id);
+        n.init();
+        self.apps.push(n);
         self.open_apps.push((id, true));
         if maximize {
             self.app_now_id = Some(id);
@@ -249,23 +254,24 @@ impl eframe::App for RvcdApp {
             });
         }
         let app_now_id = self.app_now_id;
-        let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
-            let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
-            if let Some((id, open)) = open_app {
-                Window::new(app.title())
-                    .min_height(200.0)
-                    .default_width(ctx.used_size().x / 2.0)
-                    .vscroll(false)
-                    .open(open)
-                    .id(Id::new(*id))
-                    .title_bar(true)
-                    .show(ctx, |ui| {
-                        app.update(ui, frame, self.sst_enabled, false, || {
-                            self.app_now_id = Some(*id)
+        let mut show_app_in_window =
+            |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
+                let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
+                if let Some((id, open)) = open_app {
+                    Window::new(app.title())
+                        .min_height(200.0)
+                        .default_width(ctx.used_size().x / 2.0)
+                        .vscroll(false)
+                        .open(open)
+                        .id(Id::new(*id))
+                        .title_bar(true)
+                        .show(ctx, |ui| {
+                            app.update(ui, frame, self.sst_enabled, false, || {
+                                self.app_now_id = Some(*id)
+                            });
                         });
-                    });
-            }
-        };
+                }
+            };
         let mut will_minimum_this = false;
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {

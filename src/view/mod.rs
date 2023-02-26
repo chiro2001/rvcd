@@ -5,6 +5,7 @@ pub mod ui;
 
 use crate::message::RvcdMsg;
 use crate::radix::Radix;
+use crate::verilog::VerilogSource;
 use crate::view::cursor::WaveCursor;
 use crate::view::signal::{SignalView, SignalViewAlign};
 use crate::view::ui::ResponsePointerState;
@@ -86,6 +87,8 @@ pub struct WaveView {
     pub range_seek_started: bool,
     #[serde(skip)]
     pub value_width_max: f32,
+    #[serde(skip)]
+    pub sources: Vec<VerilogSource>,
 }
 
 impl Default for WaveView {
@@ -118,15 +121,17 @@ impl Default for WaveView {
             last_pointer_state: Default::default(),
             range_seek_started: false,
             value_width_max: 0.0,
+            sources: vec![],
         }
     }
 }
 
 impl WaveView {
     /// * `tx`: mpsc message sender from parent
-    pub fn new(tx: mpsc::Sender<RvcdMsg>) -> Self {
+    pub fn new(tx: mpsc::Sender<RvcdMsg>, sources: Vec<VerilogSource>) -> Self {
         Self {
             tx: Some(tx),
+            sources,
             ..Default::default()
         }
     }
@@ -135,6 +140,9 @@ impl WaveView {
     }
     pub fn set_tx(&mut self, tx: mpsc::Sender<RvcdMsg>) {
         self.tx = Some(tx);
+    }
+    pub fn set_sources(&mut self, sources: Vec<VerilogSource>) {
+        self.sources = sources;
     }
     /// Remove signals that not defined in wave info, used in `reload()`
     pub fn signals_clean_unavailable(&mut self, info: &WaveInfo) {

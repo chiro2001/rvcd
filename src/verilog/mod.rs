@@ -60,39 +60,39 @@ impl<'i> ParseTreeVisitorCompat<'i> for VerilogSimpleVisitor {
 
 impl<'i> VerilogParserVisitorCompat<'i> for VerilogSimpleVisitor {}
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
     pub source: String,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VerilogModule {
     pub name: String,
     pub ports: Vec<VerilogPort>,
     pub regs: Vec<VerilogReg>,
     pub wires: Vec<VerilogWire>,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub enum VerilogPortType {
     #[default]
     Input,
     Output,
     Inout,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VerilogPort {
     pub typ: VerilogPortType,
     pub name: String,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VerilogReg {
     pub name: String,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VerilogWire {
     pub name: String,
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct MyVerilogListener {
     pub source: VerilogSource,
     pub module: Option<VerilogModule>,
