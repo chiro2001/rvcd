@@ -354,7 +354,7 @@ impl WaveView {
                                 if let Some(signal) = signal {
                                     row.col(|ui| {
                                         if let Some(signal_new) =
-                                            self.ui_signal_label(signal, row_index, ui)
+                                            self.ui_signal_label(signal, row_index, ui, &wave.info)
                                         {
                                             new_signals.push(signal_new);
                                         }

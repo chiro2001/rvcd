@@ -9,6 +9,7 @@ use antlr_rust::rule_context::CustomRuleContext;
 use antlr_rust::token_factory::CommonTokenFactory;
 use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
 use antlr_rust::{BaseParser, InputStream};
+use queues::IsQueue;
 use std::io::Read;
 use tracing::info;
 pub use veriloglexer::*;
@@ -65,6 +66,50 @@ pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
     pub source: String,
 }
+
+impl VerilogSource {
+    pub fn search_path(&self, query: &[&str]) -> Vec<Vec<String>> {
+        let mut result = vec![];
+        let mut query = query.iter().map(|x| x.clone()).collect::<Vec<_>>();
+        while result.is_empty() && !query.is_empty() {
+            let mut queue = vec![];
+            let mut do_if_insert = |queue: &mut Vec<&str>, result: &mut Vec<Vec<String>>| {
+                if queue.len() >= query.len() && queue[queue.len() - query.len()..] == query {
+                    result.push(query.iter().map(|x| x.to_string()).collect());
+                }
+                queue.pop().unwrap();
+            };
+            fn do_push_insert_pop<'t1: 't2, 't2, F>(
+                s: &'t1 str,
+                queue: &'t2 mut std::vec::Vec<&'t1 str>,
+                result: &mut Vec<Vec<String>>,
+                do_if_insert: F,
+            ) where
+                F: Fn(&'t2 mut Vec<&str>, &mut Vec<Vec<String>>),
+            {
+                queue.push(s);
+                do_if_insert(queue, result);
+            }
+            for module in &self.modules {
+                queue.push(module.name.as_str());
+                for r in &module.ports {
+                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                }
+                for r in &module.regs {
+                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                }
+                for r in &module.wires {
+                    do_push_insert_pop(r.name.as_str(), &mut queue, &mut result, do_if_insert);
+                }
+                queue.pop().unwrap();
+            }
+            // pop top to find more paths
+            query.remove(0);
+        }
+        result
+    }
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct VerilogModule {
     pub name: String,

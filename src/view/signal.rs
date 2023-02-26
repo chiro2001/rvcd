@@ -9,6 +9,7 @@ use num_bigint::BigUint;
 use num_traits::{One, Zero};
 use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
+use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub enum SignalViewMode {
@@ -375,6 +376,7 @@ impl WaveView {
         signal: &SignalView,
         index: usize,
         ui: &mut Ui,
+        info: &WaveInfo,
     ) -> Option<(SignalView, usize, bool)> {
         let mut signal_new = signal.clone();
         let text = signal.s.to_string();
@@ -419,7 +421,17 @@ impl WaveView {
                             ui.close_menu();
                         }
                     });
-
+                    if !self.sources.is_empty() {
+                        if ui.button("To Source").clicked() {
+                            let id = signal.s.id;
+                            if let Some(path) = info.code_paths.get(&id) {
+                                let mut path = path.clone();
+                                path.push(signal.s.name.to_string());
+                                info!("got path: {:?}", path);
+                            }
+                            ui.close_menu();
+                        }
+                    }
                 });
             });
         });
