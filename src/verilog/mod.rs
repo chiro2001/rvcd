@@ -9,7 +9,7 @@ use antlr_rust::interval_set::Interval;
 use antlr_rust::rule_context::CustomRuleContext;
 use antlr_rust::token_factory::CommonTokenFactory;
 use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeVisitorCompat, Tree};
-use antlr_rust::{BaseParser, InputStream};
+use antlr_rust::{BaseParser, DefaultErrorStrategy, InputStream};
 use queues::IsQueue;
 use std::io::Read;
 use tracing::info;
@@ -66,7 +66,7 @@ impl<'i> VerilogParserVisitorCompat<'i> for VerilogSimpleVisitor {}
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
     pub source_path: String,
-    pub source_code: String,
+    pub source_code: debug_ignore::DebugIgnore<String>,
 }
 
 type VerilogSourceSearchResultType = Vec<(Vec<String>, CodeInterval)>;
@@ -382,7 +382,7 @@ pub fn parse_verilog_file(path: &str) -> anyhow::Result<VerilogSource> {
     let listener = parser.remove_parse_listener(listener_id);
     let mut parsed = listener.source;
     parsed.source_path = path.to_string();
-    parsed.source_code = data.clone();
+    parsed.source_code = debug_ignore::DebugIgnore(data.clone());
     Ok(parsed)
 }
 

@@ -448,6 +448,7 @@ impl WaveView {
                                         results.sort_by_key(|x| x.1.len());
                                         results.reverse();
                                         if let Some(result) = results.first() {
+                                            info!("result: {:?}", result);
                                             let (line, line_offset) =
                                                 result.0.offset_to_line_no(result.2.a as u64);
                                             tx.send(RvcdMsg::CallGotoSources((
