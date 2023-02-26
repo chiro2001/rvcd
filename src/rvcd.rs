@@ -4,7 +4,7 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
-use crate::verilog::highlight::code_view_ui;
+use crate::code::highlight::code_view_ui;
 use crate::verilog::{VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};

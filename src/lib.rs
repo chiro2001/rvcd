@@ -17,6 +17,7 @@ pub mod wave;
 pub mod verilog;
 pub mod client;
 pub mod rpc;
+pub mod code;
 
 #[macro_use]
 extern crate rust_i18n;

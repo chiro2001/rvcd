@@ -4,8 +4,6 @@ mod verilogparser;
 mod verilogparserlistener;
 mod verilogparservisitor;
 
-pub mod highlight;
-
 use antlr_rust::common_token_stream::CommonTokenStream;
 use antlr_rust::interval_set::Interval;
 use antlr_rust::parser_rule_context::ParserRuleContext;

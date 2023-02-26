@@ -1,5 +1,4 @@
 use egui::text::LayoutJob;
-use egui::text_edit::CursorRange;
 
 /// View some code with syntax highlighting and selection.
 pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>) {
