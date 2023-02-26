@@ -164,7 +164,7 @@ impl Rvcd {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let filepath = &self.filepath;
-            info!("last file: {}", filepath);
+            info!("last file: {}; last source dir: {}", filepath, self.source_dir);
             if !filepath.is_empty() {
                 channel_req_tx
                     .send(RvcdMsg::FileOpen(rfd::FileHandle::from(
@@ -173,7 +173,7 @@ impl Rvcd {
                     .unwrap();
             }
         }
-        let loop_self = channel_req_tx.clone();
+        let loop_self = channel_resp_tx.clone();
         self.loop_self = Some(loop_self);
         self.channel = Some(RvcdChannel {
             tx: channel_req_tx,
@@ -594,12 +594,14 @@ impl Rvcd {
             RvcdMsg::UpdateSourceDir(_path) => {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
+                    info!("update self.source_dir to {}", _path);
                     self.source_dir = _path;
                 }
             }
             RvcdMsg::UpdateSources(_sources) => {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
+                    info!("self.sources updated");
                     self.sources = _sources;
                     self.sources_updated = true;
                 }
