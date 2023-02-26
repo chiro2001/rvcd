@@ -43,6 +43,8 @@ pub struct Rvcd {
     /// ui <- -> service
     #[serde(skip)]
     pub channel: Option<RvcdChannel>,
+    #[serde(skip)]
+    pub loop_self: Option<mpsc::Sender<RvcdMsg>>,
     /// Loaded file path.
     ///
     /// **Only available on native**
@@ -109,6 +111,7 @@ impl Default for Rvcd {
             title: "Rvcd".to_string(),
             state: State::default(),
             channel: None,
+            loop_self: None,
             filepath: "".to_string(),
             load_progress: (0.0, 0),
             parse_progress: (0.0, 0),
@@ -170,6 +173,8 @@ impl Rvcd {
                     .unwrap();
             }
         }
+        let loop_self = channel_req_tx.clone();
+        self.loop_self = Some(loop_self);
         self.channel = Some(RvcdChannel {
             tx: channel_req_tx,
             rx: channel_resp_rx,
@@ -281,6 +286,18 @@ impl Rvcd {
                 });
             ctx.request_repaint();
         }
+        // auto update sources
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(channel) = &self.channel {
+            if !self.sources_update_started && !self.sources_updated && !self.source_dir.is_empty()
+            {
+                self.sources_update_started = true;
+                let tx = &channel.tx;
+                tx.send(RvcdMsg::UpdateSourceDir(self.source_dir.to_string()))
+                    .unwrap();
+            }
+        }
+
         self.toasts
             .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
 
@@ -574,7 +591,12 @@ impl Rvcd {
             RvcdMsg::FileLoadCancel => {}
             RvcdMsg::ServiceDataReady(_) => {}
             RvcdMsg::StopService => {}
-            RvcdMsg::UpdateSourceDir(_) => {}
+            RvcdMsg::UpdateSourceDir(_path) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    self.source_dir = _path;
+                }
+            }
             RvcdMsg::UpdateSources(_sources) => {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
@@ -640,29 +662,21 @@ impl Rvcd {
                     self.sources_update_started = true;
                     let task = rfd::AsyncFileDialog::new().pick_folder();
                     let tx = channel.tx.clone();
+                    let loop_self = self.loop_self.clone();
                     execute(async move {
                         let dir = task.await;
                         if let Some(path) = dir {
-                            tx.send(RvcdMsg::UpdateSourceDir(
-                                path.path().to_str().unwrap().to_string(),
-                            ))
-                            .unwrap();
+                            let path = path.path().to_str().unwrap().to_string();
+                            if let Some(loop_self) = loop_self {
+                                loop_self
+                                    .send(RvcdMsg::UpdateSourceDir(path.to_string()))
+                                    .unwrap();
+                            }
+                            tx.send(RvcdMsg::UpdateSourceDir(path)).unwrap();
                         }
                     });
                 }
-            }
-            // auto update sources
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(channel) = &self.channel {
-                if !self.sources_update_started
-                    && !self.sources_updated
-                    && !self.source_dir.is_empty()
-                {
-                    self.sources_update_started = true;
-                    let tx = &channel.tx;
-                    tx.send(RvcdMsg::UpdateSourceDir(self.source_dir.to_string()))
-                        .unwrap();
-                }
+                ui.close_menu();
             }
             ui.add_enabled_ui(self.state == State::Working, |ui| {
                 if ui.button(t!("menu.close")).clicked() {

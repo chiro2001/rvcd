@@ -176,7 +176,7 @@ impl<'i> VerilogParserListener<'i> for MyVerilogListener {
 
 impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
     fn enter_every_rule(&mut self, ctx: &dyn VerilogParserContext<'i>) {
-        info!(
+        tracing::trace!(
             "rule entered {}",
             verilogparser::ruleNames
                 .get(ctx.get_rule_index())
@@ -185,7 +185,7 @@ impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
     }
 
     fn exit_every_rule(&mut self, ctx: &dyn VerilogParserContext<'i>) {
-        info!(
+        tracing::trace!(
             "rule exit {}",
             verilogparser::ruleNames
                 .get(ctx.get_rule_index())

@@ -192,6 +192,7 @@ impl Service {
             RvcdMsg::UpdateSourceDir(_path) => {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
+                    info!("service updating source path: {}", _path);
                     let tx = self.channel.tx.clone();
                     execute(async move {
                         let sources = utils::scan_sources_recursive(_path.as_str());

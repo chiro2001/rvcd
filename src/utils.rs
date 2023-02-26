@@ -64,13 +64,26 @@ pub fn get_text_size(ui: &Ui, text: &str, font: FontId) -> Vec2 {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn scan_sources_recursive(path: &str) -> Vec<String> {
+    tracing::info!("scan_sources_recursive({})", path);
     let mut result = vec![];
     for entry in walkdir::WalkDir::new(path)
         .into_iter()
         .filter_map(|x| x.ok())
-        .filter(|x| x.path().ends_with(".v"))
     {
-        result.push(entry.path().display().to_string())
+        let meta = entry.metadata();
+        if meta.is_err() {
+            continue;
+        }
+        let meta = meta.unwrap();
+        if !meta.is_file() {
+            continue;
+        }
+        let f = entry.path().display().to_string();
+        if !f.to_lowercase().ends_with(".v") {
+            continue;
+        }
+        tracing::info!("got file: {}", f);
+        result.push(f);
     }
     result
 }
