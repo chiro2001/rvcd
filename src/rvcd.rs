@@ -369,8 +369,8 @@ impl Rvcd {
                             },
                         );
                     });
-                    if let Some(v) = &self.alternative_view_source {
-                        code_view_ui(ui, v.text.as_str());
+                    if let Some(v) = &mut self.alternative_view_source {
+                        code_view_ui(ui, &mut v.text);
                     }
                 });
             });
