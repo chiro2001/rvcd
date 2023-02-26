@@ -86,6 +86,10 @@ pub struct Rvcd {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub sources_updated: bool,
+
+    // #[cfg(not(target_arch = "wasm32"))]
+    // #[serde(skip)]
+    // pub client:
 }
 
 impl Display for Rvcd {

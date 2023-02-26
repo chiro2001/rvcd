@@ -53,14 +53,15 @@ async fn main() -> Result<()> {
     let rpc = async move {
         loop {
             let addr = format!("0.0.0.0:{}", args.port).parse().unwrap();
+            info!("[Manager] rpc server at {}", addr);
             match Server::builder()
-                .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(RvcdManager::default()))
+                .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(
+                    RvcdManager::default(),
+                ))
                 .serve(addr)
                 .await
             {
-                Ok(_) => {
-                    info!("[Manager] started rpc server at {}", addr);
-                }
+                Ok(_) => {}
                 Err(_) => {}
             }
             sleep_ms(1000).await;
