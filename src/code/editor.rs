@@ -75,13 +75,14 @@ impl CodeEditor {
                     }
                 });
             }
-            CodeEditorState::NeedReload | CodeEditorState::Idle | CodeEditorState::Modified => {
+            CodeEditorState::Idle | CodeEditorState::Modified | CodeEditorState::NeedReload => {
                 if let Some(goto) = self.goto.take() {
                     let mut line = 1isize;
                     let mut offset = 0usize;
                     for (i, c) in self.text.chars().enumerate() {
                         if line >= goto.line {
                             offset = i + goto.column as usize;
+                            break;
                         }
                         if c == '\n' {
                             line += 1;
