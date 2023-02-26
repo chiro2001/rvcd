@@ -381,7 +381,6 @@ fn is_keyword(word: &str) -> bool {
             | "include"
             | "ifdef"
             | "endif"
-            | "else"
             | "timescale"
     )
 }
