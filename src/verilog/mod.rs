@@ -41,6 +41,22 @@ impl<'i> VerilogParserVisitorCompat<'i> for VerilogModulesVisitor {
     // }
 }
 
+#[derive(Default)]
+pub struct VerilogSimpleVisitor {
+    temp: usize,
+}
+
+impl<'i> ParseTreeVisitorCompat<'i> for VerilogSimpleVisitor {
+    type Node = VerilogParserContextType;
+    type Return = usize;
+
+    fn temp_result(&mut self) -> &mut Self::Return {
+        &mut self.temp
+    }
+}
+
+impl<'i> VerilogParserVisitorCompat<'i> for VerilogSimpleVisitor {}
+
 #[derive(Default, Debug)]
 pub struct VerilogSource {
     pub modules: Vec<VerilogModule>,
@@ -176,7 +192,7 @@ impl<'i> ParseTreeListener<'i, VerilogParserContextType> for MyVerilogListener {
 
 #[cfg(test)]
 mod test {
-    use crate::verilog::{MyVerilogListener, VerilogLexer, VerilogModulesVisitor, VerilogParser};
+    use crate::verilog::{MyVerilogListener, VerilogLexer, VerilogModulesVisitor, VerilogParser, VerilogSimpleVisitor};
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::token_factory::CommonTokenFactory;
     use antlr_rust::tree::ParseTreeVisitorCompat;
@@ -198,9 +214,9 @@ mod test {
         let listener = MyVerilogListener::new();
         let listener_id = parser.add_parse_listener(Box::new(listener));
         let result = parser.source_text().expect("parsed unsuccessfully");
-        let mut visitor = VerilogModulesVisitor(Vec::new());
-        let visitor_result = visitor.visit(&*result);
-        info!("modules: {:?}", visitor_result);
+        let mut visitor = VerilogSimpleVisitor::default();
+        let _visitor_result = visitor.visit(&*result);
+        // info!("modules: {:?}", visitor_result);
         let listener = parser.remove_parse_listener(listener_id);
         info!("tree: {:?}", listener);
     }
