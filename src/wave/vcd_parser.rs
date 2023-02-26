@@ -139,27 +139,48 @@ fn vcd_iterate_tree(
     tree.deep_clone()
 }
 
+fn merge_scope_items(items: Vec<ScopeItem>) -> Vec<ScopeItem> {
+    let mut results: Vec<ScopeItem> = vec![];
+    for item in items {
+        match item {
+            ScopeItem::Scope(scope) => {
+                if let Some(r) = results.iter_mut().find(|x| match &x {
+                    ScopeItem::Scope(x) => x.identifier.as_str(),
+                    ScopeItem::Var(_) => "",
+                    ScopeItem::Comment(_) => "",
+                } == scope.identifier.as_str()) {
+                    match r {
+                        ScopeItem::Scope(s) => {
+                            for child in scope.children {
+                                s.children.push(child);
+                            }
+                        }
+                        ScopeItem::Var(_) => {}
+                        ScopeItem::Comment(_) => {}
+                    }
+                } else {
+                    results.push(ScopeItem::Scope(scope));
+                }
+            }
+            ScopeItem::Var(x) => results.push(ScopeItem::Var(x)),
+            ScopeItem::Comment(_) => {}
+        }
+    }
+    results
+}
+
 pub fn vcd_tree(header: &Header) -> Result<Tree<WaveTreeNode>> {
     let root = Tree::new(WaveRoot);
     fn on_scope(tree: Tree<WaveTreeNode>, scope: &Scope, scope_id: u64) -> Tree<WaveTreeNode> {
-        vcd_iterate_tree(
-            tree,
-            scope.children.as_slice(),
-            on_scope,
-            on_var,
-            scope_id + 1,
-        )
+        let children = merge_scope_items(scope.children.clone());
+        vcd_iterate_tree(tree, children.as_slice(), on_scope, on_var, scope_id + 1)
     }
     fn on_var(tree: Tree<WaveTreeNode>, _var: &Var) -> Tree<WaveTreeNode> {
         tree.deep_clone()
     }
-    Ok(vcd_iterate_tree(
-        root,
-        header.items.as_slice(),
-        on_scope,
-        on_var,
-        0,
-    ))
+    let items = merge_scope_items(header.items.clone());
+    let result = vcd_iterate_tree(root, items.as_slice(), on_scope, on_var, 0);
+    Ok(result)
 }
 
 pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
