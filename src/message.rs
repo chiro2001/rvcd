@@ -1,3 +1,4 @@
+use crate::verilog::VerilogSource;
 use crate::wave::Wave;
 use egui_toast::Toast;
 use rfd::FileHandle;
@@ -19,6 +20,8 @@ pub enum RvcdMsg {
     Notification(Toast),
     ServiceDataReady(Vec<u8>),
     StopService,
+    UpdateSourceDir(String),
+    UpdateSources(Vec<VerilogSource>),
 }
 
 impl Debug for RvcdMsg {
@@ -43,6 +46,8 @@ impl Debug for RvcdMsg {
                 write!(f, "RcdMsg: ServiceDataReady ({} bytes)", v.len())
             }
             RvcdMsg::StopService => write!(f, "RvcdMsg: StopService"),
+            RvcdMsg::UpdateSources(s) => write!(f, "RvcdMsg: UpdateSources({})", s.len()),
+            RvcdMsg::UpdateSourceDir(path) => write!(f, "RvcdMsg: UpdateSorceDir({})", path),
         }
     }
 }

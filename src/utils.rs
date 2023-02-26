@@ -61,3 +61,16 @@ pub fn get_text_size(ui: &Ui, text: &str, font: FontId) -> Vec2 {
         )
         .size()
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn scan_sources_recursive(path: &str) -> Vec<String> {
+    let mut result = vec![];
+    for entry in walkdir::WalkDir::new(path)
+        .into_iter()
+        .filter_map(|x| x.ok())
+        .filter(|x| x.path().ends_with(".v"))
+    {
+        result.push(entry.path().display().to_string())
+    }
+    result
+}

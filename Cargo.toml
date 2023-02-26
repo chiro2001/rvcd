@@ -49,6 +49,7 @@ tonic = "0.8.3"
 prost = "0.11.6"
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }
 egui-toast = { git = "https://github.com/chiro2001/egui-toast", rev = "2f3adaab2e7b1512b9d6101ba5d668351e224056" }
+walkdir = "2.3.2"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -2599,6 +2599,7 @@ dependencies = [
  "tracing-wasm",
  "trees",
  "vcd",
+ "walkdir",
  "wasm-bindgen-futures",
  "web-sys",
 ]

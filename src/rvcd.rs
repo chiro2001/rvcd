@@ -3,6 +3,7 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::execute;
+use crate::verilog::VerilogSource;
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
@@ -37,10 +38,6 @@ pub struct Rvcd {
     pub id: usize,
     title: String,
     /// File loading state
-    #[cfg(not(target_arch = "wasm32"))]
-    #[serde(skip)]
-    pub state: State,
-    #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
     pub state: State,
     /// ui <- -> service
@@ -79,6 +76,15 @@ pub struct Rvcd {
     pub search_text: String,
     pub search_tree: bool,
     pub search_regex: bool,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub source_dir: String,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub sources: Vec<VerilogSource>,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub sources_updated: bool,
 }
 
 impl Display for Rvcd {
@@ -116,6 +122,12 @@ impl Default for Rvcd {
             search_text: "".to_string(),
             search_tree: false,
             search_regex: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            source_dir: "".to_string(),
+            #[cfg(not(target_arch = "wasm32"))]
+            sources: vec![],
+            #[cfg(not(target_arch = "wasm32"))]
+            sources_updated: false,
         }
     }
 }
@@ -557,6 +569,14 @@ impl Rvcd {
             RvcdMsg::FileLoadCancel => {}
             RvcdMsg::ServiceDataReady(_) => {}
             RvcdMsg::StopService => {}
+            RvcdMsg::UpdateSourceDir(_) => {}
+            RvcdMsg::UpdateSources(_sources) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    self.sources = _sources;
+                    self.sources_updated = true;
+                }
+            }
         };
     }
     pub fn reload(&mut self) {

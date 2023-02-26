@@ -1,5 +1,7 @@
 use crate::message::{RvcdChannel, RvcdMsg};
+use crate::utils;
 use crate::utils::{execute, sleep_ms};
+use crate::verilog::parse_verilog_file;
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::{WaveLoader, WavePreLoader};
 use anyhow::Result;
@@ -187,6 +189,22 @@ impl Service {
                 info!("stop parsing data");
             }
             RvcdMsg::StopService => return Ok(true),
+            RvcdMsg::UpdateSourceDir(_path) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let tx = self.channel.tx.clone();
+                    execute(async move {
+                        let sources = utils::scan_sources_recursive(_path.as_str());
+                        let parsed = sources
+                            .into_iter()
+                            .map(|s| parse_verilog_file(s.as_str()))
+                            .filter(|x| x.is_ok())
+                            .map(|x| x.unwrap())
+                            .collect::<Vec<_>>();
+                        tx.send(RvcdMsg::UpdateSources(parsed)).unwrap();
+                    });
+                }
+            }
             _ => {}
         }
         Ok(false)
