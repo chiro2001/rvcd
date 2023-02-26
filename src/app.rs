@@ -1,4 +1,5 @@
 use crate::code::editor::CodeEditor;
+use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::manager::RvcdRpcMessage;
@@ -45,6 +46,7 @@ pub struct RvcdApp {
     pub app_rx: Option<mpsc::Receiver<RvcdAppMessage>>,
     #[serde(skip)]
     pub editors: Vec<CodeEditor>,
+    pub code_editor: CodeEditorType,
 }
 
 impl Default for RvcdApp {
@@ -62,6 +64,7 @@ impl Default for RvcdApp {
             loop_tx: None,
             app_rx: None,
             editors: vec![],
+            code_editor: Default::default(),
         }
     }
 }
@@ -206,13 +209,29 @@ impl RvcdApp {
     pub fn message_handler(&mut self, msg: RvcdAppMessage) {
         info!("app message handle: {:?}", msg);
         match msg {
-            RvcdAppMessage::CreateCodeEditor(p) => {
-                if let Some(editor) = self.editors.iter_mut().find(|x| x.file == p.0.as_str()) {
-                    editor.goto = p.1;
-                } else {
-                    self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+            RvcdAppMessage::CreateCodeEditor(p) => match self.code_editor {
+                CodeEditorType::Internal => {
+                    if let Some(editor) = self.editors.iter_mut().find(|x| x.file == p.0.as_str()) {
+                        editor.goto = p.1;
+                    } else {
+                        self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+                    }
                 }
-            }
+                CodeEditorType::Scaleda => {}
+                CodeEditorType::VsCode => {
+                    let loc = p.1.clone();
+                    std::process::Command::new("code")
+                        .args(if loc.is_some() {
+                            let loc = loc.unwrap();
+                            let s = format!("{}:{}", loc.line, loc.column);
+                            vec![p.0, "-g".to_string(), s]
+                        } else {
+                            vec![p.0]
+                        })
+                        .output()
+                        .ok();
+                }
+            },
         }
     }
 }
@@ -255,6 +274,17 @@ impl eframe::App for RvcdApp {
                     };
                     for locale in locales {
                         set_locale(locale.to_string() == locale_now, locale);
+                    }
+                });
+                ui.menu_button("Editor", |ui| {
+                    use CodeEditorType::*;
+                    let editor_types = vec![Scaleda, Internal, VsCode];
+                    for e in editor_types {
+                        let mut eq = e == self.code_editor;
+                        if ui.checkbox(&mut eq, e.to_string()).clicked() {
+                            self.code_editor = e;
+                            ui.close_menu();
+                        }
                     }
                 });
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
