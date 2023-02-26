@@ -332,76 +332,68 @@ impl Rvcd {
             egui::Window::new("选择要跳转到的目标")
                 .open(&mut _open_alternative_goto_sources)
                 .show(ctx, |ui| {
-                    ui.set_min_height(480.0);
                     ui.horizontal(|ui| {
-                        ScrollArea::vertical()
-                            .id_source("alternative-file-table")
-                            .show(ui, |ui| {
-                                TableBuilder::new(ui).column(Column::auto()).body(|body| {
-                                    body.heterogeneous_rows(
-                                        (0..self.alternative_goto_sources.len()).map(|_| 40.0),
-                                        |index, mut row| {
-                                            if let Some(a) = self
-                                                .alternative_goto_sources
-                                                .get(index)
-                                                .map(|x| x.clone())
+                        TableBuilder::new(ui).column(Column::auto()).body(|body| {
+                            body.heterogeneous_rows(
+                                (0..self.alternative_goto_sources.len()).map(|_| 40.0),
+                                |index, mut row| {
+                                    if let Some(a) =
+                                        self.alternative_goto_sources.get(index).map(|x| x.clone())
+                                    {
+                                        row.col(|ui| {
+                                            let resp = ui.add(
+                                                Label::new(format!(
+                                                    "{}:{}:{}",
+                                                    file_basename(a.file.as_str()),
+                                                    a.location.line,
+                                                    a.location.column
+                                                ))
+                                                .sense(Sense::click()),
+                                            );
+                                            if resp.double_clicked() {
+                                                if let Some(loop_self) = &self.loop_self {
+                                                    loop_self
+                                                        .send(RvcdMsg::CallGotoSources(a))
+                                                        .unwrap();
+                                                    self.alternative_goto_sources.clear();
+                                                }
+                                            } else if resp.clicked()
+                                                || self.alternative_view_source.is_none()
                                             {
-                                                row.col(|ui| {
-                                                    let resp = ui.add(
-                                                        Label::new(format!(
-                                                            "{}:{}:{}",
-                                                            file_basename(a.file.as_str()),
-                                                            a.location.line,
-                                                            a.location.column
-                                                        ))
-                                                        .sense(Sense::click()),
-                                                    );
-                                                    if resp.double_clicked() {
-                                                        if let Some(loop_self) = &self.loop_self {
-                                                            loop_self
-                                                                .send(RvcdMsg::CallGotoSources(a))
-                                                                .unwrap();
-                                                            self.alternative_goto_sources.clear();
+                                                let f = self
+                                                    .view
+                                                    .sources
+                                                    .iter()
+                                                    .filter(|x| x.source_path == a.file)
+                                                    .map(|x| x.source_code.0.as_str())
+                                                    .collect::<Vec<_>>();
+                                                if let Some(f) = f.first() {
+                                                    let code = f.to_string();
+                                                    let mut line = 1isize;
+                                                    let mut offset = 0usize;
+                                                    for (i, c) in code.chars().enumerate() {
+                                                        if line >= a.location.line {
+                                                            offset = i + a.location.column as usize;
+                                                            break;
                                                         }
-                                                    } else if resp.clicked()
-                                                        || self.alternative_view_source.is_none()
-                                                    {
-                                                        let f = self
-                                                            .view
-                                                            .sources
-                                                            .iter()
-                                                            .filter(|x| x.source_path == a.file)
-                                                            .map(|x| x.source_code.0.as_str())
-                                                            .collect::<Vec<_>>();
-                                                        if let Some(f) = f.first() {
-                                                            let code = f.to_string();
-                                                            let mut line = 1isize;
-                                                            let mut offset = 0usize;
-                                                            for (i, c) in code.chars().enumerate() {
-                                                                if line >= a.location.line {
-                                                                    offset = i + a.location.column
-                                                                        as usize;
-                                                                    break;
-                                                                }
-                                                                if c == '\n' {
-                                                                    line += 1;
-                                                                }
-                                                            }
-                                                            self.alternative_view_source =
-                                                                Some(VerilogViewSource {
-                                                                    file: a.file,
-                                                                    path: a.path,
-                                                                    text: code,
-                                                                    offset,
-                                                                });
+                                                        if c == '\n' {
+                                                            line += 1;
                                                         }
                                                     }
-                                                });
+                                                    self.alternative_view_source =
+                                                        Some(VerilogViewSource {
+                                                            file: a.file,
+                                                            path: a.path,
+                                                            text: code,
+                                                            offset,
+                                                        });
+                                                }
                                             }
-                                        },
-                                    );
-                                });
-                            });
+                                        });
+                                    }
+                                },
+                            );
+                        });
                         if let Some(v) = &mut self.alternative_view_source {
                             egui::ScrollArea::both()
                                 .id_source("code-preview")
