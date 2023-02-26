@@ -45,6 +45,7 @@ impl Default for RvcdApp {
             debug_panel: false,
             sst_enabled: true,
             locale: "".to_string(),
+            rpc_rx: None,
         }
     }
 }
