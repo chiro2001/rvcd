@@ -3,6 +3,7 @@ use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::manager::RvcdRpcMessage;
+use crate::message::RvcdMsg;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::verilog::CodeLocation;
@@ -13,7 +14,9 @@ use eframe::Frame;
 use egui::{
     CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window,
 };
+use rfd::FileHandle;
 use rust_i18n::locale;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::info;
 
@@ -462,11 +465,28 @@ impl eframe::App for RvcdApp {
                         app.handle_rpc_message(message.clone());
                     }
                 }
-                // _ => {
-                //     for app in &mut self.apps {
-                //         app.handle_rpc_message(message.clone());
-                //     }
-                // }
+                RvcdRpcMessage::OpenWaveFile(path) => {
+                    if !self
+                        .apps
+                        .iter()
+                        .any(|x| x.filepath.as_str() == path.as_str())
+                    {
+                        let has_maximum_window = self.app_now_id.is_some();
+                        let id = self.new_window(!has_maximum_window);
+                        if let Some(app) = self.apps.iter().find(|a| a.id == id) {
+                            if let Some(tx) = &app.loop_self {
+                                tx.send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                                    path.as_str(),
+                                ))))
+                                .unwrap();
+                            }
+                        }
+                    }
+                } // _ => {
+                  //     for app in &mut self.apps {
+                  //         app.handle_rpc_message(message.clone());
+                  //     }
+                  // }
             }
         }
         let mut messages = vec![];

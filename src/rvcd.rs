@@ -764,6 +764,9 @@ impl Rvcd {
                     self.view.do_source_goto(path.path);
                 }
             }
+            RvcdRpcMessage::OpenWaveFile(_) => {
+                panic!("handle this in app level");
+            }
         }
     }
     pub fn reload(&mut self) {

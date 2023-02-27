@@ -15,12 +15,13 @@ pub const MANAGER_PORT: u16 = 5411;
 #[derive(Clone)]
 pub enum RvcdRpcMessage {
     GotoPath(RvcdSignalPath),
+    OpenWaveFile(String),
 }
 unsafe impl Send for RvcdRpcMessage {}
 
 #[derive(Debug)]
 pub struct RvcdManager {
-    pub managed_files: Mutex<HashMap<u32, (Vec<String>, std::time::Instant)>>,
+    pub managed_files: Mutex<HashMap<u32, (String, Vec<String>, Instant)>>,
     pub tx: Arc<Mutex<mpsc::Sender<RvcdRpcMessage>>>,
 }
 
@@ -40,7 +41,23 @@ impl RvcdRpc for RvcdManager {
         request: Request<RvcdOpenFile>,
     ) -> Result<Response<RvcdEmpty>, Status> {
         debug!("got a request open_file: {:?}", request);
-        // TODO
+        let data = request.into_inner();
+        let mut found = false;
+        let managed_files = { self.managed_files.lock().unwrap().clone() };
+        for (_k, v) in managed_files {
+            if v.0.as_str() == data.path.as_str() {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            // send to self, open new
+            self.tx
+                .lock()
+                .unwrap()
+                .send(RvcdRpcMessage::OpenWaveFile(data.path))
+                .unwrap();
+        }
         Ok(Response::new(RvcdEmpty::default()))
     }
 
@@ -52,7 +69,7 @@ impl RvcdRpc for RvcdManager {
         let mut found = false;
         let managed_files = { self.managed_files.lock().unwrap().clone() };
         for (k, v) in managed_files {
-            if v.0.contains(&data.file) {
+            if v.0.as_str() == data.file.as_str() {
                 if let Ok(channel) = Channel::from_shared(format!("http://127.0.0.1:{}", k)) {
                     let channel = channel.connect().await;
                     if let Ok(channel) = channel {
@@ -88,14 +105,14 @@ impl RvcdRpc for RvcdManager {
         trace!("manager recv client: {:?}", r);
         let m = {
             let mut m = self.managed_files.lock().unwrap();
-            m.insert(r.client_port, (r.paths, std::time::Instant::now()));
-            // notify outdated clients
+            m.insert(r.client_port, (r.wave_file, r.paths, Instant::now()));
             m.clone()
         };
+        // notify outdated clients
         let mut to_remove_keys = vec![];
         for (k, v) in m.iter() {
             let now = Instant::now();
-            if now.duration_since(v.1) > Duration::from_millis(2000) {
+            if now.duration_since(v.2) > Duration::from_millis(2000) {
                 to_remove_keys.push(*k);
                 if let Ok(channel) = Channel::from_shared(format!("http://127.0.0.1:{}", k)) {
                     let channel = channel.connect().await;
