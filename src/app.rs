@@ -466,19 +466,33 @@ impl eframe::App for RvcdApp {
                     }
                 }
                 RvcdRpcMessage::OpenWaveFile(path) => {
-                    if !self
-                        .apps
-                        .iter()
-                        .any(|x| x.filepath.as_str() == path.as_str())
-                    {
-                        let has_maximum_window = self.app_now_id.is_some();
-                        let id = self.new_window(!has_maximum_window);
-                        if let Some(app) = self.apps.iter().find(|a| a.id == id) {
-                            if let Some(channel) = &app.channel {
-                                channel.tx.send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                    let mut ok = false;
+                    let send = |app: &Rvcd| {
+                        if let Some(channel) = &app.channel {
+                            channel
+                                .tx
+                                .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
                                     path.as_str(),
                                 ))))
                                 .unwrap();
+                        }
+                    };
+                    if let Some(id) = self.app_now_id {
+                        if let Some(app) = self.apps.iter_mut().find(|app| app.id == id) {
+                            send(app);
+                            ok = true;
+                        }
+                    }
+                    if !ok {
+                        if !self
+                            .apps
+                            .iter()
+                            .any(|x| x.filepath.as_str() == path.as_str() && x.state == State::Idle)
+                        {
+                            let has_maximum_window = self.app_now_id.is_some();
+                            let id = self.new_window(!has_maximum_window);
+                            if let Some(app) = self.apps.iter().find(|a| a.id == id) {
+                                send(app);
                             }
                         }
                     }
