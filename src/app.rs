@@ -47,6 +47,7 @@ pub struct RvcdApp {
     #[serde(skip)]
     pub editors: Vec<CodeEditor>,
     pub code_editor: CodeEditorType,
+    pub default_source_dir: String,
 }
 
 impl Default for RvcdApp {
@@ -65,12 +66,17 @@ impl Default for RvcdApp {
             app_rx: None,
             editors: vec![],
             code_editor: Default::default(),
+            default_source_dir: "".to_string(),
         }
     }
 }
 
 impl RvcdApp {
-    pub fn new(cc: &eframe::CreationContext<'_>, rpc_rx: mpsc::Receiver<RvcdRpcMessage>) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
+        default_source_dir: Option<String>,
+    ) -> Self {
         // load chinese font
         let mut fonts = FontDefinitions::default();
         let font_name = "ali";
@@ -89,6 +95,9 @@ impl RvcdApp {
         } else {
             Default::default()
         };
+        if let Some(s) = default_source_dir {
+            def.default_source_dir = s;
+        }
         if def.locale.is_empty() {
             // detect locate
             // TODO: detect on windows
@@ -192,6 +201,9 @@ impl RvcdApp {
         n.init();
         if let Some(tx) = self.loop_tx.clone() {
             n.set_upper_tx(tx);
+        }
+        if !self.default_source_dir.is_empty() {
+            n.source_dir = self.default_source_dir.clone();
         }
         self.apps.push(n);
         self.open_apps.push((id, true));
