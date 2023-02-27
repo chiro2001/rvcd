@@ -1,23 +1,26 @@
 syntax = "proto3";
 
-import "google/protobuf/wrappers.proto";
-import "google/protobuf/empty.proto";
-
-package rvcd;
+package top.criwits.scaleda.kernel.rvcd;
 
 service RvcdRpc {
     // When scaleda wants to open vcd file
-    rpc OpenFile (google.protobuf.StringValue) returns (google.protobuf.Empty) {}
+    rpc OpenFile (RvcdOpenFile) returns (RvcdEmpty) {}
     // For scaleda to request goto signal by path
-    rpc GotoSignal (RvcdSignalPath) returns (google.protobuf.Empty) {}
+    rpc GotoSignal (RvcdSignalPath) returns (RvcdEmpty) {}
     // For clients to sync data with manager
-    rpc ClientInfo (RvcdManagedInfo) returns (google.protobuf.Empty) {}
+    rpc ClientInfo (RvcdManagedInfo) returns (RvcdEmpty) {}
+}
+
+message RvcdEmpty {}
+
+message RvcdOpenFile {
+    string path = 1;
 }
 
 service RvcdClient {
-    rpc Info (google.protobuf.Empty) returns (RvcdManagedInfo) {}
-    rpc Ping (google.protobuf.Empty) returns (google.protobuf.Empty) {}
-    rpc GotoSignal (RvcdSignalPath) returns (google.protobuf.Empty) {}
+    rpc Info (RvcdEmpty) returns (RvcdManagedInfo) {}
+    rpc Ping (RvcdEmpty) returns (RvcdEmpty) {}
+    rpc GotoSignal (RvcdSignalPath) returns (RvcdEmpty) {}
 }
 
 message RvcdManagedInfo {
