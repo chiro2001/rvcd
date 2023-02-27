@@ -53,11 +53,7 @@ async fn main() -> Result<()> {
                 Box::new(RvcdApp::new(
                     cc,
                     rpc_rx,
-                    if src.is_empty() {
-                        None
-                    } else {
-                        Some(src)
-                    },
+                    if src.is_empty() { None } else { Some(src) },
                 ))
             }),
         )
@@ -68,7 +64,12 @@ async fn main() -> Result<()> {
             let rpc_tx = rpc_tx.clone();
             let addr = format!("0.0.0.0:{}", args.port).parse().unwrap();
             info!("[Manager] rpc server at {}", addr);
+            let reflection_service = tonic_reflection::server::Builder::configure()
+                .register_encoded_file_descriptor_set(rvcd::rpc::RVCD_FILE_DESCRIPTOR_SET)
+                .build()
+                .unwrap();
             match Server::builder()
+                .add_service(reflection_service)
                 .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(
                     RvcdManager::new(rpc_tx),
                 ))
