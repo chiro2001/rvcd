@@ -3,7 +3,7 @@
 use crate::manager::{RvcdRpcMessage, MANAGER_PORT};
 use crate::rpc::rvcd_client_server::{RvcdClient, RvcdClientServer};
 use crate::rpc::rvcd_rpc_client::RvcdRpcClient;
-use crate::rpc::{RvcdManagedInfo, RvcdSignalPath};
+use crate::rpc::{RvcdEmpty, RvcdManagedInfo, RvcdSignalPath};
 use crate::utils::sleep_ms;
 use std::sync::{mpsc, Arc, Mutex};
 use tonic::transport::Server;
@@ -36,7 +36,10 @@ pub struct RvcdManagedClient {
 
 #[tonic::async_trait]
 impl RvcdClient for RvcdManagedClient {
-    async fn info(&self, _request: Request<()>) -> Result<Response<RvcdManagedInfo>, Status> {
+    async fn info(
+        &self,
+        _request: Request<RvcdEmpty>,
+    ) -> Result<Response<RvcdManagedInfo>, Status> {
         Ok(Response::new(RvcdManagedInfo {
             client_port: self.data.lock().unwrap().port as u32,
             paths: self.data.lock().unwrap().paths.clone(),
@@ -44,16 +47,19 @@ impl RvcdClient for RvcdManagedClient {
         }))
     }
 
-    async fn ping(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn ping(&self, _request: Request<RvcdEmpty>) -> Result<Response<RvcdEmpty>, Status> {
         if *self.stop.lock().unwrap() {
             panic!("will panic this thread!");
         } else {
             info!("valid ping : {}", self.data.lock().unwrap().port);
         }
-        Ok(Response::new(()))
+        Ok(Response::new(RvcdEmpty::default()))
     }
 
-    async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
+    async fn goto_signal(
+        &self,
+        request: Request<RvcdSignalPath>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
         if let Ok(tx) = self.tx.lock() {
             if tx.is_some() {
                 tx.as_ref()
@@ -62,7 +68,7 @@ impl RvcdClient for RvcdManagedClient {
                     .unwrap();
             }
         }
-        Ok(Response::new(()))
+        Ok(Response::new(RvcdEmpty::default()))
     }
 }
 

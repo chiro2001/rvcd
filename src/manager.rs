@@ -2,7 +2,7 @@
 
 use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
-use crate::rpc::{RvcdManagedInfo, RvcdSignalPath};
+use crate::rpc::{RvcdEmpty, RvcdManagedInfo, RvcdOpenFile, RvcdSignalPath};
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -35,12 +35,19 @@ impl RvcdManager {
 
 #[tonic::async_trait]
 impl RvcdRpc for RvcdManager {
-    async fn open_file(&self, request: Request<String>) -> Result<Response<()>, Status> {
+    async fn open_file(
+        &self,
+        request: Request<RvcdOpenFile>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
         debug!("got a request open_file: {:?}", request);
-        Ok(Response::new(()))
+        // TODO
+        Ok(Response::new(RvcdEmpty::default()))
     }
 
-    async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
+    async fn goto_signal(
+        &self,
+        request: Request<RvcdSignalPath>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
         let data = request.into_inner();
         let mut found = false;
         let managed_files = { self.managed_files.lock().unwrap().clone() };
@@ -69,10 +76,13 @@ impl RvcdRpc for RvcdManager {
                 .send(RvcdRpcMessage::GotoPath(data.clone()))
                 .unwrap();
         }
-        Ok(Response::new(()))
+        Ok(Response::new(RvcdEmpty::default()))
     }
 
-    async fn client_info(&self, request: Request<RvcdManagedInfo>) -> Result<Response<()>, Status> {
+    async fn client_info(
+        &self,
+        request: Request<RvcdManagedInfo>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
         trace!("client_info");
         let r = request.into_inner();
         trace!("manager recv client: {:?}", r);
@@ -93,7 +103,7 @@ impl RvcdRpc for RvcdManager {
                         let channel =
                             tower::timeout::Timeout::new(channel, Duration::from_millis(100));
                         let mut client = RvcdClientClient::new(channel);
-                        let _e = client.ping(()).await;
+                        let _e = client.ping(RvcdEmpty::default()).await;
                     }
                 }
             }
@@ -102,6 +112,6 @@ impl RvcdRpc for RvcdManager {
             info!("removing port {}", k);
             self.managed_files.lock().unwrap().remove(&k);
         }
-        Ok(Response::new(()))
+        Ok(Response::new(RvcdEmpty::default()))
     }
 }
