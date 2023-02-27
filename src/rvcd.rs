@@ -103,6 +103,8 @@ pub struct Rvcd {
 
     #[serde(skip)]
     pub upper_tx: Option<mpsc::Sender<RvcdAppMessage>>,
+    #[serde(skip)]
+    pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
 }
 
 impl Display for Rvcd {
@@ -154,6 +156,7 @@ impl Default for Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             client: Arc::new(Default::default()),
             upper_tx: None,
+            rpc_rx: None,
         }
     }
 }
@@ -206,6 +209,9 @@ impl Rvcd {
         });
         self.view.set_id(self.id);
         self.view.set_tx(channel_resp_tx);
+        let (rpc_tx, rpc_rx) = mpsc::channel();
+        self.rpc_rx = Some(rpc_rx);
+        self.client.set_tx(rpc_tx);
         // self.view.set_sources(self.);
         info!("last loaded {} signals", self.view.signals.len());
     }
@@ -273,6 +279,16 @@ impl Rvcd {
             }
             for rx in messages {
                 self.message_handler(rx);
+            }
+        }
+
+        if let Some(rx) = &self.rpc_rx {
+            let mut messages = vec![];
+            while let Ok(msg) = rx.try_recv() {
+                messages.push(msg);
+            }
+            for msg in messages {
+                self.handle_rpc_message(msg);
             }
         }
 
@@ -395,11 +411,9 @@ impl Rvcd {
                             );
                         });
                         if let Some(v) = &mut self.alternative_view_source {
-                            egui::ScrollArea::both()
-                                .id_source("code-preview")
-                                .show(ui, |ui| {
-                                    code_view_ui(ui, &mut v.text, Some(v.offset));
-                                });
+                            ScrollArea::both().id_source("code-preview").show(ui, |ui| {
+                                code_view_ui(ui, &mut v.text, Some(v.offset));
+                            });
                         }
                     });
                 });
@@ -691,7 +705,9 @@ impl Rvcd {
                         }
                     }
                     self.filepath = _filepath.clone();
-                    self.title = format!("Rvcd-{_filepath}");
+                    // self.title = format!("Rvcd-{_filepath}");
+                    self.client.data.lock().unwrap().wave_file = _filepath.clone();
+                    self.title = format!("Rvcd-{}", file_basename(_filepath.as_str()));
                 }
                 self.signal_leaves.clear();
                 if self.state == State::Idle {
@@ -743,8 +759,10 @@ impl Rvcd {
     }
     pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {
         match msg {
-            RvcdRpcMessage::GotoPath(_path) => {
-                todo!();
+            RvcdRpcMessage::GotoPath(path) => {
+                if self.filepath == path.file {
+                    self.view.do_source_goto(path.path);
+                }
             }
         }
     }

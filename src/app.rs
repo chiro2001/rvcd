@@ -454,9 +454,19 @@ impl eframe::App for RvcdApp {
                 messages.push(r);
             }
         }
-        for app in &mut self.apps {
-            for message in &messages {
-                app.handle_rpc_message(message.clone());
+        for message in &messages {
+            match message {
+                RvcdRpcMessage::GotoPath(g) => {
+                    // create new if no app opened file
+                    if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
+                        app.handle_rpc_message(message.clone());
+                    }
+                }
+                // _ => {
+                //     for app in &mut self.apps {
+                //         app.handle_rpc_message(message.clone());
+                //     }
+                // }
             }
         }
         let mut messages = vec![];

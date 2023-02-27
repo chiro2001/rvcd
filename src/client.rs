@@ -1,11 +1,11 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::manager::MANAGER_PORT;
+use crate::manager::{RvcdRpcMessage, MANAGER_PORT};
 use crate::rpc::rvcd_client_server::{RvcdClient, RvcdClientServer};
 use crate::rpc::rvcd_rpc_client::RvcdRpcClient;
-use crate::rpc::RvcdManagedInfo;
+use crate::rpc::{RvcdManagedInfo, RvcdSignalPath};
 use crate::utils::sleep_ms;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tracing::{info, trace, warn};
@@ -31,6 +31,7 @@ impl Default for RvcdManagedClientData {
 pub struct RvcdManagedClient {
     pub data: Arc<Mutex<RvcdManagedClientData>>,
     pub stop: Arc<Mutex<bool>>,
+    pub tx: Arc<Mutex<Option<mpsc::Sender<RvcdRpcMessage>>>>,
 }
 
 #[tonic::async_trait]
@@ -51,6 +52,18 @@ impl RvcdClient for RvcdManagedClient {
         }
         Ok(Response::new(()))
     }
+
+    async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
+        if let Ok(tx) = self.tx.lock() {
+            if tx.is_some() {
+                tx.as_ref()
+                    .unwrap()
+                    .send(RvcdRpcMessage::GotoPath(request.into_inner()))
+                    .unwrap();
+            }
+        }
+        Ok(Response::new(()))
+    }
 }
 
 impl RvcdManagedClient {
@@ -64,6 +77,7 @@ impl RvcdManagedClient {
                 .add_service(RvcdClientServer::new(Self {
                     data: self.data.clone(),
                     stop: self.stop.clone(),
+                    tx: self.tx.clone(),
                 }))
                 .serve(addr);
             let stop = Arc::new(Mutex::new(false));
@@ -94,6 +108,11 @@ impl RvcdManagedClient {
         if let Ok(d) = self.data.lock().as_mut() {
             d.paths.clear();
             d.paths.extend_from_slice(paths);
+        }
+    }
+    pub fn set_tx(&self, tx: mpsc::Sender<RvcdRpcMessage>) {
+        if let Ok(mut t) = self.tx.lock() {
+            *t = Some(tx);
         }
     }
     pub async fn streaming_info(

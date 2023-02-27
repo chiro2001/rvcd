@@ -42,14 +42,32 @@ impl RvcdRpc for RvcdManager {
 
     async fn goto_signal(&self, request: Request<RvcdSignalPath>) -> Result<Response<()>, Status> {
         let data = request.into_inner();
-        for (_k, v) in self.managed_files.lock().unwrap().iter() {
+        let mut found = false;
+        let managed_files = { self.managed_files.lock().unwrap().clone() };
+        for (k, v) in managed_files {
             if v.0.contains(&data.file) {
-                self.tx
-                    .lock()
-                    .unwrap()
-                    .send(RvcdRpcMessage::GotoPath(data.clone()))
-                    .unwrap();
+                if let Ok(channel) = Channel::from_shared(format!("http://127.0.0.1:{}", k)) {
+                    let channel = channel.connect().await;
+                    if let Ok(channel) = channel {
+                        let channel =
+                            tower::timeout::Timeout::new(channel, Duration::from_millis(100));
+                        let mut client = RvcdClientClient::new(channel);
+                        if let Ok(_e) = client.goto_signal(data.clone()).await {
+                            info!("ask {} goto signal {:?}", k, data);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
+        }
+        if !found {
+            // send to self, open new
+            self.tx
+                .lock()
+                .unwrap()
+                .send(RvcdRpcMessage::GotoPath(data.clone()))
+                .unwrap();
         }
         Ok(Response::new(()))
     }

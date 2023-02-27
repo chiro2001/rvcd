@@ -426,51 +426,10 @@ impl WaveView {
                     if !self.sources.is_empty() {
                         if ui.button("To Source").clicked() {
                             let id = signal.s.id;
-                            let tx = self.tx.clone();
-                            if let Some(tx) = tx {
-                                if let Some(path) = info.code_paths.get(&id) {
-                                    let mut path = path.clone();
-                                    path.push(signal.s.name.to_string());
-                                    let sources = self.sources.clone();
-                                    execute(async move {
-                                        info!("got path: {:?}", path);
-                                        let mut results = vec![];
-                                        for source in &sources {
-                                            info!("searching: {:#?}", source);
-                                            let result = source.search_path(&path);
-                                            let result = result
-                                                .into_iter()
-                                                .map(|x| (debug_ignore::DebugIgnore(source), x))
-                                                .collect::<Vec<_>>();
-                                            results.extend_from_slice(&result);
-                                        }
-                                        info!("got search result: {:?}", results);
-                                        // select longest match
-                                        results.sort_by_key(|x| x.1 .0.len());
-                                        results.reverse();
-                                        let mut results = results
-                                            .into_iter()
-                                            .map(|result| VerilogGotoSource {
-                                                file: result.0.source_path.clone(),
-                                                path: result.1 .0,
-                                                location: result.1 .1,
-                                            })
-                                            .collect::<Vec<_>>();
-                                        if !results.is_empty() {
-                                            if results.len() == 1 {
-                                                let result = results.pop().unwrap();
-                                                tx.send(RvcdMsg::CallGotoSources(result)).unwrap();
-                                            } else {
-                                                tx.send(RvcdMsg::SetAlternativeGotoSources(
-                                                    results,
-                                                ))
-                                                .unwrap();
-                                            }
-                                        } else {
-                                            tx.send(RvcdMsg::GotNoSource).unwrap();
-                                        }
-                                    });
-                                }
+                            if let Some(path) = info.code_paths.get(&id) {
+                                let mut path = path.clone();
+                                path.push(signal.s.name.to_string());
+                                self.do_source_goto(path);
                             }
                             ui.close_menu();
                         }
@@ -489,6 +448,48 @@ impl WaveView {
             SignalViewMode::Default => self.default_radix.clone(),
             SignalViewMode::Number(r) => r.clone(),
             SignalViewMode::Analog => Radix::Hex,
+        }
+    }
+    pub fn do_source_goto(&self, path: Vec<String>) {
+        let tx = self.tx.clone();
+        if let Some(tx) = tx {
+            let sources = self.sources.clone();
+            execute(async move {
+                info!("got path: {:?}", path);
+                let mut results = vec![];
+                for source in &sources {
+                    info!("searching: {:#?}", source);
+                    let result = source.search_path(&path);
+                    let result = result
+                        .into_iter()
+                        .map(|x| (debug_ignore::DebugIgnore(source), x))
+                        .collect::<Vec<_>>();
+                    results.extend_from_slice(&result);
+                }
+                info!("got search result: {:?}", results);
+                // select longest match
+                results.sort_by_key(|x| x.1 .0.len());
+                results.reverse();
+                let mut results = results
+                    .into_iter()
+                    .map(|result| VerilogGotoSource {
+                        file: result.0.source_path.clone(),
+                        path: result.1 .0,
+                        location: result.1 .1,
+                    })
+                    .collect::<Vec<_>>();
+                if !results.is_empty() {
+                    if results.len() == 1 {
+                        let result = results.pop().unwrap();
+                        tx.send(RvcdMsg::CallGotoSources(result)).unwrap();
+                    } else {
+                        tx.send(RvcdMsg::SetAlternativeGotoSources(results))
+                            .unwrap();
+                    }
+                } else {
+                    tx.send(RvcdMsg::GotNoSource).unwrap();
+                }
+            });
         }
     }
 }
