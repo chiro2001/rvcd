@@ -474,8 +474,8 @@ impl eframe::App for RvcdApp {
                         let has_maximum_window = self.app_now_id.is_some();
                         let id = self.new_window(!has_maximum_window);
                         if let Some(app) = self.apps.iter().find(|a| a.id == id) {
-                            if let Some(tx) = &app.loop_self {
-                                tx.send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                            if let Some(channel) = &app.channel {
+                                channel.tx.send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
                                     path.as_str(),
                                 ))))
                                 .unwrap();
