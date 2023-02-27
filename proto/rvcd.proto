@@ -22,6 +22,7 @@ service RvcdClient {
 message RvcdManagedInfo {
     uint32 client_port = 1;
     repeated string paths = 2;
+    string wave_file = 3;
 }
 
 message RvcdSignalPath {

@@ -14,6 +14,7 @@ use tracing::{info, trace, warn};
 pub struct RvcdManagedClientData {
     pub port: u16,
     pub paths: Vec<String>,
+    pub wave_file: String,
 }
 
 impl Default for RvcdManagedClientData {
@@ -21,6 +22,7 @@ impl Default for RvcdManagedClientData {
         Self {
             port: MANAGER_PORT + 1,
             paths: vec![],
+            wave_file: "".to_string(),
         }
     }
 }
@@ -37,6 +39,7 @@ impl RvcdClient for RvcdManagedClient {
         Ok(Response::new(RvcdManagedInfo {
             client_port: self.data.lock().unwrap().port as u32,
             paths: self.data.lock().unwrap().paths.clone(),
+            wave_file: self.data.lock().unwrap().wave_file.clone(),
         }))
     }
 
@@ -108,10 +111,11 @@ impl RvcdManagedClient {
                 trace!("client sending info: {:?}", data);
                 let paths = data.paths.clone();
                 let port = data.port.clone();
-                // drop(data);
+                let wave_file = data.wave_file.clone();
                 Some(RvcdManagedInfo {
                     client_port: port as u32,
                     paths,
+                    wave_file,
                 })
             } else {
                 None
