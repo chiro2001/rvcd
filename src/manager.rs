@@ -131,4 +131,8 @@ impl RvcdRpc for RvcdManager {
         }
         Ok(Response::new(RvcdEmpty::default()))
     }
+
+    async fn ping(&self, _request: Request<RvcdEmpty>) -> Result<Response<RvcdEmpty>, Status> {
+        Ok(Response::new(RvcdEmpty::default()))
+    }
 }
