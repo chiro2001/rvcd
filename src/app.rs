@@ -4,9 +4,12 @@ use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 use crate::manager::RvcdRpcMessage;
 use crate::message::RvcdMsg;
+use crate::rpc::scaleda_rpc_client::ScaledaRpcClient;
+use crate::rpc::ScaledaGotoSource;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
-use crate::verilog::CodeLocation;
+use crate::utils::execute;
+use crate::verilog::VerilogGotoSource;
 use crate::{available_locales, Rvcd};
 use eframe::emath::Align;
 use eframe::glow::Context;
@@ -18,11 +21,11 @@ use rfd::FileHandle;
 use rust_i18n::locale;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub enum RvcdAppMessage {
-    CreateCodeEditor((String, Option<CodeLocation>)),
+    CreateCodeEditor(VerilogGotoSource),
 }
 
 pub const REPAINT_AFTER_SECONDS: f32 = 1.0;
@@ -231,13 +234,34 @@ impl RvcdApp {
         match msg {
             RvcdAppMessage::CreateCodeEditor(p) => match self.code_editor {
                 CodeEditorType::Internal => {
-                    if let Some(editor) = self.editors.iter_mut().find(|x| x.file == p.0.as_str()) {
-                        editor.goto = p.1;
+                    if let Some(editor) =
+                        self.editors.iter_mut().find(|x| x.file == p.file.as_str())
+                    {
+                        editor.goto = Some(p.location);
                     } else {
-                        self.editors.push(CodeEditor::new(p.0.as_str(), p.1));
+                        self.editors
+                            .push(CodeEditor::new(p.file.as_str(), Some(p.location)));
                     }
                 }
-                CodeEditorType::Scaleda => {}
+                CodeEditorType::Scaleda => {
+                    execute(async move {
+                        if let Ok(mut client) =
+                            ScaledaRpcClient::connect("http://127.0.0.1:4151").await
+                        {
+                            if let Err(e) = client
+                                .goto_source(ScaledaGotoSource {
+                                    file: p.file,
+                                    path: p.path,
+                                    line: p.location.line as u32,
+                                    column: p.location.column as u32,
+                                })
+                                .await
+                            {
+                                warn!("cannot call scaleda rpc: {:?}", e);
+                            }
+                        }
+                    });
+                }
                 CodeEditorType::VsCode => {
                     let loc = p.1.clone();
                     std::process::Command::new("code")
@@ -477,12 +501,15 @@ impl eframe::App for RvcdApp {
                     } else {
                         if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle) {
                             info!("goto path: use idle app");
-                            retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
+                            retry = app
+                                .handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
                         } else {
                             info!("goto path: create app");
                             let id = self.new_window(self.app_now_id.is_none());
                             if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
-                                app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
+                                app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
+                                    g.file.clone(),
+                                ));
                             }
                             retry = true;
                         }

@@ -741,10 +741,7 @@ impl Rvcd {
             RvcdMsg::CallGotoSources(goto) => {
                 info!("ui CallGotoSources({:?})", goto);
                 if let Some(tx) = &self.upper_tx {
-                    tx.send(RvcdAppMessage::CreateCodeEditor((
-                        goto.file,
-                        Some(goto.location),
-                    )))
+                    tx.send(RvcdAppMessage::CreateCodeEditor(goto))
                     .unwrap();
                 }
             }
