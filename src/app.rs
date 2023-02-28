@@ -263,14 +263,13 @@ impl RvcdApp {
                     });
                 }
                 CodeEditorType::VsCode => {
-                    let loc = p.1.clone();
+                    let loc = p.location.clone();
                     std::process::Command::new("code")
-                        .args(if loc.is_some() {
-                            let loc = loc.unwrap();
+                        .args(if loc.line > 0 && loc.column > 0 {
                             let s = format!("{}:{}", loc.line, loc.column);
-                            vec![p.0, "-g".to_string(), s]
+                            vec![p.file, "-g".to_string(), s]
                         } else {
-                            vec![p.0]
+                            vec![p.file]
                         })
                         .output()
                         .ok();
