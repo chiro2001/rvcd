@@ -5,13 +5,15 @@ use std::path::PathBuf;
 use std::process::Command;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=build.rs");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     tonic_build::configure()
         .file_descriptor_set_path(out_dir.join("rvcd_descriptor.bin"))
         .compile(&["proto/rvcd.proto"], &["proto"])
         .unwrap();
+
+    tonic_build::compile_protos("proto/scaleda.proto")?;
 
     let antlr_url = "https://github.com/rrevenantt/antlr4rust/releases/download/antlr4-4.8-2-Rust0.3.0-beta/antlr4-4.8-2-SNAPSHOT-complete.jar";
     let antlr_path_str = format!("target/{}", antlr_url.split("/").last().unwrap());
