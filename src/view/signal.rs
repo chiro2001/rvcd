@@ -492,4 +492,38 @@ impl WaveView {
             });
         }
     }
+    pub fn do_signal_goto(&self, path: Vec<String>, info: &WaveInfo) {
+        let tx = self.tx.clone();
+        if let Some(tx) = tx {
+            // let info = info.clone();
+            let paths: Vec<(u64, Vec<String>)> =
+                info.code_paths.clone().into_iter().collect::<Vec<_>>();
+            info!("paths: {:?}", paths);
+            let match_num = |a: &Vec<String>, b: &Vec<String>| {
+                let mut a = a.iter().rev();
+                let mut b = b.iter().rev();
+                let mut n = 0usize;
+                loop {
+                    let v1 = a.next();
+                    let v2 = b.next();
+                    if v1.is_some() && v2.is_some() && v1.unwrap().as_str() == v2.unwrap().as_str()
+                    {
+                        n += 1;
+                    } else {
+                        break;
+                    }
+                }
+                n
+            };
+            execute(async move {
+                let mut matches = paths
+                    .iter()
+                    .map(|x| (x.0, &x.1, match_num(&x.1, &path)))
+                    .collect::<Vec<_>>();
+                matches.sort_by_key(|x| x.2);
+                matches.reverse();
+                info!("matches: {:?}", matches);
+            });
+        }
+    }
 }

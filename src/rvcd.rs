@@ -761,7 +761,10 @@ impl Rvcd {
         match msg {
             RvcdRpcMessage::GotoPath(path) => {
                 if self.filepath == path.file {
-                    self.view.do_source_goto(path.path);
+                    // self.view.do_source_goto(path.path);
+                    if let Some(wave) = &self.wave {
+                        self.view.do_signal_goto(path.path, &wave.info);
+                    }
                 }
             }
             RvcdRpcMessage::OpenWaveFile(_) => {
