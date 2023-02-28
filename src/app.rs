@@ -44,6 +44,8 @@ pub struct RvcdApp {
     #[serde(skip)]
     pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
     #[serde(skip)]
+    pub rpc_self_tx: Option<mpsc::Sender<RvcdRpcMessage>>,
+    #[serde(skip)]
     pub loop_tx: Option<mpsc::Sender<RvcdAppMessage>>,
     #[serde(skip)]
     pub app_rx: Option<mpsc::Receiver<RvcdAppMessage>>,
@@ -65,6 +67,7 @@ impl Default for RvcdApp {
             sst_enabled: true,
             locale: "".to_string(),
             rpc_rx: None,
+            rpc_self_tx: None,
             loop_tx: None,
             app_rx: None,
             editors: vec![],
@@ -78,6 +81,7 @@ impl RvcdApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
+        rpc_tx: mpsc::Sender<RvcdRpcMessage>,
         default_source_dir: Option<String>,
     ) -> Self {
         // load chinese font
@@ -131,6 +135,7 @@ impl RvcdApp {
             })
             .collect();
         def.rpc_rx = Some(rpc_rx);
+        def.rpc_self_tx = Some(rpc_tx);
         let (tx, rx) = mpsc::channel();
         def.apps
             .iter_mut()
@@ -461,8 +466,32 @@ impl eframe::App for RvcdApp {
             match message {
                 RvcdRpcMessage::GotoPath(g) => {
                     // create new if no app opened file
+                    let mut retry = false;
+                    let mut handle = |app: &mut Rvcd| {
+                        if app.handle_rpc_message(message.clone()) {
+                            retry = true;
+                        }
+                    };
                     if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
-                        app.handle_rpc_message(message.clone());
+                        handle(app);
+                    } else {
+                        if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle) {
+                            info!("goto path: use idle app");
+                            retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
+                        } else {
+                            info!("goto path: create app");
+                            let id = self.new_window(self.app_now_id.is_none());
+                            if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
+                                app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
+                            }
+                            retry = true;
+                        }
+                    }
+                    if retry {
+                        info!("do retry for: {:?}", g);
+                        if let Some(tx) = &self.rpc_self_tx {
+                            tx.send(message.clone()).unwrap();
+                        }
                     }
                 }
                 RvcdRpcMessage::OpenWaveFile(path) => {

@@ -44,6 +44,7 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
     let (rpc_tx, rpc_rx) = mpsc::channel();
+    let rpc_tx2 = rpc_tx.clone();
     let src = args.src.clone();
     let gui = async move {
         eframe::run_native(
@@ -53,6 +54,7 @@ async fn main() -> Result<()> {
                 Box::new(RvcdApp::new(
                     cc,
                     rpc_rx,
+                    rpc_tx2,
                     if src.is_empty() { None } else { Some(src) },
                 ))
             }),
@@ -102,12 +104,12 @@ fn main() {
 
     info!("starting rvcd");
 
-    let (_rpc_tx, rpc_rx) = mpsc::channel();
+    let (rpc_tx, rpc_rx) = mpsc::channel();
     wasm_bindgen_futures::spawn_local(async {
         eframe::start_web(
             "the_canvas_id", // hardcode it
             web_options,
-            Box::new(|cc| Box::new(RvcdApp::new(cc, rpc_rx, None))),
+            Box::new(|cc| Box::new(RvcdApp::new(cc, rpc_rx, rpc_tx, None))),
         )
         .await
         .expect("failed to start eframe");

@@ -756,8 +756,10 @@ impl Rvcd {
                     .warning("找不到对应源文件", egui_toast::ToastOptions::default());
             }
             RvcdMsg::SetGotoSignals(list) => {
-                let add_ids = list.iter().filter(|v|
-                    !self.view.signals.iter().any(|x| x.s.id == **v)).collect::<Vec<_>>();
+                let add_ids = list
+                    .iter()
+                    .filter(|v| !self.view.signals.iter().any(|x| x.s.id == **v))
+                    .collect::<Vec<_>>();
                 for v in &add_ids {
                     self.signal_clicked(**v, true);
                 }
@@ -765,7 +767,7 @@ impl Rvcd {
             }
         };
     }
-    pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {
+    pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) -> bool {
         match msg {
             RvcdRpcMessage::GotoPath(path) => {
                 if self.filepath == path.file {
@@ -773,12 +775,21 @@ impl Rvcd {
                     if let Some(wave) = &self.wave {
                         self.view.do_signal_goto(path.path, &wave.info);
                     }
+                } else {
+                    return true;
                 }
             }
-            RvcdRpcMessage::OpenWaveFile(_) => {
-                panic!("handle this in app level");
+            RvcdRpcMessage::OpenWaveFile(path) => {
+                if let Some(channel) = &self.channel {
+                    channel
+                        .tx
+                        .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(path))))
+                        .unwrap();
+                }
+                return true;
             }
         }
+        false
     }
     pub fn reload(&mut self) {
         info!("reloading file");
