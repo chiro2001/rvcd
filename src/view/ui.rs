@@ -352,9 +352,10 @@ impl WaveView {
                                 let signal = self.signals.get(row_index);
                                 last_paint_row_index = Some(row_index);
                                 if let Some(signal) = signal {
+                                    let highlight = self.highlight_signals.contains(&signal.s.id);
                                     row.col(|ui| {
                                         if let Some(signal_new) =
-                                            self.ui_signal_label(signal, row_index, ui, &wave.info)
+                                            self.ui_signal_label(signal, row_index, ui, &wave.info, highlight)
                                         {
                                             new_signals.push(signal_new);
                                         }
@@ -368,6 +369,9 @@ impl WaveView {
                                             // ui.label(value);
                                             let value_font =
                                                 FontId::monospace(self.signal_font_size);
+                                            if highlight {
+                                                painter.rect_filled(response.rect, 0.0, Color32::YELLOW.linear_multiply(BG_MULTIPLY));
+                                            }
                                             painter.text(
                                                 response.rect.left_center(),
                                                 Align2::LEFT_CENTER,

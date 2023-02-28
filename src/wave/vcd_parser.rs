@@ -207,6 +207,7 @@ pub fn vcd_code_path(header: &Header) -> Result<HashMap<IdCode, Vec<String>>> {
             path.add(v.to_string())
                 .map_err(|e| anyhow!("cannot push: {}", e))?;
         }
+        vec.push(var.reference.to_string());
         result.insert(var.code, vec);
         Ok(())
     }
@@ -277,7 +278,7 @@ pub fn vcd_get_last_timestamp<T>(
     reader: BufReader<T>,
 ) -> (Option<u64>, std::io::Result<BufReader<T>>)
 where
-    T: Read + std::io::Seek,
+    T: Read + Seek,
 {
     // trying to get last timestamp
     let limit_lines = 1024;
@@ -446,12 +447,14 @@ impl WaveLoader for Vcd {
 #[cfg(test)]
 mod test {
     use crate::radix::radix_vector_to_string_n;
-    use crate::wave::vcd_parser::{vcd_code_name, vcd_header_show, vcd_tree_show};
+    use crate::wave::vcd_parser::{Vcd, vcd_code_name, vcd_header_show, vcd_tree_show};
     use anyhow::Result;
     use std::fs::File;
     use std::io::Read;
+    use tracing::{info, warn};
     use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
     use vcd::IdCode;
+    use crate::wave::WaveLoader;
 
     fn init() {
         std::env::set_var("RUST_LOG", "debug");
@@ -493,5 +496,31 @@ mod test {
         let mut input = File::open("data/cpu_ila_commit.vcd")?;
         vcd_read(&mut input)?;
         Ok(())
+    }
+
+    fn testing_vcd_parser(path: &str) -> Result<()> {
+        info!("optimize_vcd_parser({})", path);
+        if let Ok(mut input) = File::open(path) {
+            let v = Vcd::load(&mut input, |_, _| {}, None)?;
+            info!("code path: {:#?}", v.info.code_paths);
+        } else {
+            warn!("file not found: {}", path);
+        }
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_vcd_parser() {
+        tracing_subscriber::fmt::init();
+        let files = [
+            // "data/testbench.vcd",
+            "data/cpu_ila_commit.vcd",
+            "/home/chiro/programs/scaleda-sample-project/.sim/Icarus-Run iverilog simulation/tb_waterfall_waveform.vcd"
+        ];
+        for file in files {
+            let id = format!("load {file}");
+            info!("id: {id}");
+            testing_vcd_parser(file).unwrap();
+        }
     }
 }

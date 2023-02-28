@@ -25,6 +25,7 @@ pub enum RvcdMsg {
     GotNoSource,
     SetAlternativeGotoSources(Vec<VerilogGotoSource>),
     CallGotoSources(VerilogGotoSource),
+    SetGotoSignals(Vec<u64>)
 }
 
 impl Debug for RvcdMsg {
@@ -56,6 +57,7 @@ impl Debug for RvcdMsg {
                 write!(f, "RvcdMg: SetAlternativeGotoSources({:?})", g)
             }
             RvcdMsg::GotNoSource => write!(f, "RvcdMg: GotNoSource"),
+            RvcdMsg::SetGotoSignals(v) => write!(f, "RvcdMg: SetGotoSignals({})", v.len()),
         }
     }
 }

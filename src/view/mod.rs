@@ -89,6 +89,7 @@ pub struct WaveView {
     pub value_width_max: f32,
     #[serde(skip)]
     pub sources: Vec<VerilogSource>,
+    pub highlight_signals: Vec<u64>,
 }
 
 impl Default for WaveView {
@@ -122,6 +123,7 @@ impl Default for WaveView {
             range_seek_started: false,
             value_width_max: 0.0,
             sources: vec![],
+            highlight_signals: vec![],
         }
     }
 }

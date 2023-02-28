@@ -755,6 +755,14 @@ impl Rvcd {
                 self.toasts
                     .warning("找不到对应源文件", egui_toast::ToastOptions::default());
             }
+            RvcdMsg::SetGotoSignals(list) => {
+                let add_ids = list.iter().filter(|v|
+                    !self.view.signals.iter().any(|x| x.s.id == **v)).collect::<Vec<_>>();
+                for v in &add_ids {
+                    self.signal_clicked(**v, true);
+                }
+                self.view.highlight_signals = add_ids.into_iter().map(|x| x.clone()).collect();
+            }
         };
     }
     pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) {

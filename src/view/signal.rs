@@ -379,6 +379,7 @@ impl WaveView {
         index: usize,
         ui: &mut Ui,
         info: &WaveInfo,
+        highlight: bool,
     ) -> Option<(SignalView, usize, bool)> {
         let mut signal_new = signal.clone();
         let text = signal.s.to_string();
@@ -386,6 +387,9 @@ impl WaveView {
         ui.scope(|ui| {
             ui.set_height(signal.height);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if highlight {
+                    ui.painter().rect_filled(ui.available_rect_before_wrap(), 0.0, Color32::YELLOW.linear_multiply(BG_MULTIPLY));
+                }
                 let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
                 // TODO: drag signal order
                 response.context_menu(|ui| {
@@ -495,10 +499,8 @@ impl WaveView {
     pub fn do_signal_goto(&self, path: Vec<String>, info: &WaveInfo) {
         let tx = self.tx.clone();
         if let Some(tx) = tx {
-            // let info = info.clone();
             let paths: Vec<(u64, Vec<String>)> =
                 info.code_paths.clone().into_iter().collect::<Vec<_>>();
-            info!("paths: {:?}", paths);
             let match_num = |a: &Vec<String>, b: &Vec<String>| {
                 let mut a = a.iter().rev();
                 let mut b = b.iter().rev();
@@ -519,10 +521,15 @@ impl WaveView {
                 let mut matches = paths
                     .iter()
                     .map(|x| (x.0, &x.1, match_num(&x.1, &path)))
+                    .filter(|x| x.2 > 0)
                     .collect::<Vec<_>>();
                 matches.sort_by_key(|x| x.2);
                 matches.reverse();
                 info!("matches: {:?}", matches);
+                tx.send(RvcdMsg::SetGotoSignals(
+                    matches.into_iter().map(|x| x.0).collect::<Vec<_>>(),
+                ))
+                .unwrap();
             });
         }
     }

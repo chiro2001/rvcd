@@ -20,7 +20,8 @@ fn optimize_vcd_parser(path: &str) -> Result<()> {
 pub fn criterion_benchmark(c: &mut Criterion) {
     let files = [
         // "data/testbench.vcd",
-        "data/cpu_ila_commit.vcd",
+        // "data/cpu_ila_commit.vcd",
+        "/home/chiro/programs/scaleda-sample-project/.sim/Icarus-Run iverilog simulation/tb_waterfall_waveform.vcd"
     ];
     for file in files {
         let id = format!("load {file}");
