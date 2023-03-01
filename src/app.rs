@@ -1,11 +1,6 @@
-use crate::code::editor::CodeEditor;
 use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
-use crate::manager::RvcdRpcMessage;
-use crate::message::RvcdMsg;
-use crate::rpc::scaleda_rpc_client::ScaledaRpcClient;
-use crate::rpc::{ScaledaEmpty, ScaledaGotoSource};
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::verilog::VerilogGotoSource;
@@ -16,10 +11,9 @@ use eframe::Frame;
 use egui::{
     CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window,
 };
-use rfd::FileHandle;
 use rust_i18n::locale;
-use std::path::PathBuf;
 use std::sync::mpsc;
+#[allow(unused_imports)]
 use tracing::{error, info, warn};
 
 #[derive(Debug)]
@@ -43,17 +37,21 @@ pub struct RvcdApp {
     pub debug_panel: bool,
     pub sst_enabled: bool,
     pub locale: String,
+    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
+    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub rpc_self_tx: Option<mpsc::Sender<RvcdRpcMessage>>,
     #[serde(skip)]
     pub loop_tx: Option<mpsc::Sender<RvcdAppMessage>>,
     #[serde(skip)]
     pub app_rx: Option<mpsc::Receiver<RvcdAppMessage>>,
+    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub editors: Vec<CodeEditor>,
     pub code_editor: CodeEditorType,
+    #[cfg(not(target_arch = "wasm32"))]
     pub default_source_dir: String,
 }
 
@@ -68,12 +66,16 @@ impl Default for RvcdApp {
             debug_panel: false,
             sst_enabled: true,
             locale: "".to_string(),
+            #[cfg(not(target_arch = "wasm32"))]
             rpc_rx: None,
+            #[cfg(not(target_arch = "wasm32"))]
             rpc_self_tx: None,
             loop_tx: None,
             app_rx: None,
+            #[cfg(not(target_arch = "wasm32"))]
             editors: vec![],
             code_editor: Default::default(),
+            #[cfg(not(target_arch = "wasm32"))]
             default_source_dir: "".to_string(),
         }
     }
@@ -82,8 +84,11 @@ impl Default for RvcdApp {
 impl RvcdApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
+        #[cfg(not(target_arch = "wasm32"))]
         rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
+        #[cfg(not(target_arch = "wasm32"))]
         rpc_tx: mpsc::Sender<RvcdRpcMessage>,
+        #[cfg(not(target_arch = "wasm32"))]
         default_source_dir: Option<String>,
     ) -> Self {
         // load chinese font
@@ -104,6 +109,7 @@ impl RvcdApp {
         } else {
             Default::default()
         };
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(s) = default_source_dir {
             def.default_source_dir = s;
         }
@@ -136,8 +142,11 @@ impl RvcdApp {
                 a
             })
             .collect();
-        def.rpc_rx = Some(rpc_rx);
-        def.rpc_self_tx = Some(rpc_tx);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            def.rpc_rx = Some(rpc_rx);
+            def.rpc_self_tx = Some(rpc_tx);
+        }
         let (tx, rx) = mpsc::channel();
         def.apps
             .iter_mut()
@@ -212,6 +221,7 @@ impl RvcdApp {
         if let Some(tx) = self.loop_tx.clone() {
             n.set_upper_tx(tx);
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if !self.default_source_dir.is_empty() {
             n.source_dir = self.default_source_dir.clone();
         }
@@ -232,6 +242,7 @@ impl RvcdApp {
     pub fn message_handler(&mut self, msg: RvcdAppMessage) {
         info!("app message handle: {:?}", msg);
         match msg {
+            #[cfg(not(target_arch = "wasm32"))]
             RvcdAppMessage::CreateCodeEditor(p) => match self.code_editor {
                 CodeEditorType::Internal => {
                     if let Some(editor) =
@@ -292,6 +303,7 @@ impl RvcdApp {
                     }
                 }
             },
+            _ => {}
         }
     }
 }
@@ -508,109 +520,112 @@ impl eframe::App for RvcdApp {
         if self.apps.is_empty() {
             self.new_window(true);
         }
-        let mut messages = vec![];
-        if let Some(rx) = &self.rpc_rx {
-            while let Ok(r) = rx.try_recv() {
-                messages.push(r);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut messages = vec![];
+            if let Some(rx) = &self.rpc_rx {
+                while let Ok(r) = rx.try_recv() {
+                    messages.push(r);
+                }
             }
-        }
-        let mut handled_app = vec![];
-        for message in &messages {
-            info!("rvcd app handle rpc message: {:?}", message);
-            match message {
-                RvcdRpcMessage::GotoPath(g) => {
-                    if g.file.is_empty() {
-                        // goto signal in file that have opened
-                        for app in &mut self.apps {
-                            app.handle_rpc_message(message.clone());
-                        }
-                    } else {
-                        // create new if no app opened file
-                        let mut retry = false;
-                        let mut handle = |app: &mut Rvcd| {
-                            if app.handle_rpc_message(message.clone()) {
-                                retry = true;
+            let mut handled_app = vec![];
+            for message in &messages {
+                info!("rvcd app handle rpc message: {:?}", message);
+                match message {
+                    RvcdRpcMessage::GotoPath(g) => {
+                        if g.file.is_empty() {
+                            // goto signal in file that have opened
+                            for app in &mut self.apps {
+                                app.handle_rpc_message(message.clone());
                             }
-                        };
-                        if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
-                            handle(app);
                         } else {
-                            if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle)
-                            {
-                                info!("goto path: use idle app");
-                                retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
-                                    g.file.clone(),
-                                ));
+                            // create new if no app opened file
+                            let mut retry = false;
+                            let mut handle = |app: &mut Rvcd| {
+                                if app.handle_rpc_message(message.clone()) {
+                                    retry = true;
+                                }
+                            };
+                            if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
+                                handle(app);
                             } else {
-                                info!("goto path: create app");
-                                let id = self.new_window(self.app_now_id.is_none());
-                                if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
-                                    app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
+                                if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle)
+                                {
+                                    info!("goto path: use idle app");
+                                    retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
                                         g.file.clone(),
                                     ));
+                                } else {
+                                    info!("goto path: create app");
+                                    let id = self.new_window(self.app_now_id.is_none());
+                                    if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
+                                        app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
+                                            g.file.clone(),
+                                        ));
+                                    }
+                                    retry = true;
                                 }
-                                retry = true;
                             }
-                        }
-                        if retry {
-                            info!("do retry for: {:?}", g);
-                            if let Some(tx) = &self.rpc_self_tx {
-                                tx.send(message.clone()).unwrap();
+                            if retry {
+                                info!("do retry for: {:?}", g);
+                                if let Some(tx) = &self.rpc_self_tx {
+                                    tx.send(message.clone()).unwrap();
+                                }
                             }
                         }
                     }
-                }
-                RvcdRpcMessage::OpenWaveFile(path) => {
-                    let mut ok = false;
-                    let send = |app: &Rvcd| {
-                        if let Some(channel) = &app.channel {
-                            channel
-                                .tx
-                                .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
-                                    path.as_str(),
-                                ))))
-                                .unwrap();
-                            info!("send app<{}> file {}", app.id, path);
+                    RvcdRpcMessage::OpenWaveFile(path) => {
+                        let mut ok = false;
+                        let send = |app: &Rvcd| {
+                            if let Some(channel) = &app.channel {
+                                channel
+                                    .tx
+                                    .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
+                                        path.as_str(),
+                                    ))))
+                                    .unwrap();
+                                info!("send app<{}> file {}", app.id, path);
+                            }
+                        };
+                        if let Some(id) = self.app_now_id {
+                            if !handled_app.contains(&id) {
+                                if let Some(app) = self
+                                    .apps
+                                    .iter_mut()
+                                    .find(|app| app.id == id && app.state == State::Idle)
+                                {
+                                    info!("use maximized app to handle {}", path);
+                                    send(app);
+                                    handled_app.push(app.id);
+                                    ok = true;
+                                }
+                            }
                         }
-                    };
-                    if let Some(id) = self.app_now_id {
-                        if !handled_app.contains(&id) {
-                            if let Some(app) = self
+                        if !ok {
+                            if !self
                                 .apps
-                                .iter_mut()
-                                .find(|app| app.id == id && app.state == State::Idle)
+                                .iter()
+                                .any(|x| x.filepath.as_str() == path.as_str() && x.state == State::Idle)
                             {
-                                info!("use maximized app to handle {}", path);
-                                send(app);
-                                handled_app.push(app.id);
-                                ok = true;
+                                info!("create new window to handle {}", path);
+                                let has_maximum_window = self.app_now_id.is_some();
+                                let id = self.new_window(!has_maximum_window);
+                                if let Some(app) = self.apps.iter().find(|a| a.id == id) {
+                                    send(app);
+                                    handled_app.push(app.id);
+                                }
                             }
                         }
                     }
-                    if !ok {
-                        if !self
-                            .apps
-                            .iter()
-                            .any(|x| x.filepath.as_str() == path.as_str() && x.state == State::Idle)
-                        {
-                            info!("create new window to handle {}", path);
-                            let has_maximum_window = self.app_now_id.is_some();
-                            let id = self.new_window(!has_maximum_window);
-                            if let Some(app) = self.apps.iter().find(|a| a.id == id) {
-                                send(app);
-                                handled_app.push(app.id);
-                            }
+                    RvcdRpcMessage::OpenSourceFile(path) => {
+                        for app in &mut self.apps {
+                            app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(path.to_string()));
                         }
                     }
-                }
-                RvcdRpcMessage::OpenSourceFile(path) => {
-                    for app in &mut self.apps {
-                        app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(path.to_string()));
-                    }
-                }
-                RvcdRpcMessage::OpenSourceDir(path) => {
-                    for app in &mut self.apps {
-                        app.handle_rpc_message(RvcdRpcMessage::OpenSourceDir(path.to_string()));
+                    RvcdRpcMessage::OpenSourceDir(path) => {
+                        for app in &mut self.apps {
+                            app.handle_rpc_message(RvcdRpcMessage::OpenSourceDir(path.to_string()));
+                        }
                     }
                 }
             }
@@ -624,7 +639,9 @@ impl eframe::App for RvcdApp {
         for message in messages {
             self.message_handler(message);
         }
+        #[cfg(not(target_arch = "wasm32"))]
         self.editors.retain(|x| x.open);
+        #[cfg(not(target_arch = "wasm32"))]
         for editor in &mut self.editors {
             editor.ui(ctx);
         }

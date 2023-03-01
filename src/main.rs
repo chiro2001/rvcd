@@ -4,14 +4,18 @@
 #[allow(unused_imports)]
 use anyhow::Result;
 use rvcd::app::RvcdApp;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
 use tracing::info;
-
+#[cfg(not(target_arch = "wasm32"))]
 use clap::Parser;
+#[cfg(not(target_arch = "wasm32"))]
 use rvcd::manager::{RvcdRpcMessage, MANAGER_PORT};
+#[cfg(not(target_arch = "wasm32"))]
 use rvcd::utils::sleep_ms;
 
 /// Simple program to greet a person
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct RvcdArgs {
@@ -94,7 +98,9 @@ async fn main() -> Result<()> {
         rpc_tx3.send(RvcdRpcMessage::OpenWaveFile(file)).unwrap();
     }
     for source in args.input {
-        rpc_tx3.send(RvcdRpcMessage::OpenSourceFile(source)).unwrap();
+        rpc_tx3
+            .send(RvcdRpcMessage::OpenSourceFile(source))
+            .unwrap();
     }
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;
@@ -116,12 +122,11 @@ fn main() {
 
     info!("starting rvcd");
 
-    let (rpc_tx, rpc_rx) = mpsc::channel();
     wasm_bindgen_futures::spawn_local(async {
         eframe::start_web(
             "the_canvas_id", // hardcode it
             web_options,
-            Box::new(|cc| Box::new(RvcdApp::new(cc, rpc_rx, rpc_tx, None))),
+            Box::new(|cc| Box::new(RvcdApp::new(cc))),
         )
         .await
         .expect("failed to start eframe");

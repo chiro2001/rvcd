@@ -1,11 +1,9 @@
 use crate::message::{RvcdChannel, RvcdMsg};
-use crate::utils;
 use crate::utils::{execute, sleep_ms};
-use crate::verilog::parse_verilog_file;
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::{WaveLoader, WavePreLoader};
 use anyhow::Result;
-use std::io::{BufReader, Cursor, Read};
+use std::io::{BufReader, Cursor};
 use std::sync::{mpsc, Arc, Mutex};
 use tracing::{debug, error, info};
 

@@ -1,18 +1,25 @@
 use crate::app::RvcdAppMessage;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::code::highlight::code_view_ui;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::manager::{RvcdRpcMessage, MANAGER_PORT};
 use crate::message::{RvcdChannel, RvcdMsg};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::rpc::rvcd_rpc_client::RvcdRpcClient;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::rpc::{RvcdEmpty, RvcdRemoveClient};
 use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
+#[allow(unused_imports)]
 use crate::utils::{execute, file_basename};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::verilog::{parse_verilog_file, VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
+#[allow(unused_imports)]
 use egui::{
     vec2, Align2, Color32, Direction, DroppedFile, Id, Label, Layout, ProgressBar, RichText,
     ScrollArea, Sense, Ui, Widget,
@@ -25,8 +32,8 @@ use rfd::FileHandle;
 use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
 use std::path::PathBuf;
+#[allow(unused_imports)]
 use std::sync::{mpsc, Arc};
-use tonic::IntoRequest;
 use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
@@ -106,6 +113,7 @@ pub struct Rvcd {
 
     #[serde(skip)]
     pub upper_tx: Option<mpsc::Sender<RvcdAppMessage>>,
+    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
 }
@@ -159,6 +167,7 @@ impl Default for Rvcd {
             #[cfg(not(target_arch = "wasm32"))]
             client: Arc::new(Default::default()),
             upper_tx: None,
+            #[cfg(not(target_arch = "wasm32"))]
             rpc_rx: None,
         }
     }
@@ -212,9 +221,12 @@ impl Rvcd {
         });
         self.view.set_id(self.id);
         self.view.set_tx(channel_resp_tx);
-        let (rpc_tx, rpc_rx) = mpsc::channel();
-        self.rpc_rx = Some(rpc_rx);
-        self.client.set_tx(rpc_tx);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let (rpc_tx, rpc_rx) = mpsc::channel();
+            self.rpc_rx = Some(rpc_rx);
+            self.client.set_tx(rpc_tx);
+        }
         // self.view.set_sources(self.);
         info!("last loaded {} signals", self.view.signals.len());
     }
@@ -285,6 +297,7 @@ impl Rvcd {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(rx) = &self.rpc_rx {
             let mut messages = vec![];
             while let Ok(msg) = rx.try_recv() {
@@ -345,85 +358,90 @@ impl Rvcd {
             }
         }
 
-        let mut _open_alternative_goto_sources = true;
         #[cfg(not(target_arch = "wasm32"))]
-        if !self.alternative_goto_sources.is_empty() {
-            egui::Window::new("选择要跳转到的目标")
-                .open(&mut _open_alternative_goto_sources)
-                .show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        TableBuilder::new(ui).column(Column::auto()).body(|body| {
-                            body.heterogeneous_rows(
-                                (0..self.alternative_goto_sources.len()).map(|_| 40.0),
-                                |index, mut row| {
-                                    if let Some(a) =
-                                        self.alternative_goto_sources.get(index).map(|x| x.clone())
-                                    {
-                                        row.col(|ui| {
-                                            let resp = ui.add(
-                                                Label::new(format!(
-                                                    "{}:{}:{}",
-                                                    file_basename(a.file.as_str()),
-                                                    a.location.line,
-                                                    a.location.column
-                                                ))
-                                                .sense(Sense::click()),
-                                            );
-                                            if resp.double_clicked() {
-                                                if let Some(loop_self) = &self.loop_self {
-                                                    loop_self
-                                                        .send(RvcdMsg::CallGotoSources(a))
-                                                        .unwrap();
-                                                    self.alternative_goto_sources.clear();
-                                                }
-                                            } else if resp.clicked()
-                                                || self.alternative_view_source.is_none()
-                                            {
-                                                let f = self
-                                                    .view
-                                                    .sources
-                                                    .iter()
-                                                    .filter(|x| x.source_path == a.file)
-                                                    .map(|x| x.source_code.0.as_str())
-                                                    .collect::<Vec<_>>();
-                                                if let Some(f) = f.first() {
-                                                    let code = f.to_string();
-                                                    let mut line = 1isize;
-                                                    let mut offset = 0usize;
-                                                    for (i, c) in code.chars().enumerate() {
-                                                        if line >= a.location.line {
-                                                            offset = i + a.location.column as usize;
-                                                            break;
-                                                        }
-                                                        if c == '\n' {
-                                                            line += 1;
-                                                        }
+        {
+            let mut _open_alternative_goto_sources = true;
+            if !self.alternative_goto_sources.is_empty() {
+                egui::Window::new("选择要跳转到的目标")
+                    .open(&mut _open_alternative_goto_sources)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            TableBuilder::new(ui).column(Column::auto()).body(|body| {
+                                body.heterogeneous_rows(
+                                    (0..self.alternative_goto_sources.len()).map(|_| 40.0),
+                                    |index, mut row| {
+                                        if let Some(a) = self
+                                            .alternative_goto_sources
+                                            .get(index)
+                                            .map(|x| x.clone())
+                                        {
+                                            row.col(|ui| {
+                                                let resp = ui.add(
+                                                    Label::new(format!(
+                                                        "{}:{}:{}",
+                                                        file_basename(a.file.as_str()),
+                                                        a.location.line,
+                                                        a.location.column
+                                                    ))
+                                                    .sense(Sense::click()),
+                                                );
+                                                if resp.double_clicked() {
+                                                    if let Some(loop_self) = &self.loop_self {
+                                                        loop_self
+                                                            .send(RvcdMsg::CallGotoSources(a))
+                                                            .unwrap();
+                                                        self.alternative_goto_sources.clear();
                                                     }
-                                                    self.alternative_view_source =
-                                                        Some(VerilogViewSource {
-                                                            file: a.file,
-                                                            path: a.path,
-                                                            text: code,
-                                                            offset,
-                                                        });
+                                                } else if resp.clicked()
+                                                    || self.alternative_view_source.is_none()
+                                                {
+                                                    let f = self
+                                                        .view
+                                                        .sources
+                                                        .iter()
+                                                        .filter(|x| x.source_path == a.file)
+                                                        .map(|x| x.source_code.0.as_str())
+                                                        .collect::<Vec<_>>();
+                                                    if let Some(f) = f.first() {
+                                                        let code = f.to_string();
+                                                        let mut line = 1isize;
+                                                        let mut offset = 0usize;
+                                                        for (i, c) in code.chars().enumerate() {
+                                                            if line >= a.location.line {
+                                                                offset =
+                                                                    i + a.location.column as usize;
+                                                                break;
+                                                            }
+                                                            if c == '\n' {
+                                                                line += 1;
+                                                            }
+                                                        }
+                                                        self.alternative_view_source =
+                                                            Some(VerilogViewSource {
+                                                                file: a.file,
+                                                                path: a.path,
+                                                                text: code,
+                                                                offset,
+                                                            });
+                                                    }
                                                 }
-                                            }
-                                        });
-                                    }
-                                },
-                            );
-                        });
-                        if let Some(v) = &mut self.alternative_view_source {
-                            ScrollArea::both().id_source("code-preview").show(ui, |ui| {
-                                code_view_ui(ui, &mut v.text, Some(v.offset));
+                                            });
+                                        }
+                                    },
+                                );
                             });
-                        }
+                            if let Some(v) = &mut self.alternative_view_source {
+                                ScrollArea::both().id_source("code-preview").show(ui, |ui| {
+                                    code_view_ui(ui, &mut v.text, Some(v.offset));
+                                });
+                            }
+                        });
                     });
-                });
-        }
-        if !_open_alternative_goto_sources {
-            self.alternative_goto_sources.clear();
-            self.alternative_view_source = None;
+            }
+            if !_open_alternative_goto_sources {
+                self.alternative_goto_sources.clear();
+                self.alternative_view_source = None;
+            }
         }
 
         self.toasts
@@ -756,8 +774,11 @@ impl Rvcd {
                     tx.send(RvcdAppMessage::CreateCodeEditor(goto)).unwrap();
                 }
             }
-            RvcdMsg::SetAlternativeGotoSources(v) => {
-                self.alternative_goto_sources = v;
+            RvcdMsg::SetAlternativeGotoSources(_v) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    self.alternative_goto_sources = _v;
+                }
             }
             RvcdMsg::GotNoSource => {
                 self.toasts
@@ -773,18 +794,22 @@ impl Rvcd {
                 }
                 self.view.highlight_signals = add_ids.into_iter().map(|x| x.clone()).collect();
             }
-            RvcdMsg::UpdateSource(file) => {
-                let tx = self.loop_self.clone();
-                execute(async move {
-                    if let Some(tx) = tx {
-                        if let Ok(r) = parse_verilog_file(file.as_str()) {
-                            tx.send(RvcdMsg::UpdateSources(vec![r])).unwrap();
+            RvcdMsg::UpdateSource(_file) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let tx = self.loop_self.clone();
+                    execute(async move {
+                        if let Some(tx) = tx {
+                            if let Ok(r) = parse_verilog_file(_file.as_str()) {
+                                tx.send(RvcdMsg::UpdateSources(vec![r])).unwrap();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
         };
     }
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn handle_rpc_message(&mut self, msg: RvcdRpcMessage) -> bool {
         match msg {
             RvcdRpcMessage::GotoPath(path) => {
@@ -967,26 +992,30 @@ impl Rvcd {
                 Err(e) => warn!("cannot send stop msg: {}", e),
             };
         }
-        info!("setting client stop to true");
-        *self.client.stop.lock().unwrap() = true;
-        let remove_info = RvcdRemoveClient {
-            key: self.client.data.lock().unwrap().port as u32,
-        };
-        execute(async move {
-            let mut client = RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
-                .await
-                .unwrap();
-            info!("rpc call built");
-            client
-                .remove_client(remove_info.into_request())
-                .await
-                .unwrap();
-            info!("rpc call remove_client done");
-            client
-                .ping(RvcdEmpty::default().into_request())
-                .await
-                .unwrap();
-            info!("rpc call ping done");
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            info!("setting client stop to true");
+            *self.client.stop.lock().unwrap() = true;
+            let remove_info = RvcdRemoveClient {
+                key: self.client.data.lock().unwrap().port as u32,
+            };
+            execute(async move {
+                let mut client =
+                    RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
+                        .await
+                        .unwrap();
+                info!("rpc call built");
+                client
+                    .remove_client(remove_info.into_request())
+                    .await
+                    .unwrap();
+                info!("rpc call remove_client done");
+                client
+                    .ping(RvcdEmpty::default().into_request())
+                    .await
+                    .unwrap();
+                info!("rpc call ping done");
+            });
+        }
     }
 }
