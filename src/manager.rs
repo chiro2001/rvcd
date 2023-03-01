@@ -2,12 +2,15 @@
 
 use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
-use crate::rpc::{RvcdEmpty, RvcdManagedInfo, RvcdOpenFile, RvcdSignalPath};
+use crate::rpc::{
+    RvcdEmpty, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile, RvcdOpenFileWith,
+    RvcdSignalPath,
+};
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 use tonic::transport::Channel;
-use tonic::{Request, Response, Status};
+use tonic::{IntoRequest, Request, Response, Status};
 use tracing::{debug, info, trace};
 
 pub const MANAGER_PORT: u16 = 5411;
@@ -17,6 +20,7 @@ pub enum RvcdRpcMessage {
     GotoPath(RvcdSignalPath),
     OpenWaveFile(String),
     OpenSourceFile(String),
+    OpenSourceDir(String),
 }
 unsafe impl Send for RvcdRpcMessage {}
 
@@ -134,6 +138,59 @@ impl RvcdRpc for RvcdManager {
     }
 
     async fn ping(&self, _request: Request<RvcdEmpty>) -> Result<Response<RvcdEmpty>, Status> {
+        Ok(Response::new(RvcdEmpty::default()))
+    }
+
+    async fn load_source_dir(
+        &self,
+        request: Request<RvcdLoadSourceDir>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
+        self.tx
+            .lock()
+            .unwrap()
+            .send(RvcdRpcMessage::OpenSourceDir(request.into_inner().path))
+            .unwrap();
+        Ok(Response::new(RvcdEmpty::default()))
+    }
+
+    async fn load_source(
+        &self,
+        request: Request<RvcdLoadSources>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
+        for file in request.into_inner().files {
+            self.tx
+                .lock()
+                .unwrap()
+                .send(RvcdRpcMessage::OpenSourceFile(file))
+                .unwrap();
+        }
+        Ok(Response::new(RvcdEmpty::default()))
+    }
+
+    async fn open_file_with(
+        &self,
+        request: Request<RvcdOpenFileWith>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
+        let data = request.into_inner();
+        self.open_file(RvcdOpenFile { path: data.file }.into_request())
+            .await?;
+        self.load_source_dir(
+            RvcdLoadSourceDir {
+                path: data.source_dir,
+            }
+            .into_request(),
+        )
+        .await?;
+        self.load_source(
+            RvcdLoadSources {
+                files: data.source_files,
+            }
+            .into_request(),
+        )
+        .await?;
+        if let Some(goto) = data.goto {
+            self.goto_signal(goto.into_request()).await?;
+        }
         Ok(Response::new(RvcdEmpty::default()))
     }
 }

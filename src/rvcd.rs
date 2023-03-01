@@ -804,6 +804,11 @@ impl Rvcd {
                     loop_self.send(RvcdMsg::UpdateSource(file)).unwrap();
                 }
             }
+            RvcdRpcMessage::OpenSourceDir(path) => {
+                if let Some(loop_self) = &self.loop_self {
+                    loop_self.send(RvcdMsg::UpdateSourceDir(path)).unwrap();
+                }
+            }
         }
         false
     }

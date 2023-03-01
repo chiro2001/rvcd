@@ -569,6 +569,11 @@ impl eframe::App for RvcdApp {
                         app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(path.to_string()));
                     }
                 }
+                RvcdRpcMessage::OpenSourceDir(path) => {
+                    for app in &mut self.apps {
+                        app.handle_rpc_message(RvcdRpcMessage::OpenSourceDir(path.to_string()));
+                    }
+                }
             }
         }
         let mut messages = vec![];
