@@ -485,6 +485,7 @@ impl eframe::App for RvcdApp {
                 messages.push(r);
             }
         }
+        let mut handled_app = vec![];
         for message in &messages {
             match message {
                 RvcdRpcMessage::GotoPath(g) => {
@@ -530,12 +531,21 @@ impl eframe::App for RvcdApp {
                                     path.as_str(),
                                 ))))
                                 .unwrap();
+                            info!("send app<{}> file {}", app.id, path);
                         }
                     };
                     if let Some(id) = self.app_now_id {
-                        if let Some(app) = self.apps.iter_mut().find(|app| app.id == id) {
-                            send(app);
-                            ok = true;
+                        if !handled_app.contains(&id) {
+                            if let Some(app) = self
+                                .apps
+                                .iter_mut()
+                                .find(|app| app.id == id && app.state == State::Idle)
+                            {
+                                info!("use maximized app to handle {}", path);
+                                send(app);
+                                handled_app.push(app.id);
+                                ok = true;
+                            }
                         }
                     }
                     if !ok {
@@ -544,10 +554,12 @@ impl eframe::App for RvcdApp {
                             .iter()
                             .any(|x| x.filepath.as_str() == path.as_str() && x.state == State::Idle)
                         {
+                            info!("create new window to handle {}", path);
                             let has_maximum_window = self.app_now_id.is_some();
                             let id = self.new_window(!has_maximum_window);
                             if let Some(app) = self.apps.iter().find(|a| a.id == id) {
                                 send(app);
+                                handled_app.push(app.id);
                             }
                         }
                     }
