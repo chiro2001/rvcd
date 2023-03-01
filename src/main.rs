@@ -8,13 +8,16 @@ use std::sync::mpsc;
 use tracing::info;
 
 use clap::Parser;
-use rvcd::manager::MANAGER_PORT;
+use rvcd::manager::{RvcdRpcMessage, MANAGER_PORT};
 use rvcd::utils::sleep_ms;
 
 /// Simple program to greet a person
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct RvcdArgs {
+    /// File to open
+    #[arg(default_value = "")]
+    file: String,
     /// Default source path
     #[arg(short, long, default_value = "")]
     src: String,
@@ -45,6 +48,7 @@ async fn main() -> Result<()> {
     };
     let (rpc_tx, rpc_rx) = mpsc::channel();
     let rpc_tx2 = rpc_tx.clone();
+    let rpc_tx3 = rpc_tx.clone();
     let src = args.src.clone();
     let gui = async move {
         eframe::run_native(
@@ -84,6 +88,11 @@ async fn main() -> Result<()> {
             sleep_ms(1000).await;
         }
     };
+    if !args.file.is_empty() {
+        rpc_tx3
+            .send(RvcdRpcMessage::OpenWaveFile(args.file))
+            .unwrap();
+    }
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;
     tokio::spawn(rpc);
