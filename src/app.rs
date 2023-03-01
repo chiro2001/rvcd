@@ -269,7 +269,7 @@ impl RvcdApp {
                 CodeEditorType::VsCode => {
                     let loc = p.location.clone();
                     let args = if loc.line > 0 && loc.column > 0 {
-                        let s = format!("{}:{}:{}", p.file, loc.line, loc.column);
+                        let s = format!("\"{}\":{}:{}", p.file, loc.line, loc.column);
                         vec!["-g".to_string(), s]
                     } else {
                         vec![p.file]
