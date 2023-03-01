@@ -491,35 +491,44 @@ impl eframe::App for RvcdApp {
             info!("rvcd app handle rpc message: {:?}", message);
             match message {
                 RvcdRpcMessage::GotoPath(g) => {
-                    // create new if no app opened file
-                    let mut retry = false;
-                    let mut handle = |app: &mut Rvcd| {
-                        if app.handle_rpc_message(message.clone()) {
-                            retry = true;
+                    if g.file.is_empty() {
+                        // goto signal in file that have opened
+                        for app in &mut self.apps {
+                            app.handle_rpc_message(message.clone());
                         }
-                    };
-                    if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
-                        handle(app);
                     } else {
-                        if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle) {
-                            info!("goto path: use idle app");
-                            retry = app
-                                .handle_rpc_message(RvcdRpcMessage::OpenWaveFile(g.file.clone()));
+                        // create new if no app opened file
+                        let mut retry = false;
+                        let mut handle = |app: &mut Rvcd| {
+                            if app.handle_rpc_message(message.clone()) {
+                                retry = true;
+                            }
+                        };
+                        if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
+                            handle(app);
                         } else {
-                            info!("goto path: create app");
-                            let id = self.new_window(self.app_now_id.is_none());
-                            if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
-                                app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
+                            if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle)
+                            {
+                                info!("goto path: use idle app");
+                                retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
                                     g.file.clone(),
                                 ));
+                            } else {
+                                info!("goto path: create app");
+                                let id = self.new_window(self.app_now_id.is_none());
+                                if let Some(app) = self.apps.iter_mut().find(|x| x.id == id) {
+                                    app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
+                                        g.file.clone(),
+                                    ));
+                                }
+                                retry = true;
                             }
-                            retry = true;
                         }
-                    }
-                    if retry {
-                        info!("do retry for: {:?}", g);
-                        if let Some(tx) = &self.rpc_self_tx {
-                            tx.send(message.clone()).unwrap();
+                        if retry {
+                            info!("do retry for: {:?}", g);
+                            if let Some(tx) = &self.rpc_self_tx {
+                                tx.send(message.clone()).unwrap();
+                            }
                         }
                     }
                 }

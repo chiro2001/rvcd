@@ -75,7 +75,7 @@ impl RvcdRpc for RvcdManager {
         let mut found = false;
         let managed_files = { self.managed_files.lock().unwrap().clone() };
         for (k, v) in managed_files {
-            if v.0.as_str() == data.file.as_str() {
+            if v.0.as_str() == data.file.as_str() || data.file.is_empty() {
                 if let Ok(channel) = Channel::from_shared(format!("http://127.0.0.1:{}", k)) {
                     let channel = channel.connect().await;
                     if let Ok(channel) = channel {

@@ -790,7 +790,14 @@ impl Rvcd {
                         self.view.do_signal_goto(path.path, &wave.info);
                     }
                 } else {
-                    return true;
+                    return if path.file.is_empty() {
+                        if let Some(wave) = &self.wave {
+                            self.view.do_signal_goto(path.path, &wave.info);
+                        }
+                        false
+                    } else {
+                        true
+                    };
                 }
             }
             RvcdRpcMessage::OpenWaveFile(path) => {
