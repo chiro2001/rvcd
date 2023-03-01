@@ -1,7 +1,9 @@
 use crate::app::RvcdAppMessage;
 use crate::code::highlight::code_view_ui;
-use crate::manager::RvcdRpcMessage;
+use crate::manager::{RvcdRpcMessage, MANAGER_PORT};
 use crate::message::{RvcdChannel, RvcdMsg};
+use crate::rpc::rvcd_rpc_client::RvcdRpcClient;
+use crate::rpc::{RvcdEmpty, RvcdRemoveClient};
 use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
@@ -24,6 +26,7 @@ use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc};
+use tonic::IntoRequest;
 use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
@@ -935,6 +938,7 @@ impl Rvcd {
         // }
     }
     pub fn on_exit(&mut self) {
+        info!("rvcd-{} {} exiting", self.id, self.filepath);
         if let Some(channel) = &self.channel {
             match channel.tx.send(RvcdMsg::StopService) {
                 Ok(_) => {}
@@ -943,5 +947,24 @@ impl Rvcd {
         }
         info!("setting client stop to true");
         *self.client.stop.lock().unwrap() = true;
+        let remove_info = RvcdRemoveClient {
+            key: self.client.data.lock().unwrap().port as u32,
+        };
+        execute(async move {
+            let mut client = RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
+                .await
+                .unwrap();
+            info!("rpc call built");
+            client
+                .remove_client(remove_info.into_request())
+                .await
+                .unwrap();
+            info!("rpc call remove_client done");
+            client
+                .ping(RvcdEmpty::default().into_request())
+                .await
+                .unwrap();
+            info!("rpc call ping done");
+        });
     }
 }

@@ -4,18 +4,18 @@ use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
 use crate::rpc::{
     RvcdEmpty, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile, RvcdOpenFileWith,
-    RvcdSignalPath,
+    RvcdRemoveClient, RvcdSignalPath,
 };
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 use tonic::transport::Channel;
 use tonic::{IntoRequest, Request, Response, Status};
-use tracing::{debug, info, trace};
+use tracing::{info, trace, warn};
 
 pub const MANAGER_PORT: u16 = 5411;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum RvcdRpcMessage {
     GotoPath(RvcdSignalPath),
     OpenWaveFile(String),
@@ -45,13 +45,14 @@ impl RvcdRpc for RvcdManager {
         &self,
         request: Request<RvcdOpenFile>,
     ) -> Result<Response<RvcdEmpty>, Status> {
-        debug!("got a request open_file: {:?}", request);
+        info!("got a request open_file: {:?}", request);
         let data = request.into_inner();
         let mut found = false;
         let managed_files = { self.managed_files.lock().unwrap().clone() };
         for (_k, v) in managed_files {
             if v.0.as_str() == data.path.as_str() {
                 found = true;
+                info!("duplicated file: [{}] {:?}", _k, v);
                 break;
             }
         }
@@ -172,6 +173,7 @@ impl RvcdRpc for RvcdManager {
         request: Request<RvcdOpenFileWith>,
     ) -> Result<Response<RvcdEmpty>, Status> {
         let data = request.into_inner();
+        info!("open file with: {:?}", data);
         self.open_file(RvcdOpenFile { path: data.file }.into_request())
             .await?;
         self.load_source_dir(
@@ -192,5 +194,25 @@ impl RvcdRpc for RvcdManager {
             self.goto_signal(goto.into_request()).await?;
         }
         Ok(Response::new(RvcdEmpty::default()))
+    }
+
+    async fn remove_client(
+        &self,
+        request: Request<RvcdRemoveClient>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
+        let data = request.into_inner();
+        if self
+            .managed_files
+            .lock()
+            .unwrap()
+            .remove(&data.key)
+            .is_none()
+        {
+            warn!("no such key: {}", data.key);
+            Err(Status::aborted("No such key"))
+        } else {
+            info!("removed key: {}", data.key);
+            Ok(Response::new(RvcdEmpty::default()))
+        }
     }
 }

@@ -224,6 +224,7 @@ impl RvcdApp {
         id
     }
     pub fn close_all(&mut self) {
+        info!("close all apps");
         self.apps.iter_mut().for_each(|app| app.on_exit());
         self.app_now_id = None;
         self.open_apps.clear();
@@ -337,13 +338,13 @@ impl eframe::App for RvcdApp {
                     }
                     ui.add_enabled_ui(self.apps.len() > 0, |ui| {
                         if ui.button(t!("menu.close_all")).clicked() {
-                            if self.apps.len() > 1 {
-                                self.close_all();
-                            } else {
-                                if let Some(app) = self.apps.first_mut() {
-                                    app.reset();
-                                }
-                            }
+                            // if self.apps.len() > 1 {
+                            self.close_all();
+                            // } else {
+                            //     if let Some(app) = self.apps.first_mut() {
+                            //         app.reset();
+                            //     }
+                            // }
                         }
                     });
                     if ui.button(t!("menu.new_window")).clicked() {
@@ -487,6 +488,7 @@ impl eframe::App for RvcdApp {
         }
         let mut handled_app = vec![];
         for message in &messages {
+            info!("rvcd app handle rpc message: {:?}", message);
             match message {
                 RvcdRpcMessage::GotoPath(g) => {
                     // create new if no app opened file

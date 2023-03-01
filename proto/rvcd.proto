@@ -17,6 +17,8 @@ service RvcdRpc {
     rpc LoadSource (RvcdLoadSources) returns (RvcdEmpty) {}
     // Open file with arguments
     rpc OpenFileWith (RvcdOpenFileWith) returns (RvcdEmpty) {}
+    // Remove registered client
+    rpc RemoveClient (RvcdRemoveClient) returns (RvcdEmpty) {}
 }
 
 message RvcdEmpty {}
@@ -55,4 +57,8 @@ message RvcdOpenFileWith {
     string source_dir = 2;
     repeated string source_files = 3;
     RvcdSignalPath goto = 4;
+}
+
+message RvcdRemoveClient {
+    uint32 key = 1;
 }
