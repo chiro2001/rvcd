@@ -204,6 +204,7 @@ impl Service {
                                 .map(|x| x.unwrap())
                                 .collect::<Vec<_>>();
                             tx.send(RvcdMsg::UpdateSources(parsed)).unwrap();
+                            tx.send(RvcdMsg::UpdateSourceDir(_path)).unwrap();
                         });
                     }
                 }

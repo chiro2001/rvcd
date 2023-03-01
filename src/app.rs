@@ -461,6 +461,7 @@ impl eframe::App for RvcdApp {
         // FIXME: wasm target cannot handle multi files
         for file in &ctx.input(|i| i.raw.dropped_files.clone()) {
             let file: &DroppedFile = file;
+            let is_file = file.path.clone().map(|x| x.is_file()).unwrap_or(false);
             let has_maximum_window = self.app_now_id.is_some();
             match self.app_now_id.and_then(|id| {
                 self.apps
@@ -469,9 +470,20 @@ impl eframe::App for RvcdApp {
             }) {
                 Some(app) => app.handle_dropping_file(file),
                 None => {
-                    let id = self.new_window(!has_maximum_window);
-                    if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
-                        app.handle_dropping_file(file);
+                    if is_file {
+                        let id = self.new_window(!has_maximum_window);
+                        if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
+                            app.handle_dropping_file(file);
+                        }
+                    } else {
+                        if let Some(app) = self.apps.first_mut() {
+                            app.handle_dropping_file(file);
+                        } else {
+                            let id = self.new_window(!has_maximum_window);
+                            if let Some(app) = self.apps.iter_mut().find(|a| a.id == id) {
+                                app.handle_dropping_file(file);
+                            }
+                        }
                     }
                 }
             };

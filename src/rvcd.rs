@@ -725,6 +725,10 @@ impl Rvcd {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     info!("update self.source_dir to {}", _path);
+                    self.toasts.info(
+                        format!("update self.source_dir to {}", _path),
+                        std::time::Duration::from_secs(5),
+                    );
                     self.source_dir = _path;
                 }
             }
@@ -932,7 +936,18 @@ impl Rvcd {
                 let file = FileHandle::from(path.clone());
                 self.message_handler(RvcdMsg::FileDrag(file));
             } else {
-                self.message_handler(RvcdMsg::FileOpenFailed);
+                if path.is_dir() {
+                    if let Some(channel) = &self.channel {
+                        channel
+                            .tx
+                            .send(RvcdMsg::UpdateSourceDir(
+                                path.clone().to_str().unwrap().to_string(),
+                            ))
+                            .unwrap();
+                    }
+                } else {
+                    self.message_handler(RvcdMsg::FileOpenFailed);
+                }
             }
         } else if let Some(data) = &dropped_file.bytes {
             self.message_handler(RvcdMsg::FileOpenData(data.clone()));
