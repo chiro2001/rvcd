@@ -93,7 +93,9 @@ async fn main() -> Result<()> {
     for file in args.file {
         rpc_tx3.send(RvcdRpcMessage::OpenWaveFile(file)).unwrap();
     }
-
+    for source in args.input {
+        rpc_tx3.send(RvcdRpcMessage::OpenSourceFile(source)).unwrap();
+    }
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;
     tokio::spawn(rpc);
