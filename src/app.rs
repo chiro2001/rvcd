@@ -20,7 +20,7 @@ use rfd::FileHandle;
 use rust_i18n::locale;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub enum RvcdAppMessage {
@@ -268,15 +268,28 @@ impl RvcdApp {
                 }
                 CodeEditorType::VsCode => {
                     let loc = p.location.clone();
-                    std::process::Command::new("code")
-                        .args(if loc.line > 0 && loc.column > 0 {
-                            let s = format!("{}:{}", loc.line, loc.column);
-                            vec![p.file, "-g".to_string(), s]
-                        } else {
-                            vec![p.file]
-                        })
-                        .output()
-                        .ok();
+                    let args = if loc.line > 0 && loc.column > 0 {
+                        let s = format!("{}:{}:{}", p.file, loc.line, loc.column);
+                        vec!["-g".to_string(), s]
+                    } else {
+                        vec![p.file]
+                    };
+                    let executable = if cfg!(target_os = "windows") {
+                        "code.exe"
+                    } else {
+                        "code"
+                    };
+                    info!("call command: {} {:?}", executable, args);
+                    match std::process::Command::new(executable).args(args).output() {
+                        Ok(output) => {
+                            info!("code ret: {:?}", output.status);
+                            info!("code out: {:?}", String::from_utf8(output.stdout));
+                            info!("code out: {:?}", String::from_utf8(output.stderr));
+                        }
+                        Err(e) => {
+                            error!("cannot execute vscode: {}", e);
+                        }
+                    }
                 }
             },
         }
