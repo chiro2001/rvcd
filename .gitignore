@@ -2,3 +2,5 @@
 /dist
 /.idea
 *perf*
+/release
+release.zip
