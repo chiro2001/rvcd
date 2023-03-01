@@ -15,9 +15,8 @@ use rvcd::utils::sleep_ms;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct RvcdArgs {
-    /// File to open
-    #[arg(default_value = "")]
-    file: String,
+    /// Files to open
+    file: Vec<String>,
     /// Default source path
     #[arg(short, long, default_value = "")]
     src: String,
@@ -89,9 +88,9 @@ async fn main() -> Result<()> {
         }
     };
     if !args.file.is_empty() {
-        rpc_tx3
-            .send(RvcdRpcMessage::OpenWaveFile(args.file))
-            .unwrap();
+        for file in args.file {
+            rpc_tx3.send(RvcdRpcMessage::OpenWaveFile(file)).unwrap();
+        }
     }
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;
