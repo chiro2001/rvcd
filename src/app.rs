@@ -5,10 +5,9 @@ use crate::frame_history::FrameHistory;
 use crate::manager::RvcdRpcMessage;
 use crate::message::RvcdMsg;
 use crate::rpc::scaleda_rpc_client::ScaledaRpcClient;
-use crate::rpc::ScaledaGotoSource;
+use crate::rpc::{ScaledaEmpty, ScaledaGotoSource};
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
-use crate::utils::execute;
 use crate::verilog::VerilogGotoSource;
 use crate::{available_locales, Rvcd};
 use eframe::emath::Align;
@@ -245,20 +244,24 @@ impl RvcdApp {
                     }
                 }
                 CodeEditorType::Scaleda => {
-                    execute(async move {
-                        if let Ok(mut client) =
-                            ScaledaRpcClient::connect("http://127.0.0.1:4151").await
-                        {
-                            if let Err(e) = client
-                                .goto_source(ScaledaGotoSource {
-                                    file: p.file,
-                                    path: p.path,
-                                    line: p.location.line as u32,
-                                    column: p.location.column as u32,
-                                })
-                                .await
-                            {
-                                warn!("cannot call scaleda rpc: {:?}", e);
+                    tokio::spawn(async move {
+                        match ScaledaRpcClient::connect("http://127.0.0.1:4151").await {
+                            Ok(mut client) => {
+                                if let Err(e) = client
+                                    .goto_source(ScaledaGotoSource {
+                                        file: p.file,
+                                        path: p.path,
+                                        line: p.location.line as u32,
+                                        column: p.location.column as u32,
+                                    })
+                                    .await
+                                {
+                                    warn!("cannot call scaleda rpc: {:?}", e);
+                                }
+                                client.ping(ScaledaEmpty::default()).await.unwrap();
+                            }
+                            Err(e) => {
+                                warn!("cannot reach scaleda: {}", e);
                             }
                         }
                     });
