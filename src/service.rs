@@ -193,17 +193,19 @@ impl Service {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     info!("service updating source path: {}", _path);
-                    let tx = self.channel.tx.clone();
-                    execute(async move {
-                        let sources = utils::scan_sources_recursive(_path.as_str());
-                        let parsed = sources
-                            .into_iter()
-                            .map(|s| parse_verilog_file(s.as_str()))
-                            .filter(|x| x.is_ok())
-                            .map(|x| x.unwrap())
-                            .collect::<Vec<_>>();
-                        tx.send(RvcdMsg::UpdateSources(parsed)).unwrap();
-                    });
+                    if !_path.is_empty() {
+                        let tx = self.channel.tx.clone();
+                        execute(async move {
+                            let sources = utils::scan_sources_recursive(_path.as_str());
+                            let parsed = sources
+                                .into_iter()
+                                .map(|s| parse_verilog_file(s.as_str()))
+                                .filter(|x| x.is_ok())
+                                .map(|x| x.unwrap())
+                                .collect::<Vec<_>>();
+                            tx.send(RvcdMsg::UpdateSources(parsed)).unwrap();
+                        });
+                    }
                 }
             }
             _ => {}
