@@ -563,11 +563,12 @@ impl eframe::App for RvcdApp {
                             }
                         }
                     }
-                } // _ => {
-                  //     for app in &mut self.apps {
-                  //         app.handle_rpc_message(message.clone());
-                  //     }
-                  // }
+                }
+                RvcdRpcMessage::OpenSourceFile(path) => {
+                    for app in &mut self.apps {
+                        app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(path.to_string()));
+                    }
+                }
             }
         }
         let mut messages = vec![];

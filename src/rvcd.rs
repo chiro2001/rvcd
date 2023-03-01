@@ -6,7 +6,7 @@ use crate::service::Service;
 use crate::size::FileSizeUnit;
 use crate::tree_view::{TreeAction, TreeView};
 use crate::utils::{execute, file_basename};
-use crate::verilog::{VerilogGotoSource, VerilogViewSource};
+use crate::verilog::{parse_verilog_file, VerilogGotoSource, VerilogViewSource};
 use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
@@ -733,16 +733,20 @@ impl Rvcd {
                         .iter()
                         .map(|x| x.source_path.to_string())
                         .collect::<Vec<_>>();
-                    self.client.set_paths(&paths);
-                    self.view.set_sources(_sources);
+                    let mut new_paths = self.client.data.lock().unwrap().paths.clone();
+                    for path in paths {
+                        new_paths.push(path);
+                    }
+                    self.client.set_paths(&new_paths);
+                    // self.view.set_sources(_sources);
+                    self.view.sources.extend_from_slice(&_sources);
                     self.sources_updated = true;
                 }
             }
             RvcdMsg::CallGotoSources(goto) => {
                 info!("ui CallGotoSources({:?})", goto);
                 if let Some(tx) = &self.upper_tx {
-                    tx.send(RvcdAppMessage::CreateCodeEditor(goto))
-                    .unwrap();
+                    tx.send(RvcdAppMessage::CreateCodeEditor(goto)).unwrap();
                 }
             }
             RvcdMsg::SetAlternativeGotoSources(v) => {
@@ -761,6 +765,16 @@ impl Rvcd {
                     self.signal_clicked(**v, true);
                 }
                 self.view.highlight_signals = add_ids.into_iter().map(|x| x.clone()).collect();
+            }
+            RvcdMsg::UpdateSource(file) => {
+                let tx = self.loop_self.clone();
+                execute(async move {
+                    if let Some(tx) = tx {
+                        if let Ok(r) = parse_verilog_file(file.as_str()) {
+                            tx.send(RvcdMsg::UpdateSources(vec![r])).unwrap();
+                        }
+                    }
+                });
             }
         };
     }
@@ -784,6 +798,11 @@ impl Rvcd {
                         .unwrap();
                 }
                 return true;
+            }
+            RvcdRpcMessage::OpenSourceFile(file) => {
+                if let Some(loop_self) = &self.loop_self {
+                    loop_self.send(RvcdMsg::UpdateSource(file)).unwrap();
+                }
             }
         }
         false

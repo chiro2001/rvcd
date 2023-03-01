@@ -16,6 +16,7 @@ pub const MANAGER_PORT: u16 = 5411;
 pub enum RvcdRpcMessage {
     GotoPath(RvcdSignalPath),
     OpenWaveFile(String),
+    OpenSourceFile(String),
 }
 unsafe impl Send for RvcdRpcMessage {}
 
