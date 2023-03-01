@@ -3,7 +3,8 @@ use crate::utils::{execute, sleep_ms};
 use crate::wave::vcd_parser::Vcd;
 use crate::wave::{WaveLoader, WavePreLoader};
 use anyhow::Result;
-use std::io::{BufReader, Cursor};
+#[allow(unused_imports)]
+use std::io::{BufReader, Cursor, Read};
 use std::sync::{mpsc, Arc, Mutex};
 use tracing::{debug, error, info};
 
@@ -54,7 +55,7 @@ impl Service {
             Ok(file) => {
                 // TODO: cancel progress that loading to memory first
                 let total_sz = file.metadata().unwrap().len();
-                let mut reader = std::io::BufReader::new(file);
+                let mut reader = BufReader::new(file);
                 if total_sz != 0 {
                     const BUF_SIZE: usize = 1024 * 256;
                     // const BUF_SIZE: usize = 8;
@@ -194,10 +195,10 @@ impl Service {
                     if !_path.is_empty() {
                         let tx = self.channel.tx.clone();
                         execute(async move {
-                            let sources = utils::scan_sources_recursive(_path.as_str());
+                            let sources = crate::utils::scan_sources_recursive(_path.as_str());
                             let parsed = sources
                                 .into_iter()
-                                .map(|s| parse_verilog_file(s.as_str()))
+                                .map(|s| crate::verilog::parse_verilog_file(s.as_str()))
                                 .filter(|x| x.is_ok())
                                 .map(|x| x.unwrap())
                                 .collect::<Vec<_>>();

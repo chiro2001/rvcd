@@ -1,6 +1,10 @@
+#[cfg(not(target_arch = "wasm32"))]
+use crate::code::editor::CodeEditor;
 use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::manager::RvcdRpcMessage;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::verilog::VerilogGotoSource;
@@ -84,12 +88,9 @@ impl Default for RvcdApp {
 impl RvcdApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
-        #[cfg(not(target_arch = "wasm32"))]
-        rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
-        #[cfg(not(target_arch = "wasm32"))]
-        rpc_tx: mpsc::Sender<RvcdRpcMessage>,
-        #[cfg(not(target_arch = "wasm32"))]
-        default_source_dir: Option<String>,
+        #[cfg(not(target_arch = "wasm32"))] rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
+        #[cfg(not(target_arch = "wasm32"))] rpc_tx: mpsc::Sender<RvcdRpcMessage>,
+        #[cfg(not(target_arch = "wasm32"))] default_source_dir: Option<String>,
     ) -> Self {
         // load chinese font
         let mut fonts = FontDefinitions::default();
@@ -256,10 +257,14 @@ impl RvcdApp {
                 }
                 CodeEditorType::Scaleda => {
                     tokio::spawn(async move {
-                        match ScaledaRpcClient::connect("http://127.0.0.1:4151").await {
+                        match crate::rpc::scaleda_rpc_client::ScaledaRpcClient::connect(
+                            "http://127.0.0.1:4151",
+                        )
+                        .await
+                        {
                             Ok(mut client) => {
                                 if let Err(e) = client
-                                    .goto_source(ScaledaGotoSource {
+                                    .goto_source(crate::rpc::ScaledaGotoSource {
                                         file: p.file,
                                         path: p.path,
                                         line: p.location.line as u32,
@@ -269,7 +274,7 @@ impl RvcdApp {
                                 {
                                     warn!("cannot call scaleda rpc: {:?}", e);
                                 }
-                                client.ping(ScaledaEmpty::default()).await.unwrap();
+                                client.ping(crate::rpc::ScaledaEmpty::default()).await.unwrap();
                             }
                             Err(e) => {
                                 warn!("cannot reach scaleda: {}", e);
@@ -303,6 +308,7 @@ impl RvcdApp {
                     }
                 }
             },
+            #[allow(unreachable_patterns)]
             _ => {}
         }
     }
@@ -549,7 +555,8 @@ impl eframe::App for RvcdApp {
                             if let Some(app) = self.apps.iter_mut().find(|x| x.filepath == g.file) {
                                 handle(app);
                             } else {
-                                if let Some(app) = self.apps.iter_mut().find(|x| x.state == State::Idle)
+                                if let Some(app) =
+                                    self.apps.iter_mut().find(|x| x.state == State::Idle)
                                 {
                                     info!("goto path: use idle app");
                                     retry = app.handle_rpc_message(RvcdRpcMessage::OpenWaveFile(
@@ -580,9 +587,9 @@ impl eframe::App for RvcdApp {
                             if let Some(channel) = &app.channel {
                                 channel
                                     .tx
-                                    .send(RvcdMsg::FileOpen(FileHandle::from(PathBuf::from(
-                                        path.as_str(),
-                                    ))))
+                                    .send(crate::message::RvcdMsg::FileOpen(rfd::FileHandle::from(
+                                        std::path::PathBuf::from(path.as_str()),
+                                    )))
                                     .unwrap();
                                 info!("send app<{}> file {}", app.id, path);
                             }
@@ -602,11 +609,9 @@ impl eframe::App for RvcdApp {
                             }
                         }
                         if !ok {
-                            if !self
-                                .apps
-                                .iter()
-                                .any(|x| x.filepath.as_str() == path.as_str() && x.state == State::Idle)
-                            {
+                            if !self.apps.iter().any(|x| {
+                                x.filepath.as_str() == path.as_str() && x.state == State::Idle
+                            }) {
                                 info!("create new window to handle {}", path);
                                 let has_maximum_window = self.app_now_id.is_some();
                                 let id = self.new_window(!has_maximum_window);
@@ -619,7 +624,9 @@ impl eframe::App for RvcdApp {
                     }
                     RvcdRpcMessage::OpenSourceFile(path) => {
                         for app in &mut self.apps {
-                            app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(path.to_string()));
+                            app.handle_rpc_message(RvcdRpcMessage::OpenSourceFile(
+                                path.to_string(),
+                            ));
                         }
                     }
                     RvcdRpcMessage::OpenSourceDir(path) => {

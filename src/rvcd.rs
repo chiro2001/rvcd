@@ -34,6 +34,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::path::PathBuf;
 #[allow(unused_imports)]
 use std::sync::{mpsc, Arc};
+#[cfg(not(target_arch = "wasm32"))]
+use tonic::IntoRequest;
 use tracing::{info, warn};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug)]
