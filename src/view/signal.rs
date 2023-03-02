@@ -8,7 +8,7 @@ use crate::view::{
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
 use egui::*;
 use num_bigint::BigUint;
-use num_traits::{One, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 use once_cell::sync::Lazy;
 use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
@@ -89,12 +89,12 @@ impl WaveView {
             }
         };
         let text_color = ui.visuals().strong_text_color();
-        let signal_rect = response.rect;
+        let signal_rect_raw = response.rect;
         // strange but works...
         let wave_range_start_x = self.fpos_to_x(self.range.0 * 2.0);
         let signal_rect = Rect::from_min_max(
-            signal_rect.min - vec2(wave_range_start_x, 0.0),
-            signal_rect.max - vec2(wave_range_start_x, 0.0),
+            signal_rect_raw.min - vec2(wave_range_start_x, 0.0),
+            signal_rect_raw.max - vec2(wave_range_start_x, 0.0),
         );
         // painter.vline(
         //     signal_rect.left(),
@@ -116,7 +116,6 @@ impl WaveView {
         //     response.rect.y_range(),
         //     (LINE_WIDTH, Color32::RED),
         // );
-        let it = start_items;
         let mut item_last: Option<&WaveDataItem> = None;
         let mut ignore_x_start = -1.0;
         let mut ignore_has_x = false;
@@ -149,6 +148,12 @@ impl WaveView {
             if !ui.is_rect_visible(rect) {
                 return Rect::NOTHING;
             }
+            match signal.mode {
+                SignalViewMode::Analog => {
+                    return rect;
+                }
+                _ => {}
+            };
             let text = item_now.value.as_radix(self.get_radix(signal));
             if rect.width() > MIN_SIGNAL_WIDTH {
                 if ignore_x_start >= 0.0 {
@@ -317,8 +322,16 @@ impl WaveView {
         };
         // TODO: Reduce horizontal value painting
         // let mut done_early = false;
-        for item in it {
+        let mut paint_items = vec![];
+        let is_analog = match signal.mode {
+            SignalViewMode::Analog => true,
+            _ => false,
+        };
+        for item in start_items {
             // let mut done = false;
+            if is_analog {
+                paint_items.push(item);
+            }
             if let Some(item_last) = item_last {
                 let value_rect = paint_signal(item_last, item);
                 if value_rect == Rect::NOTHING || value_rect.left() > response.rect.right() {
@@ -380,6 +393,101 @@ impl WaveView {
                     signal.color.clone()
                 },
             )
+        }
+        if is_analog {
+            // draw analog
+            let mut item_last_analog: Option<&WaveDataItem> = None;
+            let mut min_value = None;
+            let mut max_value = None;
+            let mut analog_no_value = true;
+            for item in &paint_items {
+                match &item.value {
+                    WaveDataValue::Comp(v) => {
+                        analog_no_value = false;
+                        let value = BigUint::from_bytes_le(&v);
+                        let handle = |min_max_value: Option<Vec<u8>>, is_less: bool| {
+                            if min_max_value.is_none() {
+                                Some(v.clone())
+                            } else {
+                                let min_max_v =
+                                    BigUint::from_bytes_le(&min_max_value.as_ref().unwrap());
+                                if if is_less {
+                                    value < min_max_v
+                                } else {
+                                    value > min_max_v
+                                } {
+                                    Some(v.clone())
+                                } else {
+                                    min_max_value
+                                }
+                            }
+                        };
+                        min_value = handle(min_value, true);
+                        max_value = handle(max_value, false);
+                    }
+                    WaveDataValue::Raw(_) => {}
+                }
+            }
+            if analog_no_value {
+                painter.rect(
+                    signal_rect_raw,
+                    0.0,
+                    Color32::RED.linear_multiply(BG_MULTIPLY),
+                    (LINE_WIDTH, Color32::RED),
+                );
+            } else {
+                for item in paint_items {
+                    if let Some(item_now) = item_last_analog {
+                        let item_next = item;
+                        let width = signal_rect.width();
+                        let height = signal_rect.height();
+                        let percent_rect_left = (item_now.timestamp - info.range.0) as f32
+                            / (self.range.1 - self.range.0);
+                        let percent_rect_right = (item_next.timestamp - info.range.0) as f32
+                            / (self.range.1 - self.range.0);
+                        let rect = Rect::from_min_max(
+                            pos2(
+                                signal_rect.left() + width * percent_rect_left,
+                                signal_rect.top(),
+                            ),
+                            pos2(
+                                signal_rect.left() + width * percent_rect_right,
+                                signal_rect.top() + height,
+                            ),
+                        );
+                        if !(min_value.is_some() && max_value.is_some()) {
+                            painter.rect(
+                                rect,
+                                0.0,
+                                Color32::RED.linear_multiply(BG_MULTIPLY),
+                                (LINE_WIDTH, Color32::RED),
+                            );
+                        } else {
+                            let min_value = BigUint::from_bytes_le(min_value.as_ref().unwrap());
+                            let max_value = BigUint::from_bytes_le(max_value.as_ref().unwrap());
+                            let value_now = match &item_now.value {
+                                WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
+                                WaveDataValue::Raw(_) => BigUint::zero(),
+                            };
+                            let value_next = match &item_next.value {
+                                WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
+                                WaveDataValue::Raw(_) => BigUint::zero(),
+                            };
+                            let rate = (rect.bottom() - rect.top())
+                                / (max_value.clone() - min_value.clone()).to_f32().unwrap();
+                            let y_left = rate * (max_value.clone() - value_now).to_f32().unwrap()
+                                + rect.top();
+                            let y_right = rate * (max_value.clone() - value_next).to_f32().unwrap()
+                                + rect.top();
+                            painter.line_segment(
+                                [pos2(rect.left(), y_left), pos2(rect.right(), y_right)],
+                                (LINE_WIDTH, signal.color.clone()),
+                            );
+                        }
+                    }
+                    item_last_analog = Some(item)
+                }
+            }
         }
         response
     }

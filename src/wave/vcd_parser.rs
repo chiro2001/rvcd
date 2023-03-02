@@ -1,8 +1,8 @@
 use crate::wave::WaveDataValue::Raw;
 use crate::wave::WaveTreeNode::WaveRoot;
 use crate::wave::{
-    Wave, WaveDataItem, WaveInfo, WaveLoader, WavePreLoader, WaveScopeInfo, WaveSignalInfo,
-    WaveTimescaleUnit, WaveTreeNode, WireValue,
+    Wave, WaveDataItem, WaveInfo, WaveLoader, WavePreLoader, WaveScopeInfo,
+    WaveSignalInfo, WaveTimescaleUnit, WaveTreeNode, WireValue,
 };
 use anyhow::{anyhow, Result};
 use queues::{IsQueue, Queue};
@@ -447,14 +447,14 @@ impl WaveLoader for Vcd {
 #[cfg(test)]
 mod test {
     use crate::radix::radix_vector_to_string_n;
-    use crate::wave::vcd_parser::{Vcd, vcd_code_name, vcd_header_show, vcd_tree_show};
+    use crate::wave::vcd_parser::{vcd_code_name, vcd_header_show, vcd_tree_show, Vcd};
+    use crate::wave::WaveLoader;
     use anyhow::Result;
     use std::fs::File;
     use std::io::Read;
     use tracing::{info, warn};
     use vcd::Command::{ChangeScalar, ChangeVector, Timestamp};
     use vcd::IdCode;
-    use crate::wave::WaveLoader;
 
     fn init() {
         std::env::set_var("RUST_LOG", "debug");
