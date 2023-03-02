@@ -65,22 +65,20 @@ fn value_map_val(v: &WireValue) -> u8 {
 pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
     let bits = vec.iter().map(value_map_val);
     let mut bytes: Vec<u8> = vec![];
-    let mut byte = 0_u8;
-    bits.enumerate().for_each(|i| {
-        let offset = i.0 & 0x7;
-        if offset == 0 {
-            byte = i.1;
-        } else {
-            byte |= i.1 << offset;
-            if offset == 7 {
-                bytes.push(byte);
-            }
+    let mut byte = 0u8;
+    bits.enumerate().for_each(|(i, b)| {
+        let offset = i & 0x7;
+        byte |= b << offset;
+        if offset == 7 {
+            bytes.push(byte);
+            byte = 0;
         }
     });
     if vec.len() & 0x7 != 0 {
         bytes.push(byte);
     }
     // assert!(bytes.len() % 8 < 2);
+    bytes.reverse();
     BigUint::from_bytes_le(&bytes)
 }
 
@@ -159,10 +157,11 @@ pub fn radix_vector_dec(vec: &Vec<WireValue>) -> String {
 
 #[cfg(test)]
 mod test {
-    use crate::radix::{radix_vector_to_string, Radix};
-    use crate::wave::WireValue;
+    use crate::radix::{radix_value_big_uint, radix_vector_to_string, Radix};
     use crate::wave::WireValue::*;
+    use crate::wave::{WaveDataItem, WaveDataValue, WireValue};
     use anyhow::Result;
+    use num_bigint::BigUint;
     use tracing::debug;
 
     #[test]
@@ -210,6 +209,72 @@ mod test {
         );
         Ok(())
     }
-}
 
-// TODO: Check radix format data
+    #[test]
+    fn test_radix_value_big_uint() {
+        use WireValue::*;
+        for test in 0usize..=32 {
+            let test_uint = BigUint::from(test);
+            let test_binary_str = test_uint.to_str_radix(2);
+            let test_binary = test_binary_str
+                .chars()
+                .rev()
+                .map(|x| match x {
+                    '0' => V0,
+                    _ => V1,
+                })
+                .collect::<Vec<_>>();
+            // let v = vec![V0, V1, V1, V0, V0, V1];
+            let v = test_binary;
+            let d = radix_value_big_uint(&v);
+            let le = d.to_bytes_le();
+            let d2 = BigUint::from_bytes_le(&le);
+            println!(
+                "v: {:?}, d: {:?} {}, le: {:?}, d2: {:?} {}",
+                v,
+                d,
+                d.to_str_radix(2),
+                le,
+                d2,
+                d2.to_str_radix(2)
+            );
+        }
+    }
+
+    #[test]
+    fn test_compress() {
+        for test in 0usize..=20 {
+            let mut t = test.clone();
+            let mut bits = vec![];
+            for _i in 0..32 {
+                bits.push((t & 0x1usize) as u8);
+                t = t >> 1;
+                if t == 0 {
+                    break;
+                }
+            }
+            let bits = bits
+                .into_iter()
+                .map(|x| match x {
+                    0 => V0,
+                    _ => V1,
+                })
+                .collect::<Vec<_>>();
+            let item = WaveDataItem {
+                value: WaveDataValue::Raw(bits.clone()),
+                timestamp: 0,
+            }
+            .compress()
+            .unwrap();
+            let item_value_v = match &item.value {
+                WaveDataValue::Comp(v) => v.as_slice(),
+                WaveDataValue::Raw(_) => &[],
+            };
+            let item_value = BigUint::from_bytes_le(item_value_v);
+            println!(
+                "[test {}], item_value: {}, bits: {:?}, item_value_v: {:?}",
+                test, item_value, bits, item_value_v
+            );
+        }
+    }
+}

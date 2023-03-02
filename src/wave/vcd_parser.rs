@@ -502,7 +502,7 @@ mod test {
         info!("optimize_vcd_parser({})", path);
         if let Ok(mut input) = File::open(path) {
             let v = Vcd::load(&mut input, |_, _| {}, None)?;
-            info!("code path: {:#?}", v.info.code_paths);
+            info!("code path: {:?}", v.info.code_paths);
         } else {
             warn!("file not found: {}", path);
         }
@@ -515,7 +515,7 @@ mod test {
         let files = [
             // "data/testbench.vcd",
             "data/cpu_ila_commit.vcd",
-            "/home/chiro/programs/scaleda-sample-project/.sim/Icarus-Run iverilog simulation/tb_waterfall_waveform.vcd"
+            // "/home/chiro/programs/scaleda-sample-project/.sim/Icarus-Run iverilog simulation/tb_waterfall_waveform.vcd"
         ];
         for file in files {
             let id = format!("load {file}");

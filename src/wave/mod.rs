@@ -132,7 +132,7 @@ impl Display for WaveDataItem {
 
 impl WaveDataItem {
     /// Compress [WaveDataItem], may change `Raw(_)` to `Comp(_)`
-    fn compress(self) -> Result<Self> {
+    pub(crate) fn compress(self) -> Result<Self> {
         if match &self.value {
             WaveDataValue::Comp(v) => v.len(),
             WaveDataValue::Raw(v) => v.len(),
