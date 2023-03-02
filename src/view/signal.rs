@@ -15,18 +15,31 @@ use std::ops::RangeInclusive;
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
+pub enum AnalogDisplayType {
+    #[default]
+    Interpolated,
+    Step,
+}
+
+impl Display for AnalogDisplayType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
 pub enum SignalViewMode {
     #[default]
     Default,
     Number(Radix),
-    Analog,
+    Analog(AnalogDisplayType),
 }
 impl Display for SignalViewMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             SignalViewMode::Default => write!(f, "default"),
             SignalViewMode::Number(r) => write!(f, "{r}"),
-            SignalViewMode::Analog => write!(f, "Analog"),
+            SignalViewMode::Analog(r) => write!(f, "Analog({:?})", r),
         }
     }
 }
@@ -149,7 +162,7 @@ impl WaveView {
                 return Rect::NOTHING;
             }
             match signal.mode {
-                SignalViewMode::Analog => {
+                SignalViewMode::Analog(_) => {
                     return rect;
                 }
                 _ => {}
@@ -324,7 +337,7 @@ impl WaveView {
         // let mut done_early = false;
         let mut paint_items = vec![];
         let is_analog = match signal.mode {
-            SignalViewMode::Analog => true,
+            SignalViewMode::Analog(_) => true,
             _ => false,
         };
         for item in start_items {
@@ -483,7 +496,13 @@ impl WaveView {
                             rate * (max_value.clone() - value_now).to_f32().unwrap() + rect.top();
                         let y_next =
                             rate * (max_value.clone() - value_next).to_f32().unwrap() + rect.top();
-                        let step = true;
+                        let step = match &signal.mode {
+                            SignalViewMode::Analog(i) => match i {
+                                AnalogDisplayType::Interpolated => false,
+                                AnalogDisplayType::Step => true,
+                            },
+                            _ => false,
+                        };
                         let y_right = if step { y_now } else { y_next };
                         painter.line_segment(
                             [pos2(rect.left(), y_now), pos2(rect.right(), y_right)],
@@ -580,10 +599,15 @@ impl WaveView {
                                 }
                             });
                         });
-                        if ui.button("Analog").clicked() {
-                            signal_new.mode = SignalViewMode::Analog;
-                            ui.close_menu();
-                        }
+                        ui.menu_button("Ananlog", |ui| {
+                            let v = [AnalogDisplayType::Interpolated, AnalogDisplayType::Step];
+                            for i in v {
+                                if ui.button(i.to_string()).clicked() {
+                                    signal_new.mode = SignalViewMode::Analog(i);
+                                    ui.close_menu();
+                                }
+                            }
+                        });
                     });
                     if !self.sources.is_empty() {
                         if ui.button("To Source").clicked() {
@@ -609,7 +633,7 @@ impl WaveView {
         match &signal.mode {
             SignalViewMode::Default => self.default_radix.clone(),
             SignalViewMode::Number(r) => r.clone(),
-            SignalViewMode::Analog => Radix::Hex,
+            SignalViewMode::Analog(_) => Radix::Hex,
         }
     }
     pub fn do_source_goto(&self, path: Vec<String>) {
