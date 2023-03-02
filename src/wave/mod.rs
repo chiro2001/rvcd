@@ -143,9 +143,10 @@ impl WaveDataItem {
         match &self.value {
             WaveDataValue::Comp(_) => Ok(self),
             WaveDataValue::Raw(v) => {
+                let rev_v = v.iter().rev().map(|x| x.clone()).collect::<Vec<_>>();
                 let ability = !v.iter().any(|i| i == &WireValue::X || i == &WireValue::Z);
                 if ability {
-                    let value = WaveDataValue::Comp(radix_value_big_uint(v).to_bytes_le());
+                    let value = WaveDataValue::Comp(radix_value_big_uint(&rev_v).to_bytes_le());
                     Ok(Self { value, ..self })
                 } else {
                     Ok(self)

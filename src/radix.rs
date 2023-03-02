@@ -31,17 +31,18 @@ impl Radix {
 
 /// Convert [Vec<WireValue>] to string in radix
 pub fn radix_vector_to_string(radix: Radix, vec: &Vec<WireValue>) -> String {
-    if radix == Radix::Dec {
-        radix_vector_dec(vec)
-    } else {
-        let n: usize = match radix {
-            Radix::Bin => 1,
-            Radix::Oct => 3,
-            Radix::Hex => 4,
-            _ => panic!("internal err"),
-        };
-        radix_vector_to_string_n(vec, n)
-    }
+    // if radix == Radix::Dec {
+    //     radix_vector_dec(vec)
+    // } else {
+    //     let n: usize = match radix {
+    //         Radix::Bin => 1,
+    //         Radix::Oct => 3,
+    //         Radix::Hex => 4,
+    //         _ => panic!("internal err"),
+    //     };
+    //     radix_vector_to_string_n(vec, n)
+    // }
+    format!("{:?}", vec)
 }
 
 pub fn radix_vector_bin(vec: &[WireValue]) -> String {
@@ -61,8 +62,10 @@ fn value_map_val(v: &WireValue) -> u8 {
 
 /// Convert [Vec<WireValue>] to BigUInt
 ///
-/// **Warning: all [WireValue::Z] and [WireValue::X] will be replaced by [WireValue::V1]**
-pub fn radix_value_big_uint(vec: &Vec<WireValue>) -> BigUint {
+/// **Warning**: all [WireValue::Z] and [WireValue::X] will be replaced by [WireValue::V1]**
+///
+/// - vec: lsb data
+pub fn radix_value_big_uint(vec: &[WireValue]) -> BigUint {
     let bits = vec.iter().map(value_map_val);
     let mut bytes: Vec<u8> = vec![];
     let mut byte = 0u8;
