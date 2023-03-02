@@ -117,17 +117,20 @@ impl RvcdApp {
         if def.locale.is_empty() {
             // detect locate
             // TODO: detect on windows
-            if let Ok(lang) = std::env::var("LANG") {
-                let locale = lang
-                    .as_str()
-                    .replace("_", "-")
-                    .as_str()
-                    .replace(".UTF-8", "");
-                if available_locales().iter().any(|x| x.to_string() == locale) {
-                    rust_i18n::set_locale(locale.as_str());
-                    def.locale = locale;
-                }
-            }
+            // if let Ok(lang) = std::env::var("LANG") {
+            //     let locale = lang
+            //         .as_str()
+            //         .replace("_", "-")
+            //         .as_str()
+            //         .replace(".UTF-8", "");
+            //     info!("auto detected locale: {}", locale);
+            //     if available_locales().iter().any(|x| x.to_string() == locale) {
+            //         rust_i18n::set_locale(locale.as_str());
+            //         def.locale = locale;
+            //     }
+            // } else {
+            rust_i18n::set_locale("zh-CN");
+            // }
         } else {
             rust_i18n::set_locale(def.locale.as_str());
         }
@@ -274,7 +277,10 @@ impl RvcdApp {
                                 {
                                     warn!("cannot call scaleda rpc: {:?}", e);
                                 }
-                                client.ping(crate::rpc::ScaledaEmpty::default()).await.unwrap();
+                                client
+                                    .ping(crate::rpc::ScaledaEmpty::default())
+                                    .await
+                                    .unwrap();
                             }
                             Err(e) => {
                                 warn!("cannot reach scaleda: {}", e);
