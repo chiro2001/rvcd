@@ -9,6 +9,7 @@ use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireVal
 use egui::*;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
+use once_cell::sync::Lazy;
 use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
 use tracing::info;
@@ -38,11 +39,16 @@ pub enum SignalViewAlign {
     Right,
 }
 
+static SIGNAL_COLOR_BG_DEFAULT: Lazy<Color32> =
+    // Lazy::new(|| Color32::GREEN.linear_multiply(BG_MULTIPLY));
+    Lazy::new(|| Color32::GREEN);
+
 #[derive(serde::Deserialize, serde::Serialize, Default, PartialEq, Debug, Clone)]
 pub struct SignalView {
     pub s: WaveSignalInfo,
     pub height: f32,
     pub mode: SignalViewMode,
+    pub color: Color32,
 }
 impl SignalView {
     pub fn from_id(id: u64, info: &WaveInfo) -> Self {
@@ -52,6 +58,7 @@ impl SignalView {
             s: signal_info,
             height: SIGNAL_HEIGHT_DEFAULT,
             mode: Default::default(),
+            color: SIGNAL_COLOR_BG_DEFAULT.clone(),
         }
     }
 }
@@ -155,7 +162,7 @@ impl WaveView {
                         if ignore_has_x {
                             Color32::DARK_RED
                         } else {
-                            Color32::GREEN
+                            signal.color.clone()
                         },
                     );
                     ignore_x_start = -1.0;
@@ -187,20 +194,24 @@ impl WaveView {
                             painter.hline(
                                 rect.x_range(),
                                 rect.bottom(),
-                                (LINE_WIDTH, Color32::GREEN),
+                                (LINE_WIDTH, signal.color.clone()),
                             );
                             painter.vline(
                                 rect.left(),
                                 rect.y_range(),
-                                (LINE_WIDTH, Color32::GREEN),
+                                (LINE_WIDTH, signal.color.clone()),
                             );
                         }
                         WireValue::V1 => {
-                            painter.hline(rect.x_range(), rect.top(), (LINE_WIDTH, Color32::GREEN));
+                            painter.hline(
+                                rect.x_range(),
+                                rect.top(),
+                                (LINE_WIDTH, signal.color.clone()),
+                            );
                             painter.vline(
                                 rect.left(),
                                 rect.y_range(),
-                                (LINE_WIDTH, Color32::GREEN),
+                                (LINE_WIDTH, signal.color.clone()),
                             );
                         }
                         WireValue::X => paint_x(),
@@ -218,7 +229,7 @@ impl WaveView {
                                 painter.hline(
                                     rect.x_range(),
                                     rect.bottom(),
-                                    (LINE_WIDTH, Color32::GREEN),
+                                    (LINE_WIDTH, signal.color.clone()),
                                 );
                             }
                             _ => {
@@ -226,11 +237,11 @@ impl WaveView {
                                     rect,
                                     0.0,
                                     if self.background {
-                                        Color32::GREEN.linear_multiply(BG_MULTIPLY)
+                                        signal.color.linear_multiply(BG_MULTIPLY)
                                     } else {
                                         Color32::TRANSPARENT
                                     },
-                                    (LINE_WIDTH, Color32::GREEN),
+                                    (LINE_WIDTH, signal.color.clone()),
                                 );
                             }
                         }
@@ -366,7 +377,7 @@ impl WaveView {
                 if ignore_has_x {
                     Color32::DARK_RED
                 } else {
-                    Color32::GREEN
+                    signal.color.clone()
                 },
             )
         }
@@ -388,7 +399,11 @@ impl WaveView {
             ui.set_height(signal.height);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if highlight {
-                    ui.painter().rect_filled(ui.available_rect_before_wrap(), 0.0, Color32::YELLOW.linear_multiply(BG_MULTIPLY));
+                    ui.painter().rect_filled(
+                        ui.available_rect_before_wrap(),
+                        0.0,
+                        Color32::YELLOW.linear_multiply(BG_MULTIPLY),
+                    );
                 }
                 let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
                 // TODO: drag signal order
@@ -406,6 +421,13 @@ impl WaveView {
                             .speed(1.0)
                             .suffix("px")
                             .ui(ui);
+                    });
+                    ui.menu_button("Color", |ui| {
+                        color_picker::color_picker_color32(
+                            ui,
+                            &mut signal_new.color,
+                            color_picker::Alpha::Opaque,
+                        );
                     });
                     ui.menu_button(format!("Mode: {}", signal.mode), |ui| {
                         if ui.button("Default").clicked() {

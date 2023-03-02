@@ -1001,7 +1001,7 @@ impl Rvcd {
             let remove_info = RvcdRemoveClient {
                 key: self.client.data.lock().unwrap().port as u32,
             };
-            execute(async move {
+            tokio::spawn(async move {
                 let mut client =
                     RvcdRpcClient::connect(format!("http://127.0.0.1:{}", MANAGER_PORT))
                         .await
