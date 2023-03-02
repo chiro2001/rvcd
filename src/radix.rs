@@ -31,18 +31,17 @@ impl Radix {
 
 /// Convert [Vec<WireValue>] to string in radix
 pub fn radix_vector_to_string(radix: Radix, vec: &Vec<WireValue>) -> String {
-    // if radix == Radix::Dec {
-    //     radix_vector_dec(vec)
-    // } else {
-    //     let n: usize = match radix {
-    //         Radix::Bin => 1,
-    //         Radix::Oct => 3,
-    //         Radix::Hex => 4,
-    //         _ => panic!("internal err"),
-    //     };
-    //     radix_vector_to_string_n(vec, n)
-    // }
-    format!("{:?}", vec)
+    if radix == Radix::Dec {
+        radix_vector_dec(vec)
+    } else {
+        let n: usize = match radix {
+            Radix::Bin => 1,
+            Radix::Oct => 3,
+            Radix::Hex => 4,
+            _ => panic!("internal err"),
+        };
+        radix_vector_to_string_n(vec, n)
+    }
 }
 
 pub fn radix_vector_bin(vec: &[WireValue]) -> String {

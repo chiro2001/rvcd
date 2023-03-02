@@ -430,62 +430,90 @@ impl WaveView {
             }
             if analog_no_value {
                 painter.rect(
-                    signal_rect_raw,
+                    Rect::from_x_y_ranges(
+                        RangeInclusive::new(
+                            self.fpos_to_x(self.range.0),
+                            self.fpos_to_x(self.range.1),
+                        ),
+                        signal_rect_raw.y_range(),
+                    ),
                     0.0,
                     Color32::RED.linear_multiply(BG_MULTIPLY),
                     (LINE_WIDTH, Color32::RED),
                 );
             } else {
-                for item in paint_items {
-                    if let Some(item_now) = item_last_analog {
-                        let item_next = item;
-                        let width = signal_rect.width();
-                        let height = signal_rect.height();
-                        let percent_rect_left = (item_now.timestamp - info.range.0) as f32
-                            / (self.range.1 - self.range.0);
-                        let percent_rect_right = (item_next.timestamp - info.range.0) as f32
-                            / (self.range.1 - self.range.0);
-                        let rect = Rect::from_min_max(
-                            pos2(
-                                signal_rect.left() + width * percent_rect_left,
-                                signal_rect.top(),
-                            ),
-                            pos2(
-                                signal_rect.left() + width * percent_rect_right,
-                                signal_rect.top() + height,
-                            ),
+                let paint_analog = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
+                    let width = signal_rect.width();
+                    let height = signal_rect.height();
+                    let percent_rect_left =
+                        (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                    let percent_rect_right =
+                        (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                    let rect = Rect::from_min_max(
+                        pos2(
+                            signal_rect.left() + width * percent_rect_left,
+                            signal_rect.top(),
+                        ),
+                        pos2(
+                            signal_rect.left() + width * percent_rect_right,
+                            signal_rect.top() + height,
+                        ),
+                    );
+                    if !(min_value.is_some() && max_value.is_some()) {
+                        painter.rect(
+                            rect,
+                            0.0,
+                            Color32::RED.linear_multiply(BG_MULTIPLY),
+                            (LINE_WIDTH, Color32::RED),
                         );
-                        if !(min_value.is_some() && max_value.is_some()) {
-                            painter.rect(
-                                rect,
-                                0.0,
-                                Color32::RED.linear_multiply(BG_MULTIPLY),
-                                (LINE_WIDTH, Color32::RED),
-                            );
-                        } else {
-                            let min_value = BigUint::from_bytes_le(min_value.as_ref().unwrap());
-                            let max_value = BigUint::from_bytes_le(max_value.as_ref().unwrap());
-                            let value_now = match &item_now.value {
-                                WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
-                                WaveDataValue::Raw(_) => BigUint::zero(),
-                            };
-                            let value_next = match &item_next.value {
-                                WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
-                                WaveDataValue::Raw(_) => BigUint::zero(),
-                            };
-                            let rate = (rect.bottom() - rect.top())
-                                / (max_value.clone() - min_value.clone()).to_f32().unwrap();
-                            let y_left = rate * (max_value.clone() - value_now).to_f32().unwrap()
-                                + rect.top();
-                            let y_right = rate * (max_value.clone() - value_next).to_f32().unwrap()
-                                + rect.top();
-                            painter.line_segment(
-                                [pos2(rect.left(), y_left), pos2(rect.right(), y_right)],
+                    } else {
+                        let min_value = BigUint::from_bytes_le(min_value.as_ref().unwrap());
+                        let max_value = BigUint::from_bytes_le(max_value.as_ref().unwrap());
+                        let value_now = match &item_now.value {
+                            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
+                            WaveDataValue::Raw(_) => BigUint::zero(),
+                        };
+                        let value_next = match &item_next.value {
+                            WaveDataValue::Comp(v) => BigUint::from_bytes_le(v),
+                            WaveDataValue::Raw(_) => BigUint::zero(),
+                        };
+                        let rate = (rect.bottom() - rect.top())
+                            / (max_value.clone() - min_value.clone()).to_f32().unwrap();
+                        let y_now =
+                            rate * (max_value.clone() - value_now).to_f32().unwrap() + rect.top();
+                        let y_next =
+                            rate * (max_value.clone() - value_next).to_f32().unwrap() + rect.top();
+                        let step = true;
+                        let y_right = if step { y_now } else { y_next };
+                        painter.line_segment(
+                            [pos2(rect.left(), y_now), pos2(rect.right(), y_right)],
+                            (LINE_WIDTH, signal.color.clone()),
+                        );
+                        if step {
+                            painter.vline(
+                                rect.right(),
+                                RangeInclusive::new(y_now, y_next),
                                 (LINE_WIDTH, signal.color.clone()),
                             );
                         }
                     }
+                };
+                for item in paint_items {
+                    if let Some(item_now) = item_last_analog {
+                        let item_next = item;
+                        paint_analog(item_now, item_next);
+                    }
                     item_last_analog = Some(item)
+                }
+                // last analog value
+                if let Some(item_last_analog) = item_last_analog {
+                    paint_analog(
+                        item_last_analog,
+                        &WaveDataItem {
+                            timestamp: u64::min(info.range.1 + 1, self.range.1 as u64 + 1),
+                            ..WaveDataItem::default()
+                        },
+                    );
                 }
             }
         }
