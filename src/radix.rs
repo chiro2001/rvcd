@@ -80,7 +80,6 @@ pub fn radix_value_big_uint(vec: &[WireValue]) -> BigUint {
         bytes.push(byte);
     }
     // assert!(bytes.len() % 8 < 2);
-    bytes.reverse();
     BigUint::from_bytes_le(&bytes)
 }
 
