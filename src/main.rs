@@ -11,6 +11,7 @@ use tracing::info;
 use clap::Parser;
 #[cfg(not(target_arch = "wasm32"))]
 use rvcd::manager::{RvcdRpcMessage, MANAGER_PORT};
+use rvcd::manager::RvcdManagerMessage;
 #[cfg(not(target_arch = "wasm32"))]
 use rvcd::utils::sleep_ms;
 
@@ -55,6 +56,7 @@ async fn main() -> Result<()> {
     let (rpc_tx, rpc_rx) = mpsc::channel();
     let rpc_tx2 = rpc_tx.clone();
     let rpc_tx3 = rpc_tx.clone();
+    let (manager_tx, manager_rx) = mpsc::channel();
     let src = args.src.clone();
     let gui = async move {
         eframe::run_native(
@@ -65,6 +67,7 @@ async fn main() -> Result<()> {
                     cc,
                     rpc_rx,
                     rpc_tx2,
+                    manager_tx,
                     if src.is_empty() { None } else { Some(src) },
                 ))
             }),
@@ -90,6 +93,14 @@ async fn main() -> Result<()> {
             {
                 Ok(_) => {}
                 Err(_) => {}
+            }
+            match manager_rx.try_recv() {
+                Ok(msg) => {
+                    match msg {
+                        RvcdManagerMessage::Exit => break,
+                    }
+                },
+                _ => {},
             }
             sleep_ms(1000).await;
         }

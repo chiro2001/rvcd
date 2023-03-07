@@ -19,6 +19,7 @@ use rust_i18n::locale;
 use std::sync::mpsc;
 #[allow(unused_imports)]
 use tracing::{error, info, warn};
+use crate::manager::RvcdManagerMessage;
 
 #[derive(Debug)]
 pub enum RvcdAppMessage {
@@ -44,6 +45,9 @@ pub struct RvcdApp {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub rpc_rx: Option<mpsc::Receiver<RvcdRpcMessage>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    pub manager_tx: Option<mpsc::Sender<RvcdManagerMessage>>,
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     pub rpc_self_tx: Option<mpsc::Sender<RvcdRpcMessage>>,
@@ -73,6 +77,8 @@ impl Default for RvcdApp {
             #[cfg(not(target_arch = "wasm32"))]
             rpc_rx: None,
             #[cfg(not(target_arch = "wasm32"))]
+            manager_tx: None,
+            #[cfg(not(target_arch = "wasm32"))]
             rpc_self_tx: None,
             loop_tx: None,
             app_rx: None,
@@ -90,6 +96,7 @@ impl RvcdApp {
         cc: &eframe::CreationContext<'_>,
         #[cfg(not(target_arch = "wasm32"))] rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
         #[cfg(not(target_arch = "wasm32"))] rpc_tx: mpsc::Sender<RvcdRpcMessage>,
+        #[cfg(not(target_arch = "wasm32"))] manager_tx: mpsc::Sender<RvcdManagerMessage>,
         #[cfg(not(target_arch = "wasm32"))] default_source_dir: Option<String>,
     ) -> Self {
         // load chinese font
@@ -150,6 +157,7 @@ impl RvcdApp {
         {
             def.rpc_rx = Some(rpc_rx);
             def.rpc_self_tx = Some(rpc_tx);
+            def.manager_tx = Some(manager_tx);
         }
         let (tx, rx) = mpsc::channel();
         def.apps
@@ -670,5 +678,12 @@ impl eframe::App for RvcdApp {
         for app in &mut self.apps {
             app.on_exit();
         }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn on_close_event(&mut self) -> bool {
+        if let Some(tx) = &self.manager_tx {
+            tx.send(RvcdManagerMessage::Exit).unwrap();
+        }
+        true
     }
 }

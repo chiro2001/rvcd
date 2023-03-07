@@ -24,6 +24,12 @@ pub enum RvcdRpcMessage {
 }
 unsafe impl Send for RvcdRpcMessage {}
 
+#[derive(Clone, Debug)]
+pub enum RvcdManagerMessage {
+    Exit,
+}
+unsafe impl Send for RvcdManagerMessage {}
+
 #[derive(Debug)]
 pub struct RvcdManager {
     pub managed_files: Mutex<HashMap<u32, (String, Vec<String>, Instant)>>,
