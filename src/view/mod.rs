@@ -104,7 +104,7 @@ impl Default for WaveView {
             default_radix: Radix::Hex,
             tx: None,
             cursors: vec![],
-            marker: WaveCursor::from_string(-1, "Main Cursor"),
+            marker: WaveCursor::from_string(-1, t!("view.cursor_main").as_str()),
             marker_temp: WaveCursor::from_string(-2, ""),
             spans: vec![],
             dragging_cursor_id: None,

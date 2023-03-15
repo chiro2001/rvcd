@@ -103,7 +103,7 @@ impl WaveView {
         // pop up cursor menu
         response.context_menu(|ui| {
             ui.add_enabled_ui(self.right_click_time_bar_pos.is_some(), |ui| {
-                if ui.button("Add cursor").clicked() {
+                if ui.button(t!("view.time.cursor_add")).clicked() {
                     let pos_new = self.x_to_pos(self.right_click_time_bar_pos.unwrap().x - offset);
                     self.cursors
                         .push(WaveCursor::new(self.next_cursor_id(), pos_new));
@@ -113,7 +113,7 @@ impl WaveView {
             if let Some(right_click_pos) = self.right_click_time_bar_pos {
                 if let Some(id) = self.find_cursor(right_click_pos.x - offset) {
                     if id >= 0 {
-                        if ui.button("Remove cursor").clicked() {
+                        if ui.button(t!("view.time.cursor_remove")).clicked() {
                             if let Some(index) = self.cursors.iter().position(|x| x.id == id) {
                                 self.cursors.remove(index);
                             }
@@ -125,9 +125,9 @@ impl WaveView {
                     } {
                         if ui
                             .button(if cursor.valid {
-                                "Disable cursor"
+                                t!("view.time.cursor_disable")
                             } else {
-                                "Enable cursor"
+                                t!("view.time.cursor_enable")
                             })
                             .clicked()
                         {
@@ -140,16 +140,16 @@ impl WaveView {
                         let cursor_id = cursor.id;
                         let cursor_name = cursor.name.to_string();
                         if cursor.valid {
-                            if ui.button("Disable cursor").clicked() {
+                            if ui.button(t!("view.time.cursor_disable")).clicked() {
                                 cursor.valid = false;
                                 ui.close_menu();
                             }
-                        } else if ui.button("Enable cursor").clicked() {
+                        } else if ui.button(t!("view.time.cursor_enable")).clicked() {
                             cursor.valid = true;
                             ui.close_menu();
                         }
                         let mut linked_cursors = vec![];
-                        ui.menu_button("Spans", |ui| {
+                        ui.menu_button(t!("view.time.spans"), |ui| {
                             let mut span_to_remove = None;
                             for span in self
                                 .spans
@@ -206,7 +206,7 @@ impl WaveView {
                                     self.spans.iter().copied().filter(|x| *x != span).collect();
                                 self.spans = spans_new;
                             }
-                            if ui.button("Remove all relative spans").clicked() {
+                            if ui.button(t!("view.time.spans_remove_all_relative")).clicked() {
                                 let spans_new = self
                                     .spans
                                     .iter()
@@ -223,7 +223,7 @@ impl WaveView {
                     }
                 }
             }
-            if ui.button("Remove all cursor").clicked() {
+            if ui.button(t!("view.time.cursor_remove_all")).clicked() {
                 self.cursors.clear();
                 self.marker.valid = false;
                 self.marker_temp.valid = false;

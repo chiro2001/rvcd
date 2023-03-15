@@ -7,11 +7,11 @@ use crate::view::{
     WAVE_MARGIN_TOP2, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
 };
 use crate::wave::{Wave, WaveInfo};
-use egui::*;
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
 use std::usize;
+use egui::{Align, Align2, CentralPanel, Color32, Direction, DragValue, Event, FontId, Layout, PointerButton, Pos2, pos2, Rect, Response, Sense, TopBottomPanel, Ui, vec2, Widget};
 use tracing::{debug, warn};
 
 #[derive(Default, Debug, Clone)]
@@ -136,13 +136,13 @@ impl WaveView {
     /// Paint toolbar above wave panel
     pub fn toolbar(&mut self, ui: &mut Ui, info: &WaveInfo) {
         ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-            if ui.button("⛔ Clear").clicked() {
+            if ui.button(t!("view.toolbar.clear")).clicked() {
                 self.signals.clear();
             }
-            if ui.button("↩ Reset View").clicked() {
+            if ui.button(t!("view.toolbar.reset")).clicked() {
                 self.range = (info.range.0 as f32, info.range.1 as f32);
             }
-            if ui.button("🔄 Reload File").clicked() {
+            if ui.button(t!("view.toolbar.reload")).clicked() {
                 if let Some(tx) = &self.tx {
                     debug!("reload msg sent");
                     tx.send(RvcdMsg::Reload).unwrap();
@@ -151,7 +151,7 @@ impl WaveView {
                 }
             }
             const EDIT_WIDTH: f32 = 100.0;
-            ui.label("From:");
+            ui.label(t!("view.toolbar.from"));
             let speed_min = 0.1;
             let old_range = self.range;
             let drag_value = DragValue::new(&mut self.range.0)
@@ -163,7 +163,7 @@ impl WaveView {
                 drag_value.clamp_range((-(info.range.1 as f32) * ZOOM_SIZE_MAX_SCALE)..=range_right)
             };
             drag_value.ui(ui);
-            ui.label("To:");
+            ui.label(t!("view.toolbar.to"));
             DragValue::new(&mut self.range.1)
                 .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min))
                 .clamp_range(
@@ -333,13 +333,16 @@ impl WaveView {
                 table
                     .header(SIGNAL_HEIGHT_DEFAULT, |mut header| {
                         header.col(|ui| {
-                            ui.strong(format!(
-                                "Time #{}~#{} {}{}",
-                                info.range.0, info.range.1, info.timescale.0, info.timescale.1
+                            ui.strong(t!(
+                                "view.time_label",
+                                left = info.range.0.to_string().as_str(),
+                                right = info.range.1.to_string().as_str(),
+                                timescale = info.timescale.0.to_string().as_str(),
+                                timescale_unit = info.timescale.1.to_string().as_str()
                             ));
                         });
                         header.col(|ui| {
-                            ui.strong("value");
+                            ui.strong(t!("view.value"));
                         });
                         header.col(|ui| {
                             self.time_bar(ui, info, wave_left);

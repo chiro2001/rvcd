@@ -1,9 +1,9 @@
+use egui::{Align2, Color32, pos2, Rect, Ui, vec2};
 use crate::utils::get_text_size;
 use crate::view::{
     WaveView, CURSOR_NEAREST, LINE_WIDTH, TEXT_BG_MULTIPLY, WAVE_MARGIN_TOP, WAVE_MARGIN_TOP2,
 };
 use crate::wave::WaveInfo;
-use egui::*;
 
 #[derive(
     serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default, Ord, PartialOrd, Eq,
@@ -20,7 +20,7 @@ impl WaveCursor {
         Self {
             id,
             pos,
-            name: format!("Cursor{id}"),
+            name: t!("view.cursor", id = id.to_string().as_str()),
             valid: true,
         }
     }

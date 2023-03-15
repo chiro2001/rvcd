@@ -69,10 +69,10 @@ impl CodeEditor {
             CodeEditorState::FileOpenFailed => {
                 ui.horizontal_centered(|ui| {
                     ui.add(Label::new(
-                        RichText::new(format!("无法打开文件 {}", self.file.as_str()))
+                        RichText::new(t!("editor.open_file_failed", file = self.file.as_str()))
                             .color(ui.visuals().warn_fg_color),
                     ));
-                    if ui.button("刷新").clicked() {
+                    if ui.button(t!("editor.refresh")).clicked() {
                         self.state = CodeEditorState::FirstLoad;
                     }
                 });

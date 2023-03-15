@@ -66,11 +66,11 @@ impl TreeView {
             let mut add_all = false;
             let mut recurse_add_all = false;
             response.context_menu(|ui| {
-                if ui.button("Add all").clicked() {
+                if ui.button(t!("sst.signal.add_all")).clicked() {
                     add_all = true;
                     ui.close_menu();
                 }
-                if ui.button("Recurse add all").clicked() {
+                if ui.button(t!("sst.signal.recursive_add_all")).clicked() {
                     recurse_add_all = true;
                     ui.close_menu();
                 }

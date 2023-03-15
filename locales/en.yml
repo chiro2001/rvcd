@@ -64,7 +64,40 @@ view:
   use_top_margin: Wave Panel Top Margin
   round_pointer: Round Pointer
   value_font_size: Value Font Size
+  cursor: "Cursor%{id}"
+  cursor_main: Main Cursor
+  remove: Remove
+  height: "Height: "
+  color: Color
+  mode:
+    prefix: "Mode: %{mode}"
+    default: Default
+    number: Number
+    analog: Analog
+  to_source: To Source
+  time:
+    cursor_add: Add cursor
+    cursor_remove: Remove cursor
+    cursor_disable: Disable cursor
+    cursor_enable: Enable cursor
+    spans: Spans
+    spans_remove_all_relative: Remove all relative spans
+    cursor_remove_all: Remove all cursor
+  toolbar:
+    clear: ⛔ Clear
+    reset: ↩ Reset View
+    reload: 🔄 Reload File
+    from: "From:"
+    to: "To:"
+  time_label: "Time #%{left}~#%{right} %{timescale}%{timescale_unit}"
+  value: value
 sst:
   show_leaves: Show Tree Leaves
   show_tail_leaves: Show Tail Leaves
   show_modules_only: Show Modules Only
+  signal:
+    add_all: Add all signals
+    recursive_add_all: Recursive add all signals
+editor:
+  open_file_failed: "Failed to open file %{file}"
+  refresh: Refresh

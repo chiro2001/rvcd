@@ -64,7 +64,40 @@ view:
   use_top_margin: Wave Panel Top Margin
   round_pointer: 四舍五入指针位置
   value_font_size: 数值文本大小
+  cursor: "游标%{id}"
+  cursor_main: 主游标
+  remove: 移除
+  height: "高度: "
+  color: 颜色
+  mode:
+    prefix: "模式: %{mode}"
+    default: 默认
+    number: 数值
+    analog: 模拟
+  to_source: 跳转到源码
+  time:
+    cursor_add: 添加游标
+    cursor_remove: 移除游标
+    cursor_disable: 禁用此游标
+    cursor_enable: 启用此游标
+    spans: 区间
+    spans_remove_all_relative: 移除所有相关区间
+    cursor_remove_all: 移除所有游标
+  toolbar:
+    clear: ⛔ 清除信号
+    reset: ↩ 重置视图
+    reload: 🔄 重新载入文件
+    from: "从:"
+    to: "到:"
+  time_label: "时间 #%{left}~#%{right} %{timescale}%{timescale_unit}"
+  value: 值
 sst:
   show_leaves: 树中显示信号
   show_tail_leaves: 树中显示末尾叶子信号
   show_modules_only: 只显示模块类型
+  signal:
+    add_all: 添加所有信号
+    recursive_add_all: 递归地添加所有信号
+editor:
+  open_file_failed: "无法打开文件 %{file}"
+  refresh: 刷新

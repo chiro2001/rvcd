@@ -6,12 +6,12 @@ use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
 };
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
-use egui::*;
 use num_bigint::BigUint;
 use num_traits::{One, ToPrimitive, Zero};
 use once_cell::sync::Lazy;
 use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
+use egui::{Align, Align2, Color32, color_picker, DragValue, FontId, Label, Layout, pos2, Rect, Response, Sense, Ui, vec2, Widget};
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
@@ -563,12 +563,12 @@ impl WaveView {
                 let response = ui.add(Label::new(text).wrap(false).sense(Sense::click_and_drag()));
                 // TODO: drag signal order
                 response.context_menu(|ui| {
-                    if ui.button("Remove").clicked() {
+                    if ui.button(t!("view.remove")).clicked() {
                         to_remove = true;
                         ui.close_menu();
                     }
                     ui.horizontal(|ui| {
-                        ui.label("Height: ");
+                        ui.label(t!("view.height"));
                         DragValue::new(&mut signal_new.height)
                             .clamp_range(
                                 (SIGNAL_HEIGHT_DEFAULT / 2.0)..=(SIGNAL_HEIGHT_DEFAULT * 4.0),
@@ -577,19 +577,19 @@ impl WaveView {
                             .suffix("px")
                             .ui(ui);
                     });
-                    ui.menu_button("Color", |ui| {
+                    ui.menu_button(t!("view.color"), |ui| {
                         color_picker::color_picker_color32(
                             ui,
                             &mut signal_new.color,
                             color_picker::Alpha::Opaque,
                         );
                     });
-                    ui.menu_button(format!("Mode: {}", signal.mode), |ui| {
-                        if ui.button("Default").clicked() {
+                    ui.menu_button(t!("view.mode.prefix", mode = signal.mode.to_string().as_str()), |ui| {
+                        if ui.button(t!("view.default")).clicked() {
                             signal_new.mode = SignalViewMode::Default;
                             ui.close_menu();
                         }
-                        ui.menu_button("Number", |ui| {
+                        ui.menu_button(t!("view.number"), |ui| {
                             use Radix::*;
                             let data = [Hex, Oct, Dec, Bin];
                             data.into_iter().for_each(|r| {
@@ -599,7 +599,7 @@ impl WaveView {
                                 }
                             });
                         });
-                        ui.menu_button("Ananlog", |ui| {
+                        ui.menu_button(t!("view.analog"), |ui| {
                             let v = [AnalogDisplayType::Interpolated, AnalogDisplayType::Step];
                             for i in v {
                                 if ui.button(i.to_string()).clicked() {
@@ -610,7 +610,7 @@ impl WaveView {
                         });
                     });
                     if !self.sources.is_empty() {
-                        if ui.button("To Source").clicked() {
+                        if ui.button(t!("view.to_source")).clicked() {
                             let id = signal.s.id;
                             if let Some(path) = info.code_paths.get(&id) {
                                 let mut path = path.clone();
