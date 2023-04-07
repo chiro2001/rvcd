@@ -34,8 +34,10 @@ Options:
 3. Wave view operations
 
    1. `Shift+Mouse Scroll / TouchPad move left-right / Shift+TouchPad move up-down`: ⬅️ move view window ➡️
-   2. `Mouse Scroll / TouchPad move up-down`: ⬆️ move signal view⬇️
+   2. `Mouse Scroll / TouchPad move up-down`: ⬆️ move signal view ⬇️
    3. `Ctrl+Mouse Scroll / Ctrl+TouchPad move up-down`: zoom in/out
+   4. `Mouse middle drag` to move signal view vertically
+   5. `Mouse right drag` to select new view range
 
 4. Signal operations
 
