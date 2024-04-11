@@ -38,8 +38,8 @@ pub struct WaveView {
     pub id: usize,
     /// Signals added to viewer
     pub signals: Vec<SignalView>,
-    /// Viewer range, smaller or bigger than data range, TODO: change to float for zooming
-    pub range: (f32, f32),
+    /// Viewer range, smaller or bigger than data range
+    pub range: (f64, f64),
     /// Text alignment, FIXME: center position error
     pub align: SignalViewAlign,
     /// Whether to show background in signals
@@ -160,21 +160,23 @@ impl WaveView {
     /// Convert paint pos to wave position
     /// * `x`: x position to wave panel
     pub fn x_to_pos(&self, x: f32) -> u64 {
-        ((x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0) as u64
+        ((x as f64 * (self.range.1 - self.range.0) / self.wave_width as f64) + self.range.0) as u64
     }
     pub fn x_to_fpos(&self, x: f32) -> f32 {
-        (x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0
+        ((x as f64 * (self.range.1 - self.range.0) / self.wave_width as f64) + self.range.0) as f32
     }
     pub fn x_to_pos_delta(&self, x: f32) -> i64 {
-        ((x * (self.range.1 - self.range.0) / self.wave_width) + self.range.0) as i64
+        ((x as f64 * (self.range.1 - self.range.0) / self.wave_width as f64) + self.range.0) as i64
     }
     /// Convert wave position to paint pos
     /// * `pos`: wave position defined in wave info
     pub fn pos_to_x(&self, pos: u64) -> f32 {
-        (pos as f32 - self.range.0) * self.wave_width / (self.range.1 - self.range.0)
+        ((pos as f64 - self.range.0) * self.wave_width as f64 / (self.range.1 - self.range.0))
+            as f32
     }
     pub fn fpos_to_x(&self, pos: f32) -> f32 {
-        (pos - self.range.0) * self.wave_width / (self.range.1 - self.range.0)
+        ((pos as f64 - self.range.0) * self.wave_width as f64 / (self.range.1 - self.range.0))
+            as f32
     }
     /// Stringify wave position
     pub fn pos_to_time(&self, timescale: &(u64, WaveTimescaleUnit), pos: u64) -> String {

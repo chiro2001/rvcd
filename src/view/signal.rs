@@ -6,12 +6,15 @@ use crate::view::{
     WaveView, BG_MULTIPLY, LINE_WIDTH, MIN_SIGNAL_WIDTH, SIGNAL_HEIGHT_DEFAULT, TEXT_ROUND_OFFSET,
 };
 use crate::wave::{WaveDataItem, WaveDataValue, WaveInfo, WaveSignalInfo, WireValue};
+use egui::{
+    color_picker, pos2, vec2, Align, Align2, Color32, DragValue, FontId, Label, Layout, Rect,
+    Response, Sense, Ui, Widget,
+};
 use num_bigint::BigUint;
 use num_traits::{One, ToPrimitive, Zero};
 use once_cell::sync::Lazy;
 use std::fmt::{Display, Formatter};
 use std::ops::RangeInclusive;
-use egui::{Align, Align2, Color32, color_picker, DragValue, FontId, Label, Layout, pos2, Rect, Response, Sense, Ui, vec2, Widget};
 use tracing::info;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, Default)]
@@ -104,7 +107,7 @@ impl WaveView {
         let text_color = ui.visuals().strong_text_color();
         let signal_rect_raw = response.rect;
         // strange but works...
-        let wave_range_start_x = self.fpos_to_x(self.range.0 * 2.0);
+        let wave_range_start_x = self.fpos_to_x(self.range.0 as f32 * 2.0);
         let signal_rect = Rect::from_min_max(
             signal_rect_raw.min - vec2(wave_range_start_x, 0.0),
             signal_rect_raw.max - vec2(wave_range_start_x, 0.0),
@@ -144,9 +147,9 @@ impl WaveView {
             let width = signal_rect.width();
             let height = signal_rect.height();
             let percent_rect_left =
-                (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
-            let percent_rect_right =
-                (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                ((item_now.timestamp - info.range.0) as f64 / (self.range.1 - self.range.0)) as f32;
+            let percent_rect_right = ((item_next.timestamp - info.range.0) as f64
+                / (self.range.1 - self.range.0)) as f32;
             let rect = Rect::from_min_max(
                 pos2(
                     signal_rect.left() + width * percent_rect_left,
@@ -445,8 +448,8 @@ impl WaveView {
                 painter.rect(
                     Rect::from_x_y_ranges(
                         RangeInclusive::new(
-                            self.fpos_to_x(self.range.0),
-                            self.fpos_to_x(self.range.1),
+                            self.fpos_to_x(self.range.0 as f32),
+                            self.fpos_to_x(self.range.1 as f32),
                         ),
                         signal_rect_raw.y_range(),
                     ),
@@ -458,10 +461,12 @@ impl WaveView {
                 let paint_analog = |item_now: &WaveDataItem, item_next: &WaveDataItem| {
                     let width = signal_rect.width();
                     let height = signal_rect.height();
-                    let percent_rect_left =
-                        (item_now.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
-                    let percent_rect_right =
-                        (item_next.timestamp - info.range.0) as f32 / (self.range.1 - self.range.0);
+                    let percent_rect_left = ((item_now.timestamp - info.range.0) as f64
+                        / (self.range.1 - self.range.0))
+                        as f32;
+                    let percent_rect_right = ((item_next.timestamp - info.range.0) as f64
+                        / (self.range.1 - self.range.0))
+                        as f32;
                     let rect = Rect::from_min_max(
                         pos2(
                             signal_rect.left() + width * percent_rect_left,
@@ -584,31 +589,34 @@ impl WaveView {
                             color_picker::Alpha::Opaque,
                         );
                     });
-                    ui.menu_button(t!("view.mode.prefix", mode = signal.mode.to_string().as_str()), |ui| {
-                        if ui.button(t!("view.default")).clicked() {
-                            signal_new.mode = SignalViewMode::Default;
-                            ui.close_menu();
-                        }
-                        ui.menu_button(t!("view.number"), |ui| {
-                            use Radix::*;
-                            let data = [Hex, Oct, Dec, Bin];
-                            data.into_iter().for_each(|r| {
-                                if ui.button(format!("{r:?}")).clicked() {
-                                    signal_new.mode = SignalViewMode::Number(r);
-                                    ui.close_menu();
+                    ui.menu_button(
+                        t!("view.mode.prefix", mode = signal.mode.to_string().as_str()),
+                        |ui| {
+                            if ui.button(t!("view.default")).clicked() {
+                                signal_new.mode = SignalViewMode::Default;
+                                ui.close_menu();
+                            }
+                            ui.menu_button(t!("view.number"), |ui| {
+                                use Radix::*;
+                                let data = [Hex, Oct, Dec, Bin];
+                                data.into_iter().for_each(|r| {
+                                    if ui.button(format!("{r:?}")).clicked() {
+                                        signal_new.mode = SignalViewMode::Number(r);
+                                        ui.close_menu();
+                                    }
+                                });
+                            });
+                            ui.menu_button(t!("view.analog"), |ui| {
+                                let v = [AnalogDisplayType::Interpolated, AnalogDisplayType::Step];
+                                for i in v {
+                                    if ui.button(i.to_string()).clicked() {
+                                        signal_new.mode = SignalViewMode::Analog(i);
+                                        ui.close_menu();
+                                    }
                                 }
                             });
-                        });
-                        ui.menu_button(t!("view.analog"), |ui| {
-                            let v = [AnalogDisplayType::Interpolated, AnalogDisplayType::Step];
-                            for i in v {
-                                if ui.button(i.to_string()).clicked() {
-                                    signal_new.mode = SignalViewMode::Analog(i);
-                                    ui.close_menu();
-                                }
-                            }
-                        });
-                    });
+                        },
+                    );
                     if !self.sources.is_empty() {
                         if ui.button(t!("view.to_source")).clicked() {
                             let id = signal.s.id;

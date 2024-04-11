@@ -205,7 +205,7 @@ impl TreeView {
             match tree.data() {
                 WaveTreeNode::WaveRoot => tree
                     .iter()
-                    .map(|child| self.ui(ui, child, search_text.clone(), is_regex))
+                    .map(|child| self.ui(ui, child, search_text, is_regex))
                     .find(|a| *a != TreeAction::None)
                     .unwrap_or(TreeAction::None),
                 data => {
@@ -213,7 +213,7 @@ impl TreeView {
                         .default_open(true)
                         .show(ui, |ui| {
                             tree.iter()
-                                .map(|child| self.ui(ui, child, search_text.clone(), is_regex))
+                                .map(|child| self.ui(ui, child, search_text, is_regex))
                                 .find(|a| *a != TreeAction::None)
                         });
                     if scope.header_response.clicked_by(PointerButton::Primary) {

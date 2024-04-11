@@ -7,11 +7,14 @@ use crate::view::{
     WAVE_MARGIN_TOP2, ZOOM_SIZE_MAX_SCALE, ZOOM_SIZE_MIN,
 };
 use crate::wave::{Wave, WaveInfo};
+use egui::{
+    pos2, vec2, Align, Align2, CentralPanel, Color32, Direction, DragValue, Event, FontId, Layout,
+    PointerButton, Pos2, Rect, Response, Sense, TopBottomPanel, Ui, Widget,
+};
 use egui_extras::{Column, TableBuilder};
 use num_traits::Float;
 use std::ops::RangeInclusive;
 use std::usize;
-use egui::{Align, Align2, CentralPanel, Color32, Direction, DragValue, Event, FontId, Layout, PointerButton, Pos2, pos2, Rect, Response, Sense, TopBottomPanel, Ui, vec2, Widget};
 use tracing::{debug, warn};
 
 #[derive(Default, Debug, Clone)]
@@ -52,10 +55,10 @@ impl ResponsePointerState {
 #[derive(Default, Debug)]
 pub struct ResponseHandleState {
     pub pointer: ResponsePointerState,
-    pub new_range: (f32, f32),
+    pub new_range: (f64, f64),
 }
 impl ResponseHandleState {
-    pub fn new(old_range: (f32, f32)) -> Self {
+    pub fn new(old_range: (f64, f64)) -> Self {
         Self {
             new_range: old_range,
             ..Default::default()
@@ -140,7 +143,7 @@ impl WaveView {
                 self.signals.clear();
             }
             if ui.button(t!("view.toolbar.reset")).clicked() {
-                self.range = (info.range.0 as f32, info.range.1 as f32);
+                self.range = (info.range.0 as f64, info.range.1 as f64);
             }
             if ui.button(t!("view.toolbar.reload")).clicked() {
                 if let Some(tx) = &self.tx {
@@ -154,9 +157,11 @@ impl WaveView {
             ui.label(t!("view.toolbar.from"));
             let speed_min = 0.1;
             let old_range = self.range;
-            let drag_value = DragValue::new(&mut self.range.0)
-                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min));
-            let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1);
+            let drag_value = DragValue::new(&mut self.range.0).speed(f32::max(
+                (old_range.1 - old_range.0) as f32 / 100.0,
+                speed_min,
+            ));
+            let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1 as f32);
             let drag_value = if self.limit_range_left {
                 drag_value.clamp_range(0.0..=range_right)
             } else {
@@ -165,9 +170,13 @@ impl WaveView {
             drag_value.ui(ui);
             ui.label(t!("view.toolbar.to"));
             DragValue::new(&mut self.range.1)
-                .speed(f32::max((old_range.1 - old_range.0) / 100.0, speed_min))
+                .speed(f32::max(
+                    (old_range.1 - old_range.0) as f32 / 100.0,
+                    speed_min,
+                ))
                 .clamp_range(
-                    (old_range.0 + ZOOM_SIZE_MIN)..=(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE),
+                    (old_range.0 as f32 + ZOOM_SIZE_MIN)
+                        ..=(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE),
                 )
                 .ui(ui);
         });
@@ -181,7 +190,7 @@ impl WaveView {
         response: &Response,
         wave_left: f32,
         info: &WaveInfo,
-        old_range: (f32, f32),
+        old_range: (f64, f64),
     ) -> ResponseHandleState {
         let mut state = ResponseHandleState::new(old_range);
         // catch mouse wheel events
@@ -205,17 +214,18 @@ impl WaveView {
                     _ => None,
                 });
             if let Some(zoom) = zoom {
-                let zoom = 1.0 / zoom;
+                let zoom = 1.0 / zoom as f64;
                 if let Some(pos) = response.hover_pos() {
                     let painter = ui.painter();
                     let pos = pos2(pos.x - wave_left, pos.y);
                     // zoom from this pos
-                    let center_pos = (pos.x * (self.range.1 - self.range.0) / self.wave_width
+                    let center_pos = (pos.x as f64 * (self.range.1 - self.range.0)
+                        / self.wave_width as f64
                         + self.range.0)
-                        .clamp(info.range.0 as f32, info.range.1 as f32);
+                        .clamp(info.range.0 as f64, info.range.1 as f64);
                     painter.debug_rect(
                         Rect::from_center_size(
-                            pos2(self.fpos_to_x(center_pos) + wave_left, pos.y),
+                            pos2(self.fpos_to_x(center_pos as f32) + wave_left, pos.y),
                             vec2(4.0, 4.0),
                         ),
                         Color32::RED,
@@ -225,8 +235,8 @@ impl WaveView {
                     let right = (self.range.1 - center_pos) * zoom;
                     let new_range_check = (center_pos - left, center_pos + right);
                     let d = new_range_check.1 - new_range_check.0;
-                    if d > ZOOM_SIZE_MIN
-                        && d < ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32
+                    if d > ZOOM_SIZE_MIN as f64
+                        && d < ZOOM_SIZE_MAX_SCALE as f64 * (info.range.1 - info.range.0) as f64
                     {
                         state.new_range = new_range_check;
                     }
@@ -244,7 +254,7 @@ impl WaveView {
     pub fn panel(&mut self, ui: &mut Ui, wave: &Wave) {
         let info: &WaveInfo = &wave.info;
         if self.range.0 == 0.0 && self.range.1 == 0.0 {
-            self.range = (info.range.0 as f32, info.range.1 as f32);
+            self.range = (info.range.0 as f64, info.range.1 as f64);
         }
         TopBottomPanel::top(format!("wave_top_{}", self.id))
             .resizable(false)
@@ -357,9 +367,9 @@ impl WaveView {
                                 if let Some(signal) = signal {
                                     let highlight = self.highlight_signals.contains(&signal.s.id);
                                     row.col(|ui| {
-                                        if let Some(signal_new) =
-                                            self.ui_signal_label(signal, row_index, ui, &wave.info, highlight)
-                                        {
+                                        if let Some(signal_new) = self.ui_signal_label(
+                                            signal, row_index, ui, &wave.info, highlight,
+                                        ) {
                                             new_signals.push(signal_new);
                                         }
                                     });
@@ -373,7 +383,11 @@ impl WaveView {
                                             let value_font =
                                                 FontId::monospace(self.signal_font_size);
                                             if highlight {
-                                                painter.rect_filled(response.rect, 0.0, Color32::YELLOW.linear_multiply(BG_MULTIPLY));
+                                                painter.rect_filled(
+                                                    response.rect,
+                                                    0.0,
+                                                    Color32::YELLOW.linear_multiply(BG_MULTIPLY),
+                                                );
                                             }
                                             painter.text(
                                                 response.rect.left_center(),
@@ -504,7 +518,7 @@ impl WaveView {
                         } else {
                             (&self.marker_temp, &self.marker)
                         };
-                        let range_new = (a.pos as f32, b.pos as f32);
+                        let range_new = (a.pos as f64, b.pos as f64);
                         debug!("range_new: {:?}", range_new);
                         if range_new.1 - range_new.0 > 1.0 {
                             self.range = range_new;
@@ -557,8 +571,8 @@ impl WaveView {
             self.last_pointer_state = pointer_state;
         });
     }
-    pub fn move_horizontal(&self, dx: f32, info: &WaveInfo) -> (f32, f32) {
-        let pos_delta = self.x_to_fpos(dx) - self.range.0;
+    pub fn move_horizontal(&self, dx: f32, info: &WaveInfo) -> (f64, f64) {
+        let pos_delta = self.x_to_fpos(dx) as f64 - self.range.0;
         let new_range_check = (self.range.0 + pos_delta, self.range.1 + pos_delta);
         if new_range_check.0 < 0.0 {
             if self.limit_range_left {
@@ -567,7 +581,7 @@ impl WaveView {
                 new_range_check
             }
         } else {
-            let max_right = ZOOM_SIZE_MAX_SCALE * (info.range.1 - info.range.0) as f32;
+            let max_right = ZOOM_SIZE_MAX_SCALE as f64 * (info.range.1 - info.range.0) as f64;
             if new_range_check.1 > max_right {
                 (
                     max_right - (new_range_check.1 - new_range_check.0),

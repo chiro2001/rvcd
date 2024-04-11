@@ -30,7 +30,7 @@ impl WaveView {
         } else {
             (1, 1)
         };
-        while step as f32 * rect.width() / (self.range.1 - self.range.0) > 80.0 && step > 1 {
+        while step as f64 * rect.width() as f64 / (self.range.1 - self.range.0) > 80.0 && step > 1 {
             step /= 10;
             unit /= 10;
         }
@@ -206,7 +206,10 @@ impl WaveView {
                                     self.spans.iter().copied().filter(|x| *x != span).collect();
                                 self.spans = spans_new;
                             }
-                            if ui.button(t!("view.time.spans_remove_all_relative")).clicked() {
+                            if ui
+                                .button(t!("view.time.spans_remove_all_relative"))
+                                .clicked()
+                            {
                                 let spans_new = self
                                     .spans
                                     .iter()

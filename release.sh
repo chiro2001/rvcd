@@ -16,4 +16,4 @@ then
 fi
 # other asserts in release/ will also packed
 cd release/ && 7z a ../release.zip -r * && cd ..
-cd release/ && 7z a ../../scaleda/src/main/resources/bin/assets.zip -r * && cd ..
+cd release/ && 7z a ../../scaleda/scaleda-kernel/src/main/resources/bin/assets.zip -r * && cd ..
