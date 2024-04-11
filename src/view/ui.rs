@@ -153,7 +153,7 @@ impl WaveView {
                     warn!("no tx in view!");
                 }
             }
-            const EDIT_WIDTH: f32 = 100.0;
+            // const EDIT_WIDTH: f32 = 100.0;
             ui.label(t!("view.toolbar.from"));
             let speed_min = 0.1;
             let old_range = self.range;
