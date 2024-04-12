@@ -1,4 +1,5 @@
 #/bin/sh
+set -ex
 if [[ -v BUILD ]]
 then
   cargo build --release && \
@@ -6,7 +7,8 @@ then
   upx release/rvcd && \
   cargo build --release --target=x86_64-pc-windows-gnu && \
   cp target/x86_64-pc-windows-gnu/release/rvcd.exe release/ && \
-  upx release/rvcd.exe
+  upx release/rvcd.exe && \
+  upx release/surfer release/surfer.exe
 fi
 # trunk build --release && cp -r dist/ release/
 rm -rf release.zip

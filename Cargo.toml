@@ -1,6 +1,6 @@
 [package]
 name = "rvcd"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Chiro <Chiro2001@163.com>"]
 edition = "2021"
 rust-version = "1.65"
@@ -72,7 +72,7 @@ features = []
 
 
 [profile.release]
-opt-level = 2 # fast and small wasm
+opt-level = "z" # fast and small wasm
 strip = true  # Automatically strip symbols from the binary.
 lto = true
 

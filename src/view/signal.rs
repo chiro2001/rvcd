@@ -103,11 +103,7 @@ impl WaveView {
                 // } else {
                 //     items.skip(0)
                 // }
-                if index >= wave_data.len() && wave_data.len() > 0 {
-                    items.skip(wave_data.len() - 1)
-                } else {
-                    items.skip(index)
-                }
+                items.skip(index.min(wave_data.len() - 1))
             }
         };
         let text_color = ui.visuals().strong_text_color();
