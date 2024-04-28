@@ -14,7 +14,7 @@ pub enum RvcdMsg {
     FileOpenData(Arc<[u8]>),
     LoadingProgress(f32, usize),
     ParsingProgress(f32, u64),
-    FileOpenFailed,
+    FileOpenFailed(String),
     Reload,
     UpdateWave(Wave),
     Notification(Toast),
@@ -34,7 +34,7 @@ impl Debug for RvcdMsg {
         match &self {
             RvcdMsg::Notification(_toast) => write!(f, "RvcdMsg: Toast[...]"),
             RvcdMsg::FileOpen(file) => write!(f, "RvcdMsg: FileOpen({file:?})"),
-            RvcdMsg::FileOpenFailed => write!(f, "RvcdMsg: FileOpenFailed"),
+            RvcdMsg::FileOpenFailed(path) => write!(f, "RvcdMsg: FileOpenFailed {path}"),
             RvcdMsg::Reload => write!(f, "RvcdMsg: Reload"),
             RvcdMsg::UpdateWave(_) => write!(f, "RvcdMsg: UpdateWave"),
             RvcdMsg::FileOpenData(v) => write!(f, "RvcdMsg: FileOpenData({} bytes)", v.len()),

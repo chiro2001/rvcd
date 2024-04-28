@@ -161,14 +161,22 @@ impl Service {
                 } else {
                     #[cfg(not(target_arch = "wasm32"))]
                     if !file.path().to_str().unwrap().is_empty() {
-                        self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
+                        self.channel
+                            .tx
+                            .send(RvcdMsg::FileOpenFailed(
+                                file.path().to_str().unwrap_or("").to_string(),
+                            ))
+                            .unwrap();
                     }
                 }
             }
             RvcdMsg::FileOpenData(data) => {
                 // TODO: reduce this data clone
                 if !self.parse_data_send(data.to_vec()) {
-                    self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
+                    self.channel
+                        .tx
+                        .send(RvcdMsg::FileOpenFailed("".to_string()))
+                        .unwrap();
                 }
             }
             RvcdMsg::FileLoadCancel => {
@@ -183,7 +191,10 @@ impl Service {
                 *self.loading.lock().unwrap() = false;
                 info!("start parsing data");
                 if !self.parse_data_send(data) {
-                    self.channel.tx.send(RvcdMsg::FileOpenFailed).unwrap();
+                    self.channel
+                        .tx
+                        .send(RvcdMsg::FileOpenFailed("".to_string()))
+                        .unwrap();
                 }
                 info!("stop parsing data");
             }

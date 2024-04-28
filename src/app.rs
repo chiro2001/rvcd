@@ -8,7 +8,9 @@ use crate::manager::RvcdRpcMessage;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::verilog::VerilogGotoSource;
-use crate::{available_locales, Rvcd};
+// use crate::{available_locales, Rvcd};
+use crate::manager::RvcdManagerMessage;
+use crate::Rvcd;
 use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
@@ -19,7 +21,6 @@ use rust_i18n::locale;
 use std::sync::mpsc;
 #[allow(unused_imports)]
 use tracing::{error, info, warn};
-use crate::manager::RvcdManagerMessage;
 
 #[derive(Debug)]
 pub enum RvcdAppMessage {
@@ -182,12 +183,15 @@ impl RvcdApp {
         } else {
             self.frame_history.ui(ui);
         }
-        let mut debug_on_hover = ui.ctx().debug_on_hover();
-        ui.checkbox(
-            &mut debug_on_hover,
-            format!("🐛 {}", t!("debug.debug_mode")),
-        );
-        ui.ctx().set_debug_on_hover(debug_on_hover);
+        #[cfg(debug_assertions)]
+        {
+            let mut debug_on_hover = ui.ctx().debug_on_hover();
+            ui.checkbox(
+                &mut debug_on_hover,
+                format!("🐛 {}", t!("debug.debug_mode")),
+            );
+            ui.ctx().set_debug_on_hover(debug_on_hover);
+        }
         ui.horizontal(|ui| {
             if let Some(id) = self.app_now_id {
                 if ui.button(t!("debug.reset_this_rvcd")).clicked() {
@@ -351,11 +355,11 @@ impl eframe::App for RvcdApp {
             egui::menu::bar(ui, |ui| {
                 if let Some(id) = self.app_now_id {
                     if let Some(app) = self.apps.iter_mut().find(|app| app.id == id) {
-                        app.menubar(ui, frame, true);
+                        app.menubar(ui, true);
                     }
                 }
                 ui.menu_button("Language", |ui| {
-                    let locales = available_locales();
+                    let locales = rust_i18n::available_locales!();
                     let locale_now = locale();
                     let mut set_locale = |source: bool, locale: &str| {
                         let mut source = source;
@@ -366,7 +370,7 @@ impl eframe::App for RvcdApp {
                         }
                     };
                     for locale in locales {
-                        set_locale(locale.to_string() == locale_now, locale);
+                        set_locale(locale.to_string() == locale_now.to_string(), locale);
                     }
                 });
                 ui.menu_button("Editor", |ui| {
@@ -383,7 +387,7 @@ impl eframe::App for RvcdApp {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     #[cfg(not(target_arch = "wasm32"))]
                     if ui.button(t!("menu.quit")).clicked() {
-                        frame.close();
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                     ui.add_enabled_ui(self.apps.len() > 0, |ui| {
                         if ui.button(t!("menu.close_all")).clicked() {
@@ -424,7 +428,7 @@ impl eframe::App for RvcdApp {
             });
         }
         let app_now_id = self.app_now_id;
-        let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context, frame: &mut Frame| {
+        let mut show_app_in_window = |app: &mut Rvcd, ctx: &egui::Context| {
             let open_app = self.open_apps.iter_mut().find(|x| x.0 == app.id);
             if let Some((id, open)) = open_app {
                 Window::new(app.title())
@@ -435,7 +439,7 @@ impl eframe::App for RvcdApp {
                     .id(Id::new(*id))
                     .title_bar(true)
                     .show(ctx, |ui| {
-                        app.update(ui, frame, self.sst_enabled, false, || {
+                        app.update(ui, self.sst_enabled, false, || {
                             self.app_now_id = Some(*id)
                         });
                     });
@@ -445,19 +449,19 @@ impl eframe::App for RvcdApp {
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
                 CentralPanel::default().show(ctx, |ui| {
-                    app.update(ui, frame, self.sst_enabled, true, || {
+                    app.update(ui, self.sst_enabled, true, || {
                         will_minimum_this = true;
                     });
                 });
                 for app in &mut self.apps {
                     if id != app.id {
-                        show_app_in_window(app, ctx, frame);
+                        show_app_in_window(app, ctx);
                     }
                 }
             }
         } else {
             for app in &mut self.apps {
-                show_app_in_window(app, ctx, frame);
+                show_app_in_window(app, ctx);
             }
         }
         if will_minimum_this {
@@ -675,16 +679,12 @@ impl eframe::App for RvcdApp {
 
     fn on_exit(&mut self, _gl: Option<&Context>) {
         // self.close_all();
+        if let Some(tx) = &self.manager_tx {
+            tx.send(RvcdManagerMessage::Exit).unwrap();
+        }
         // close all but save data
         for app in &mut self.apps {
             app.on_exit();
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn on_close_event(&mut self) -> bool {
-        if let Some(tx) = &self.manager_tx {
-            tx.send(RvcdManagerMessage::Exit).unwrap();
-        }
-        true
     }
 }

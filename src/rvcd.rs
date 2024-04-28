@@ -19,13 +19,14 @@ use crate::view::signal::SignalView;
 use crate::view::{WaveView, SIGNAL_LEAF_HEIGHT_DEFAULT};
 use crate::wave::{Wave, WaveSignalInfo, WaveTreeNode};
 use eframe::emath::Align;
+use egui::WidgetText;
 #[allow(unused_imports)]
 use egui::{
     vec2, Align2, Color32, Direction, DroppedFile, Id, Label, Layout, ProgressBar, RichText,
     ScrollArea, Sense, Ui, Widget,
 };
 use egui_extras::{Column, TableBuilder};
-use egui_toast::Toasts;
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use num_traits::Float;
 use regex::Regex;
 use rfd::FileHandle;
@@ -147,9 +148,8 @@ impl Default for Rvcd {
             signal_leaves: vec![],
             wave: None,
             view: Default::default(),
-            toasts: Toasts::new()
-                .direction(Direction::BottomUp)
-                .align_to_end(true),
+            toasts: Toasts::new().direction(Direction::BottomUp),
+            // .align_to_end(true),
             #[cfg(target_arch = "wasm32")]
             file: None,
             tree: Default::default(),
@@ -244,7 +244,6 @@ impl Rvcd {
     pub fn update<F>(
         &mut self,
         ui: &mut Ui,
-        frame: &mut eframe::Frame,
         sst_enabled: bool,
         maximize: bool,
         do_min_max: F,
@@ -255,7 +254,7 @@ impl Rvcd {
             egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
                 // The top panel is often a good place for a menu bar:
                 egui::menu::bar(ui, |ui| {
-                    self.menubar(ui, frame, maximize);
+                    self.menubar(ui, maximize);
                     if maximize {
                         if ui.button(t!("menu.minimize")).clicked() {
                             do_min_max();
@@ -371,7 +370,8 @@ impl Rvcd {
                             TableBuilder::new(ui).column(Column::auto()).body(|body| {
                                 body.heterogeneous_rows(
                                     (0..self.alternative_goto_sources.len()).map(|_| 40.0),
-                                    |index, mut row| {
+                                    |mut row| {
+                                        let index = row.index();
                                         if let Some(a) = self
                                             .alternative_goto_sources
                                             .get(index)
@@ -446,8 +446,8 @@ impl Rvcd {
             }
         }
 
-        self.toasts
-            .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
+        self.toasts.show(ctx);
+        // .show_with_anchor(ctx, ctx.available_rect().max - vec2(20.0, 10.0));
 
         // TODO: fix files drop
         // self.handle_dropping_file(ctx);
@@ -554,7 +554,8 @@ impl Rvcd {
                                 .map(|x| x.clone())
                                 .collect::<Vec<_>>()
                         };
-                        body.rows(text_height, signal_leaves.len(), |row_index, mut row| {
+                        body.rows(text_height, signal_leaves.len(), |mut row| {
+                            let row_index = row.index();
                             if let Some(signal) = signal_leaves.get(row_index) {
                                 let signal = signal.clone();
                                 let mut handle_draw_response = |ui: &mut Ui, text: String| {
@@ -683,11 +684,16 @@ impl Rvcd {
             RvcdMsg::Notification(toast) => {
                 self.toasts.add(toast);
             }
-            RvcdMsg::FileOpenFailed => {
-                let text = t!("msg.open_file_failed");
+            RvcdMsg::FileOpenFailed(path) => {
+                let text = t!("msg.open_file_failed", file = path);
                 #[cfg(not(target_arch = "wasm32"))]
                 {
-                    self.toasts.error(text, std::time::Duration::from_secs(5));
+                    // self.toasts.error(text, std::time::Duration::from_secs(5));
+                    self.toasts.add(Toast {
+                        kind: ToastKind::Error,
+                        text: WidgetText::RichText(RichText::new(text)),
+                        options: ToastOptions::default().duration_in_seconds(5.0),
+                    });
                 }
                 #[cfg(target_arch = "wasm32")]
                 {
@@ -745,10 +751,18 @@ impl Rvcd {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     info!("update self.source_dir to {}", _path);
-                    self.toasts.info(
-                        format!("update self.source_dir to {}", _path),
-                        std::time::Duration::from_secs(5),
-                    );
+                    // self.toasts.info(
+                    //     format!("update self.source_dir to {}", _path),
+                    //     std::time::Duration::from_secs(5),
+                    // );
+                    self.toasts.add(Toast {
+                        kind: ToastKind::Info,
+                        text: WidgetText::RichText(RichText::new(format!(
+                            "update self.source_dir to {}",
+                            _path
+                        ))),
+                        options: ToastOptions::default().duration_in_seconds(5.0),
+                    });
                     self.source_dir = _path;
                 }
             }
@@ -783,8 +797,14 @@ impl Rvcd {
                 }
             }
             RvcdMsg::GotNoSource => {
-                self.toasts
-                    .warning("找不到对应源文件", egui_toast::ToastOptions::default());
+                let text = t!("editor.open_file_failed", file = "");
+                // self.toasts
+                //     .warning(text, egui_toast::ToastOptions::default());
+                self.toasts.add(Toast {
+                    kind: ToastKind::Warning,
+                    text: WidgetText::RichText(RichText::new(text)),
+                    options: ToastOptions::default(),
+                });
             }
             RvcdMsg::SetGotoSignals(list) => {
                 let add_ids = list
@@ -882,14 +902,14 @@ impl Rvcd {
         self.view = self.view.reset();
         self.title = format!("Rvcd-{}", self.id);
     }
-    pub fn menubar(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame, _maximum: bool) {
+    pub fn menubar(&mut self, ui: &mut Ui, _maximum: bool) {
         egui::widgets::global_dark_light_mode_switch(ui);
         ui.menu_button(t!("menu.file"), |ui| {
             // #[cfg(not(target_arch = "wasm32"))]
             if ui.button(t!("menu.open")).clicked() {
                 if let Some(channel) = &self.channel {
                     let task = rfd::AsyncFileDialog::new()
-                        .add_filter(t!("menu.vcd_file").as_str(), &["vcd"])
+                        .add_filter(t!("menu.vcd_file"), &["vcd"])
                         .pick_file();
                     let sender = channel.tx.clone();
                     execute(async move {
@@ -933,7 +953,7 @@ impl Rvcd {
             });
             #[cfg(not(target_arch = "wasm32"))]
             if _maximum && ui.button(t!("menu.quit")).clicked() {
-                _frame.close();
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
         });
         self.view.menu(ui);
@@ -973,7 +993,9 @@ impl Rvcd {
                             .unwrap();
                     }
                 } else {
-                    self.message_handler(RvcdMsg::FileOpenFailed);
+                    self.message_handler(RvcdMsg::FileOpenFailed(
+                        path.clone().to_str().unwrap_or("").to_string(),
+                    ));
                 }
             }
         } else if let Some(data) = &dropped_file.bytes {

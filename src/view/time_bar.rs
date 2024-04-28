@@ -79,7 +79,7 @@ impl WaveView {
         }
         // handle operations to cursors
         // primary drag cursors
-        if response.drag_released() {
+        if response.drag_stopped {
             self.dragging_cursor_id = None;
         } else if response.dragged_by(PointerButton::Primary) {
             if let Some(id) = cursor_id {

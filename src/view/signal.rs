@@ -191,7 +191,7 @@ impl WaveView {
                     ignore_x_start = -1.0;
                     ignore_has_x = false;
                 }
-                let paint_x = || {
+                let paint_x = || -> () {
                     painter.rect(
                         rect,
                         0.0,
@@ -201,9 +201,11 @@ impl WaveView {
                             Color32::TRANSPARENT
                         },
                         (LINE_WIDTH, Color32::RED),
-                    )
+                    );
                 };
-                let paint_z = || painter.rect_stroke(rect, 0.0, (LINE_WIDTH, Color32::DARK_RED));
+                let paint_z = || -> () {
+                    painter.rect_stroke(rect, 0.0, (LINE_WIDTH, Color32::DARK_RED));
+                };
                 if single {
                     let value = match &item_now.value {
                         WaveDataValue::Comp(v) => match BigUint::from_bytes_le(v).is_one() {
@@ -410,7 +412,7 @@ impl WaveView {
                 } else {
                     signal.color.clone()
                 },
-            )
+            );
         }
         if is_analog {
             // draw analog

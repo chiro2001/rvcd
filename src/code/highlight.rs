@@ -28,7 +28,7 @@ pub fn code_view_ui(ui: &mut egui::Ui, code: &mut String, offset: Option<usize>)
     if let Some(offset) = offset {
         if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), text_edit_id) {
             let ccursor = egui::text::CCursor::new(offset);
-            state.set_ccursor_range(Some(egui::text::CCursorRange::one(ccursor)));
+            state.cursor.set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
             state.store(ui.ctx(), text_edit_id);
             ui.ctx().memory_mut(|mem| mem.request_focus(text_edit_id)); // give focus back to the [`TextEdit`].
         }
@@ -146,7 +146,7 @@ impl CodeTheme {
 
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_top(|ui| {
-            let selected_id = egui::Id::null();
+            let selected_id = egui::Id::NULL;
             let mut selected_tt: TokenType =
                 ui.data_mut(|d| *d.get_persisted_mut_or(selected_id, TokenType::Comment));
 

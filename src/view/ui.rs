@@ -31,7 +31,7 @@ impl ResponsePointerState {
     pub fn handle_pointer_response(&mut self, response: &Response, wave_left: f32) {
         if let Some(_pointer_pos) = response.interact_pointer_pos() {
             self.drag_started = response.drag_started();
-            self.drag_release = response.drag_released();
+            self.drag_release = response.drag_stopped;
             if response.dragged_by(PointerButton::Primary) {
                 self.drag_by_primary = true;
             }
@@ -361,7 +361,8 @@ impl WaveView {
                     .body(|body| {
                         body.heterogeneous_rows(
                             self.signals.iter().map(|x| x.height),
-                            |row_index, mut row| {
+                            |mut row| {
+                                let row_index = row.index();
                                 let signal = self.signals.get(row_index);
                                 last_paint_row_index = Some(row_index);
                                 if let Some(signal) = signal {

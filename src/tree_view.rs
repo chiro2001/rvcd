@@ -150,7 +150,7 @@ impl TreeView {
                                     response.rect,
                                     0.0,
                                     Color32::YELLOW.linear_multiply(BG_MULTIPLY),
-                                )
+                                );
                             }
                         }
                         if on_hover {
