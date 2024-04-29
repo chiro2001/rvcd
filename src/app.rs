@@ -19,10 +19,10 @@ use egui::{
     Window,
 };
 use rust_i18n::locale;
-use tracing::debug;
 use std::mem::MaybeUninit;
 use std::sync::{mpsc, Arc};
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 // use tokio::sync::Mutex as FrameMutex;
 use std::sync::Mutex as FrameMutex;
 #[allow(unused_imports)]
@@ -389,10 +389,52 @@ impl RvcdApp {
         }
         Ok(())
     }
+    #[cfg(target_os = "linux")]
+    pub async fn frame_buffer_unix_server(path: &str, tx: mpsc::Sender<RvcdRpcMessage>) {
+        // try to remove old socket
+        let _ = std::fs::remove_file(path);
+        loop {
+            let tx = tx.clone();
+            if let Err(e) = Self::frame_buffer_unix_server_internal(path, tx).await {
+                warn!("frame buffer unix server error: {:?}", e);
+                sleep_ms(1000).await;
+            } else {
+                break;
+            }
+        }
+    }
+    #[cfg(target_os = "linux")]
+    pub async fn frame_buffer_unix_server_internal(
+        path: &str,
+        tx: mpsc::Sender<RvcdRpcMessage>,
+    ) -> anyhow::Result<()> {
+        // 创建一个 TCP 监听器，绑定到本地地址并监听端口
+        let listener = tokio::net::UnixListener::bind(path)?;
+        info!("FB Server started on path {}", path);
+
+        let tx = tx.clone();
+        // 接受客户端连接并处理
+        while let Ok((mut socket, _)) = listener.accept().await {
+            let tx = tx.clone();
+            // 启动一个新的任务来处理连接
+            tokio::spawn(async move {
+                info!(
+                    "New FB unix client connected: {:?}",
+                    socket.peer_addr().unwrap()
+                );
+                // 处理连接
+                if let Err(e) = handle_connection(&mut socket, tx).await {
+                    error!("Error handling connection: {:?}", e);
+                }
+            });
+        }
+        Ok(())
+    }
 }
 
-async fn handle_connection(
-    socket: &mut tokio::net::TcpStream,
+async fn handle_connection<S: AsyncWriteExt + std::marker::Unpin>(
+    // socket: &mut tokio::net::TcpStream,
+    socket: &mut S,
     tx: mpsc::Sender<RvcdRpcMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
@@ -422,7 +464,7 @@ async fn handle_connection(
         } else {
             debug!("no frame data");
         }
-        sleep_ms(10).await;
+        sleep_ms(1).await;
     }
     // Ok(())
 }
@@ -646,6 +688,7 @@ impl eframe::App for RvcdApp {
                 }
             }
             let mut handled_app = vec![];
+            let mut frame_requested = false;
             for message in &messages {
                 match message {
                     RvcdRpcMessage::RequestFrame => {}
@@ -749,7 +792,10 @@ impl eframe::App for RvcdApp {
                         }
                     }
                     RvcdRpcMessage::RequestFrame => {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                        if !frame_requested {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                            frame_requested = true;
+                        }
                         // match self.frame.lock().unwrap().as_ref() {
                         //     Some(f) => {
                         //         if let Some(tx) = &self.manager_tx {

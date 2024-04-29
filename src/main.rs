@@ -64,6 +64,7 @@ async fn main() -> Result<()> {
     let rpc_tx2 = rpc_tx.clone();
     let rpc_tx3 = rpc_tx.clone();
     let rpc_tx4 = rpc_tx.clone();
+    let rpc_tx5 = rpc_tx.clone();
     let (manager_tx, manager_rx) = mpsc::channel();
     let (exit_tx, exit_rx) = mpsc::channel();
     let exit_tx2 = exit_tx.clone();
@@ -128,6 +129,11 @@ async fn main() -> Result<()> {
     tokio::spawn(RvcdApp::frame_buffer_tcp_server(
         rvcd::manager::DISP_PORT,
         rpc_tx4,
+    ));
+    #[cfg(target_os = "linux")]
+    tokio::spawn(RvcdApp::frame_buffer_unix_server(
+        rvcd::manager::UNIX_FB_PATH,
+        rpc_tx5,
     ));
     gui.await;
     Ok(())

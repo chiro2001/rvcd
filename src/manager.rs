@@ -16,6 +16,7 @@ use tracing::{info, trace, warn};
 
 pub const MANAGER_PORT: u16 = 5411;
 pub const DISP_PORT: u16 = 5444;
+pub const UNIX_FB_PATH: &str = "/tmp/rvcd.socket";
 
 #[derive(Clone, Debug)]
 pub enum RvcdRpcMessage {
