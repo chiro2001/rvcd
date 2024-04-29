@@ -74,6 +74,9 @@ view:
     default: 默认
     number: 数值
     analog: 模拟
+    analog_str:
+      interpolated: 拟合
+      step: 台阶
   to_source: 跳转到源码
   time:
     cursor_add: 添加游标

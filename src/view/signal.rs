@@ -596,11 +596,11 @@ impl WaveView {
                     ui.menu_button(
                         t!("view.mode.prefix", mode = signal.mode.to_string().as_str()),
                         |ui| {
-                            if ui.button(t!("view.default")).clicked() {
+                            if ui.button(t!("view.mode.default")).clicked() {
                                 signal_new.mode = SignalViewMode::Default;
                                 ui.close_menu();
                             }
-                            ui.menu_button(t!("view.number"), |ui| {
+                            ui.menu_button(t!("view.mode.number"), |ui| {
                                 use Radix::*;
                                 let data = [Hex, Oct, Dec, Bin];
                                 data.into_iter().for_each(|r| {
@@ -610,10 +610,13 @@ impl WaveView {
                                     }
                                 });
                             });
-                            ui.menu_button(t!("view.analog"), |ui| {
+                            ui.menu_button(t!("view.mode.analog"), |ui| {
                                 let v = [AnalogDisplayType::Interpolated, AnalogDisplayType::Step];
                                 for i in v {
-                                    if ui.button(i.to_string()).clicked() {
+                                    if ui.button(match i {
+                                        AnalogDisplayType::Interpolated => t!("view.mode.analog_str.interpolated"),
+                                        AnalogDisplayType::Step => t!("view.mode.analog_str.step"),
+                                    }).clicked() {
                                         signal_new.mode = SignalViewMode::Analog(i);
                                         ui.close_menu();
                                     }

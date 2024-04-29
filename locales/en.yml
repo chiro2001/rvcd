@@ -74,6 +74,9 @@ view:
     default: Default
     number: Number
     analog: Analog
+    analog_str:
+      interpolated: Interpolated
+      step: Step
   to_source: To Source
   time:
     cursor_add: Add cursor
