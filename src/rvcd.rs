@@ -241,13 +241,8 @@ impl Rvcd {
     pub fn set_upper_tx(&mut self, tx: mpsc::Sender<RvcdAppMessage>) {
         self.upper_tx = Some(tx);
     }
-    pub fn update<F>(
-        &mut self,
-        ui: &mut Ui,
-        sst_enabled: bool,
-        maximize: bool,
-        do_min_max: F,
-    ) where
+    pub fn update<F>(&mut self, ui: &mut Ui, sst_enabled: bool, maximize: bool, do_min_max: F)
+    where
         F: FnOnce(),
     {
         if !maximize {
@@ -870,6 +865,7 @@ impl Rvcd {
                     loop_self.send(RvcdMsg::UpdateSourceDir(path)).unwrap();
                 }
             }
+            RvcdRpcMessage::RequestFrame => {}
         }
         false
     }

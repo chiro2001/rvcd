@@ -3,8 +3,8 @@
 use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
 use crate::rpc::{
-    RvcdEmpty, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile, RvcdOpenFileWith,
-    RvcdRemoveClient, RvcdSignalPath,
+    RvcdEmpty, RvcdFrame, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile,
+    RvcdOpenFileWith, RvcdRemoveClient, RvcdSignalPath,
 };
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
@@ -21,25 +21,40 @@ pub enum RvcdRpcMessage {
     OpenWaveFile(String),
     OpenSourceFile(String),
     OpenSourceDir(String),
+    RequestFrame,
 }
 unsafe impl Send for RvcdRpcMessage {}
 
 #[derive(Clone, Debug)]
 pub enum RvcdManagerMessage {
-    Exit,
+    RecvFrame(RvcdFrame),
 }
 unsafe impl Send for RvcdManagerMessage {}
+
+#[derive(Clone, Debug)]
+pub enum RvcdExitMessage {
+    Exit,
+}
+unsafe impl Send for RvcdExitMessage {}
 
 #[derive(Debug)]
 pub struct RvcdManager {
     pub managed_files: Mutex<HashMap<u32, (String, Vec<String>, Instant)>>,
     pub tx: Arc<Mutex<mpsc::Sender<RvcdRpcMessage>>>,
+    pub rx: Arc<Mutex<mpsc::Receiver<RvcdManagerMessage>>>,
+    pub exit_tx: Arc<Mutex<mpsc::Sender<RvcdExitMessage>>>,
 }
 
 impl RvcdManager {
-    pub fn new(tx: mpsc::Sender<RvcdRpcMessage>) -> Self {
+    pub fn new(
+        tx: mpsc::Sender<RvcdRpcMessage>,
+        rx: Arc<Mutex<mpsc::Receiver<RvcdManagerMessage>>>,
+        exit_tx: mpsc::Sender<RvcdExitMessage>,
+    ) -> Self {
         Self {
             tx: Arc::new(Mutex::new(tx)),
+            rx,
+            exit_tx: Arc::new(Mutex::new(exit_tx)),
             managed_files: Default::default(),
         }
     }
@@ -220,5 +235,23 @@ impl RvcdRpc for RvcdManager {
             info!("removed key: {}", data.key);
             Ok(Response::new(RvcdEmpty::default()))
         }
+    }
+    async fn request_frame(
+        &self,
+        _request: Request<RvcdEmpty>,
+    ) -> Result<Response<RvcdFrame>, Status> {
+        self.tx
+            .lock()
+            .unwrap()
+            .send(RvcdRpcMessage::RequestFrame)
+            .unwrap();
+        let frame = match self.rx.lock().unwrap().try_recv() {
+            Ok(msg) => match msg {
+                RvcdManagerMessage::RecvFrame(frame) => Some(frame),
+                // _ => None,
+            },
+            Err(_) => None,
+        };
+        Ok(Response::new(frame.map_or(Default::default(), |f| f)))
     }
 }

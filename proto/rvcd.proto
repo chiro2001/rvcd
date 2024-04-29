@@ -19,6 +19,8 @@ service RvcdRpc {
     rpc OpenFileWith (RvcdOpenFileWith) returns (RvcdEmpty) {}
     // Remove registered client
     rpc RemoveClient (RvcdRemoveClient) returns (RvcdEmpty) {}
+    // request frame
+    rpc RequestFrame (RvcdEmpty) returns (RvcdFrame) {}
 }
 
 message RvcdEmpty {}
@@ -61,4 +63,10 @@ message RvcdOpenFileWith {
 
 message RvcdRemoveClient {
     uint32 key = 1;
+}
+
+message RvcdFrame {
+    uint32 width = 1;
+    uint32 height = 2;
+    bytes data = 3;
 }

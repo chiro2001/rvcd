@@ -3,17 +3,16 @@
 
 #[allow(unused_imports)]
 use anyhow::Result;
+#[cfg(not(target_arch = "wasm32"))]
+use clap::Parser;
 use rvcd::app::RvcdApp;
+#[cfg(not(target_arch = "wasm32"))]
+use rvcd::manager::{RvcdRpcMessage, MANAGER_PORT};
+#[cfg(not(target_arch = "wasm32"))]
+use rvcd::utils::sleep_ms;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
 use tracing::info;
-#[cfg(not(target_arch = "wasm32"))]
-use clap::Parser;
-#[cfg(not(target_arch = "wasm32"))]
-use rvcd::manager::{RvcdRpcMessage, MANAGER_PORT};
-use rvcd::manager::RvcdManagerMessage;
-#[cfg(not(target_arch = "wasm32"))]
-use rvcd::utils::sleep_ms;
 
 /// Simple program to greet a person
 #[cfg(not(target_arch = "wasm32"))]
@@ -37,8 +36,10 @@ struct RvcdArgs {
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use rvcd::manager::RvcdManager;
+    use rvcd::manager::{RvcdExitMessage, RvcdManager};
+    use std::sync::{Arc, Mutex};
     use tonic::transport::Server;
+    use tracing::error;
 
     let args = RvcdArgs::parse();
 
@@ -57,6 +58,8 @@ async fn main() -> Result<()> {
     let rpc_tx2 = rpc_tx.clone();
     let rpc_tx3 = rpc_tx.clone();
     let (manager_tx, manager_rx) = mpsc::channel();
+    let (exit_tx, exit_rx) = mpsc::channel();
+    let exit_tx2 = exit_tx.clone();
     let src = args.src.clone();
     let gui = async move {
         eframe::run_native(
@@ -68,6 +71,7 @@ async fn main() -> Result<()> {
                     rpc_rx,
                     rpc_tx2,
                     manager_tx,
+                    exit_tx2,
                     if src.is_empty() { None } else { Some(src) },
                 ))
             }),
@@ -75,8 +79,10 @@ async fn main() -> Result<()> {
         .expect("gui panic!");
     };
     let rpc = async move {
+        let manager_rx = Arc::new(Mutex::new(manager_rx));
         loop {
             let rpc_tx = rpc_tx.clone();
+            let exit_tx = exit_tx.clone();
             let addr = format!("0.0.0.0:{}", args.port).parse().unwrap();
             info!("[Manager] rpc server at {}", addr);
             let reflection_service = tonic_reflection::server::Builder::configure()
@@ -86,21 +92,19 @@ async fn main() -> Result<()> {
             match Server::builder()
                 .add_service(reflection_service)
                 .add_service(rvcd::rpc::rvcd_rpc_server::RvcdRpcServer::new(
-                    RvcdManager::new(rpc_tx),
+                    RvcdManager::new(rpc_tx, manager_rx.clone(), exit_tx),
                 ))
                 .serve(addr)
                 .await
             {
                 Ok(_) => {}
-                Err(_) => {}
+                Err(e) => error!("cannot run rpc: {:?}", e),
             }
-            match manager_rx.try_recv() {
-                Ok(msg) => {
-                    match msg {
-                        RvcdManagerMessage::Exit => break,
-                    }
+            match exit_rx.try_recv() {
+                Ok(msg) => match msg {
+                    RvcdExitMessage::Exit => break,
                 },
-                _ => {},
+                _ => {}
             }
             sleep_ms(1000).await;
         }
@@ -116,6 +120,16 @@ async fn main() -> Result<()> {
     // pin_mut!(gui, rpc);
     // let _ = select(gui, rpc).await;
     tokio::spawn(rpc);
+    // make pings to make rpc awake
+    // {
+    //     let rpc_tx = rpc_tx.clone();
+    //     let pings = async move {
+    //         loop {
+    //             rpc_tx.send(RvcdRpcMessage::Ping)
+    //             sleep_ms(100);
+    //         }
+    //     };
+    // }
     gui.await;
     Ok(())
 }

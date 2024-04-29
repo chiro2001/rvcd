@@ -1,6 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::code::editor::CodeEditor;
-use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 #[cfg(not(target_arch = "wasm32"))]
@@ -8,17 +7,19 @@ use crate::manager::RvcdRpcMessage;
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::verilog::VerilogGotoSource;
+use crate::{code::CodeEditorType, rpc::RvcdFrame};
 // use crate::{available_locales, Rvcd};
-use crate::manager::RvcdManagerMessage;
+use crate::manager::{RvcdExitMessage, RvcdManagerMessage};
 use crate::Rvcd;
 use eframe::emath::Align;
 use eframe::glow::Context;
 use eframe::Frame;
 use egui::{
-    CentralPanel, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui, Window,
+    CentralPanel, ColorImage, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui,
+    Window,
 };
 use rust_i18n::locale;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 #[allow(unused_imports)]
 use tracing::{error, info, warn};
 
@@ -51,6 +52,9 @@ pub struct RvcdApp {
     pub manager_tx: Option<mpsc::Sender<RvcdManagerMessage>>,
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
+    pub exit_tx: Option<mpsc::Sender<RvcdExitMessage>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
     pub rpc_self_tx: Option<mpsc::Sender<RvcdRpcMessage>>,
     #[serde(skip)]
     pub loop_tx: Option<mpsc::Sender<RvcdAppMessage>>,
@@ -62,6 +66,7 @@ pub struct RvcdApp {
     pub code_editor: CodeEditorType,
     #[cfg(not(target_arch = "wasm32"))]
     pub default_source_dir: String,
+    pub frame: Mutex<Option<Arc<ColorImage>>>,
 }
 
 impl Default for RvcdApp {
@@ -80,6 +85,8 @@ impl Default for RvcdApp {
             #[cfg(not(target_arch = "wasm32"))]
             manager_tx: None,
             #[cfg(not(target_arch = "wasm32"))]
+            exit_tx: None,
+            #[cfg(not(target_arch = "wasm32"))]
             rpc_self_tx: None,
             loop_tx: None,
             app_rx: None,
@@ -88,6 +95,7 @@ impl Default for RvcdApp {
             code_editor: Default::default(),
             #[cfg(not(target_arch = "wasm32"))]
             default_source_dir: "".to_string(),
+            frame: Default::default(),
         }
     }
 }
@@ -98,6 +106,7 @@ impl RvcdApp {
         #[cfg(not(target_arch = "wasm32"))] rpc_rx: mpsc::Receiver<RvcdRpcMessage>,
         #[cfg(not(target_arch = "wasm32"))] rpc_tx: mpsc::Sender<RvcdRpcMessage>,
         #[cfg(not(target_arch = "wasm32"))] manager_tx: mpsc::Sender<RvcdManagerMessage>,
+        #[cfg(not(target_arch = "wasm32"))] exit_tx: mpsc::Sender<RvcdExitMessage>,
         #[cfg(not(target_arch = "wasm32"))] default_source_dir: Option<String>,
     ) -> Self {
         // load chinese font
@@ -159,6 +168,7 @@ impl RvcdApp {
             def.rpc_rx = Some(rpc_rx);
             def.rpc_self_tx = Some(rpc_tx);
             def.manager_tx = Some(manager_tx);
+            def.exit_tx = Some(exit_tx);
         }
         let (tx, rx) = mpsc::channel();
         def.apps
@@ -439,9 +449,7 @@ impl eframe::App for RvcdApp {
                     .id(Id::new(*id))
                     .title_bar(true)
                     .show(ctx, |ui| {
-                        app.update(ui, self.sst_enabled, false, || {
-                            self.app_now_id = Some(*id)
-                        });
+                        app.update(ui, self.sst_enabled, false, || self.app_now_id = Some(*id));
                     });
             }
         };
@@ -653,6 +661,25 @@ impl eframe::App for RvcdApp {
                             app.handle_rpc_message(RvcdRpcMessage::OpenSourceDir(path.to_string()));
                         }
                     }
+                    RvcdRpcMessage::RequestFrame => {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                        self.frame.lock().unwrap().as_ref().map(|f| {
+                            if let Some(tx) = &self.manager_tx {
+                                let (width, height) = (f.size[0] as u32, f.size[1] as u32);
+                                let mut data = Vec::<u8>::with_capacity(f.pixels.len() * 4);
+                                // copy data, can be optimized...
+                                data.iter_mut()
+                                    .zip(f.pixels.iter().flat_map(|p| p.to_array()))
+                                    .for_each(|(d, s)| *d = s);
+                                let rvcd_frame = RvcdFrame {
+                                    width,
+                                    height,
+                                    data,
+                                };
+                                tx.send(RvcdManagerMessage::RecvFrame(rvcd_frame)).unwrap();
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -671,6 +698,21 @@ impl eframe::App for RvcdApp {
         for editor in &mut self.editors {
             editor.ui(ctx);
         }
+
+        // handle screen shot
+        ctx.input(|i| {
+            for event in i.events.iter() {
+                match event {
+                    egui::Event::Screenshot {
+                        viewport_id: _,
+                        image,
+                    } => {
+                        self.frame.lock().unwrap().replace(image.clone());
+                    }
+                    _ => {}
+                }
+            }
+        });
     }
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -679,8 +721,8 @@ impl eframe::App for RvcdApp {
 
     fn on_exit(&mut self, _gl: Option<&Context>) {
         // self.close_all();
-        if let Some(tx) = &self.manager_tx {
-            tx.send(RvcdManagerMessage::Exit).unwrap();
+        if let Some(tx) = &self.exit_tx {
+            tx.send(RvcdExitMessage::Exit).unwrap();
         }
         // close all but save data
         for app in &mut self.apps {
