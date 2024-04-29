@@ -642,12 +642,23 @@ impl eframe::App for RvcdApp {
         let mut will_minimum_this = false;
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
-                CentralPanel::default().show(ctx, |ui| {
-                    ui.spinner();
-                    app.update(ui, self.sst_enabled, true, || {
-                        will_minimum_this = true;
+                CentralPanel::default()
+                    .frame(
+                        egui::Frame::default()
+                            .inner_margin(0.0)
+                            .outer_margin(0.0)
+                            .rounding(0.0),
+                    )
+                    .show(ctx, |ui| {
+                        // when testing frame sending, use spinner to auto update
+                        // ui.spinner();
+                        // ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+                        // ui.spacing_mut().window_margin = egui::Margin::same(0.0);
+                        ui.visuals_mut().window_rounding = egui::Rounding::same(0.0);
+                        app.update(ui, self.sst_enabled, true, || {
+                            will_minimum_this = true;
+                        });
                     });
-                });
                 for app in &mut self.apps {
                     if id != app.id {
                         show_app_in_window(app, ctx);
@@ -903,6 +914,11 @@ impl eframe::App for RvcdApp {
                                 let events = self.extra_events.get_or_insert(vec![]);
                                 let zoom = event.data as f32 / 1000.0;
                                 events.push(egui::Event::Zoom(zoom));
+                            }
+                            EventType::Visible => {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(
+                                    event.data != 0,
+                                ));
                             }
                         }
                     }

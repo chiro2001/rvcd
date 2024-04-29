@@ -246,42 +246,62 @@ impl Rvcd {
         F: FnOnce(),
     {
         if !maximize {
-            egui::TopBottomPanel::top(format!("top_panel_{}", self.id)).show_inside(ui, |ui| {
-                // The top panel is often a good place for a menu bar:
-                egui::menu::bar(ui, |ui| {
-                    self.menubar(ui, maximize);
-                    if maximize {
-                        if ui.button(t!("menu.minimize")).clicked() {
+            egui::TopBottomPanel::top(format!("top_panel_{}", self.id))
+                .frame(
+                    egui::Frame::default()
+                        .inner_margin(0.0)
+                        .outer_margin(0.0)
+                        .rounding(0.0),
+                )
+                .show_inside(ui, |ui| {
+                    // The top panel is often a good place for a menu bar:
+                    egui::menu::bar(ui, |ui| {
+                        self.menubar(ui, maximize);
+                        if maximize {
+                            if ui.button(t!("menu.minimize")).clicked() {
+                                do_min_max();
+                            }
+                        } else if ui.button(t!("menu.maximize")).clicked() {
                             do_min_max();
                         }
-                    } else if ui.button(t!("menu.maximize")).clicked() {
-                        do_min_max();
-                    }
+                    });
                 });
-            });
             egui::TopBottomPanel::bottom(format!("bottom_panel_{}", self.id))
+                .frame(
+                    egui::Frame::default()
+                        .inner_margin(0.0)
+                        .outer_margin(0.0)
+                        .rounding(0.0),
+                )
                 .min_height(0.0)
                 .resizable(false)
                 .show_inside(ui, |_ui| {
                     // ui.label("bottom");
                 });
         }
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.add_enabled_ui(self.state == State::Working, |ui| {
-                if sst_enabled {
-                    egui::SidePanel::left(format!("side_panel_{}", self.id))
-                        .resizable(true)
-                        .show_inside(ui, |ui| {
-                            self.sidebar(ui);
+        egui::CentralPanel::default()
+            .frame(
+                egui::Frame::default()
+                    .inner_margin(0.0)
+                    .outer_margin(0.0)
+                    .rounding(0.0),
+            )
+            .show_inside(ui, |ui| {
+                ui.add_enabled_ui(self.state == State::Working, |ui| {
+                    if sst_enabled {
+                        egui::SidePanel::left(format!("side_panel_{}", self.id))
+                            .resizable(true)
+                            .show_inside(ui, |ui| {
+                                self.sidebar(ui);
+                            });
+                    }
+                    egui::CentralPanel::default().show_inside(ui, |ui| {
+                        ui.vertical_centered_justified(|ui| {
+                            self.wave_panel(ui);
                         });
-                }
-                egui::CentralPanel::default().show_inside(ui, |ui| {
-                    ui.vertical_centered_justified(|ui| {
-                        self.wave_panel(ui);
                     });
                 });
             });
-        });
 
         if let Some(channel) = &self.channel {
             let mut messages = vec![];

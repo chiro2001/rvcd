@@ -30,6 +30,8 @@ struct RvcdArgs {
     /// Manager port
     #[arg(short, long, default_value_t = MANAGER_PORT)]
     port: u16,
+    #[arg(long, default_value_t = false)]
+    hidden: bool,
 }
 
 // When compiling natively:
@@ -39,6 +41,7 @@ async fn main() -> Result<()> {
     use rvcd::{
         app,
         manager::{RvcdExitMessage, RvcdManager},
+        rpc::RvcdInputEvent,
     };
     use std::sync::{Arc, Mutex};
     use tonic::transport::Server;
@@ -130,6 +133,12 @@ async fn main() -> Result<()> {
         rvcd::manager::DISP_PORT,
         rpc_tx4,
     ));
+    if args.hidden {
+        let mut event = RvcdInputEvent::default();
+        event.set_type(rvcd::rpc::EventType::Visible);
+        event.data = 0;
+        rpc_tx5.send(RvcdRpcMessage::InputEvent(event)).unwrap();
+    }
     #[cfg(target_os = "linux")]
     tokio::spawn(RvcdApp::frame_buffer_unix_server(
         rvcd::manager::UNIX_FB_PATH,
