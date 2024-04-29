@@ -6,6 +6,7 @@ use crate::frame_history::FrameHistory;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::manager::RvcdRpcMessage;
 use crate::manager::{RvcdExitMessage, RvcdManagerMessage};
+use crate::rpc::{EventType, RvcdInputEvent};
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
 use crate::utils::sleep_ms;
@@ -18,10 +19,11 @@ use egui::{
     CentralPanel, ColorImage, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui,
     Window,
 };
+use prost::Message;
 use rust_i18n::locale;
 use std::mem::MaybeUninit;
 use std::sync::{mpsc, Arc};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;
 // use tokio::sync::Mutex as FrameMutex;
 use std::sync::Mutex as FrameMutex;
@@ -73,6 +75,10 @@ pub struct RvcdApp {
     pub default_source_dir: String,
     #[serde(skip)]
     pub global_frame: &'static mut FrameMutex<Option<Arc<ColorImage>>>,
+    #[serde(skip)]
+    pub extra_events: Option<Vec<egui::Event>>,
+    #[serde(skip)]
+    pub extra_scroll: egui::Vec2,
 }
 
 pub fn init() {
@@ -110,6 +116,8 @@ impl Default for RvcdApp {
             default_source_dir: "".to_string(),
             #[allow(static_mut_refs)]
             global_frame: unsafe { FRAME.assume_init_mut() },
+            extra_events: None,
+            extra_scroll: Default::default(),
         }
     }
 }
@@ -370,19 +378,24 @@ impl RvcdApp {
         port: u16,
         tx: mpsc::Sender<RvcdRpcMessage>,
     ) -> anyhow::Result<()> {
-        // 创建一个 TCP 监听器，绑定到本地地址并监听端口
         let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
         info!("FB Server started on port {}", port);
-
         let tx = tx.clone();
-        // 接受客户端连接并处理
-        while let Ok((mut socket, _)) = listener.accept().await {
+        while let Ok((socket, _)) = listener.accept().await {
+            info!(
+                "New FB tcp client connected: {:?}",
+                socket.peer_addr().unwrap()
+            );
             let tx = tx.clone();
-            // 启动一个新的任务来处理连接
+            let tx2 = tx.clone();
+            let (reader, writer) = socket.into_split();
             tokio::spawn(async move {
-                info!("New FB client connected: {:?}", socket.peer_addr().unwrap());
-                // 处理连接
-                if let Err(e) = handle_connection(&mut socket, tx).await {
+                if let Err(e) = handle_connection(writer, tx).await {
+                    error!("Error handling connection: {:?}", e);
+                }
+            });
+            tokio::spawn(async move {
+                if let Err(e) = handle_stream_input(reader, tx2).await {
                     error!("Error handling connection: {:?}", e);
                 }
             });
@@ -408,22 +421,25 @@ impl RvcdApp {
         path: &str,
         tx: mpsc::Sender<RvcdRpcMessage>,
     ) -> anyhow::Result<()> {
-        // 创建一个 TCP 监听器，绑定到本地地址并监听端口
         let listener = tokio::net::UnixListener::bind(path)?;
         info!("FB Server started on path {}", path);
 
         let tx = tx.clone();
-        // 接受客户端连接并处理
-        while let Ok((mut socket, _)) = listener.accept().await {
+        while let Ok((socket, _)) = listener.accept().await {
+            info!(
+                "New FB unix client connected: {:?}",
+                socket.peer_addr().unwrap()
+            );
             let tx = tx.clone();
-            // 启动一个新的任务来处理连接
+            let tx2 = tx.clone();
+            let (reader, writer) = socket.into_split();
             tokio::spawn(async move {
-                info!(
-                    "New FB unix client connected: {:?}",
-                    socket.peer_addr().unwrap()
-                );
-                // 处理连接
-                if let Err(e) = handle_connection(&mut socket, tx).await {
+                if let Err(e) = handle_connection(writer, tx).await {
+                    error!("Error handling connection: {:?}", e);
+                }
+            });
+            tokio::spawn(async move {
+                if let Err(e) = handle_stream_input(reader, tx2).await {
                     error!("Error handling connection: {:?}", e);
                 }
             });
@@ -432,9 +448,55 @@ impl RvcdApp {
     }
 }
 
+async fn handle_stream_input<S: AsyncReadExt + std::marker::Unpin>(
+    mut reader: S,
+    tx: mpsc::Sender<RvcdRpcMessage>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut buf = [0u8; 32];
+    loop {
+        let len = reader.read_u32().await? as usize;
+        buf.iter_mut().for_each(|x| *x = 0);
+        let mut n = 0;
+        while n < len {
+            let r = reader.read(&mut buf[n..]).await;
+            match r {
+                Ok(0) => {
+                    return Ok(());
+                }
+                Ok(size) => {
+                    n += size;
+                }
+                Err(e) => {
+                    return Err(e.into());
+                }
+            }
+        }
+        let string = buf[..len]
+            .iter()
+            .map(|x| format!("{:02X}", x))
+            .collect::<Vec<String>>()
+            .join(" ");
+        debug!("read data: {}", string);
+        match RvcdInputEvent::decode(&buf[..len]) {
+            Ok(event) => {
+                if event.r#type() != EventType::None {
+                    if let Err(e) = tx.send(RvcdRpcMessage::InputEvent(event)) {
+                        error!("cannot send input event: {:?}", e);
+                    }
+                } else {
+                    warn!("invalid input event: {:?}", event)
+                }
+            }
+            Err(e) => {
+                error!("cannot decode input event! {:?}", e);
+            }
+        }
+        sleep_ms(1).await;
+    }
+}
+
 async fn handle_connection<S: AsyncWriteExt + std::marker::Unpin>(
-    // socket: &mut tokio::net::TcpStream,
-    socket: &mut S,
+    mut writer: S,
     tx: mpsc::Sender<RvcdRpcMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
@@ -458,9 +520,10 @@ async fn handle_connection<S: AsyncWriteExt + std::marker::Unpin>(
                     rgb565.to_be_bytes()
                 }))
                 .for_each(|(d, s)| *d = s);
-            socket.write_u16(width).await?;
-            socket.write_u16(height).await?;
-            socket.write_all(&data).await?;
+            writer.write_u16(width).await?;
+            writer.write_u16(height).await?;
+            writer.write_all(&data).await?;
+            // socket.flush().await?;
         } else {
             debug!("no frame data");
         }
@@ -473,6 +536,21 @@ impl eframe::App for RvcdApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
+        // ctx.input(|i| {
+        //     info!(
+        //         "update: raw_scroll_delta {:?}, smooth_scroll_delta {:?}",
+        //         i.raw_scroll_delta, i.smooth_scroll_delta
+        //     );
+        // });
+        // ctx.input_mut(|i| {
+        //     i.smooth_scroll_delta = egui::vec2(0.0, 10.0);
+        // });
+        ctx.input_mut(|i| {
+            i.smooth_scroll_delta += self.extra_scroll;
+            // i.raw_scroll_delta += self.extra_scroll;
+        });
+        self.extra_scroll = Default::default();
+
         self.frame_history
             .on_new_frame(ctx.input(|i| i.time), frame.info().cpu_usage);
         match self.run_mode {
@@ -583,6 +661,7 @@ impl eframe::App for RvcdApp {
         if let Some(id) = app_now_id {
             if let Some(app) = self.apps.get_mut(id) {
                 CentralPanel::default().show(ctx, |ui| {
+                    ui.spinner();
                     app.update(ui, self.sst_enabled, true, || {
                         will_minimum_this = true;
                     });
@@ -691,7 +770,7 @@ impl eframe::App for RvcdApp {
             let mut frame_requested = false;
             for message in &messages {
                 match message {
-                    RvcdRpcMessage::RequestFrame => {}
+                    RvcdRpcMessage::RequestFrame | RvcdRpcMessage::InputEvent(_) => {}
                     _ => info!("rvcd app handle rpc message: {:?}", message),
                 }
                 match message {
@@ -798,7 +877,7 @@ impl eframe::App for RvcdApp {
                         }
                     }
                     RvcdRpcMessage::InputEvent(event) => {
-                        info!("recv input event: {:?}", event);
+                        debug!("recv input event: {:?}", event);
                         match event.r#type() {
                             crate::rpc::EventType::None => {}
                             crate::rpc::EventType::Resize => {
@@ -809,15 +888,51 @@ impl eframe::App for RvcdApp {
                                 )))
                             }
                             crate::rpc::EventType::PointerMovement => {
-                                ctx.send_viewport_cmd(egui::ViewportCommand::CursorPosition(
-                                    egui::pos2(event.x as f32, event.y as f32),
-                                ))
+                                let events = self.extra_events.get_or_insert(vec![]);
+                                let pos = egui::pos2(
+                                    event.x as f32 / ctx.pixels_per_point(),
+                                    event.y as f32 / ctx.pixels_per_point(),
+                                );
+                                events.push(egui::Event::PointerMoved(pos));
                             }
-                            crate::rpc::EventType::Wheel => {}
-                            crate::rpc::EventType::Click => {}
+                            crate::rpc::EventType::Wheel => {
+                                // let events = self.extra_events.get_or_insert(vec![]);
+                                // events.push(egui::Event::MouseWheel {
+                                //     unit: egui::MouseWheelUnit::Line,
+                                //     delta: egui::vec2(event.x as f32, event.y as f32),
+                                //     modifiers: Default::default(),
+                                // });
+                                // ctx.input_mut(|i| {
+                                //     i.smooth_scroll_delta +=
+                                //         egui::vec2(event.x as f32 * 50.0, event.y as f32 * 50.0);
+                                // });
+                                self.extra_scroll += egui::vec2(event.x as f32, event.y as f32);
+                            }
+                            crate::rpc::EventType::Click => {
+                                let events = self.extra_events.get_or_insert(vec![]);
+                                let pos = egui::pos2(
+                                    event.x as f32 / ctx.pixels_per_point(),
+                                    event.y as f32 / ctx.pixels_per_point(),
+                                );
+                                events.push(egui::Event::PointerButton {
+                                    pos,
+                                    button: match event.button {
+                                        1 => egui::PointerButton::Primary,
+                                        3 => egui::PointerButton::Secondary,
+                                        2 => egui::PointerButton::Middle,
+                                        _ => egui::PointerButton::Primary,
+                                    },
+                                    pressed: event.data != 0,
+                                    modifiers: Default::default(),
+                                });
+                            }
                         }
                     }
                 }
+                // if !frame_requested {
+                //     ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                //     frame_requested = true;
+                // }
             }
         }
         let mut messages = vec![];
@@ -865,6 +980,39 @@ impl eframe::App for RvcdApp {
         for app in &mut self.apps {
             app.on_exit();
         }
+    }
+
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        // _ctx.input(|i| {
+        //     info!(
+        //         "raw_input_hook: raw_scroll_delta {:?}, smooth_scroll_delta {:?}",
+        //         i.raw_scroll_delta, i.smooth_scroll_delta
+        //     );
+        // });
+        let events = self.extra_events.take();
+        if let Some(mut events) = events {
+            // events.append(&mut raw_input.events);
+            // raw_input.events = events;
+            raw_input.events.append(&mut events)
+        }
+        // _ctx.input_mut(|i| {
+        //     i.smooth_scroll_delta = egui::vec2(0.0, 10.0);
+        // });
+        // for e in raw_input.events.iter() {
+        //     match e {
+        //         egui::Event::MouseWheel {
+        //             unit,
+        //             delta,
+        //             modifiers,
+        //         } => {
+        //             info!("mouse wheel: {:?} {:?} {:?}", unit, delta, modifiers);
+        //         }
+        //         // egui::Event::MouseMoved(pos) => {
+        //         //     info!("mouse moved: {:?}", pos);
+        //         // }
+        //         _ => {}
+        //     }
+        // }
     }
 }
 

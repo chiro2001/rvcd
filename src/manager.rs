@@ -250,7 +250,8 @@ impl RvcdRpc for RvcdManager {
         let _ = self.tx.lock().unwrap().send(RvcdRpcMessage::RequestFrame);
         let mut msg = Default::default();
         loop {
-            match self.rx.lock().unwrap().recv() {
+            // recv lastest frame
+            match self.rx.try_lock().unwrap().recv() {
                 Ok(m) => msg = m,
                 _ => break,
             }
