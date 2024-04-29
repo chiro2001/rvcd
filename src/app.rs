@@ -857,7 +857,7 @@ impl eframe::App for RvcdApp {
                             crate::rpc::EventType::Resize => {
                                 let width = event.x as f32 / ctx.pixels_per_point();
                                 let height = event.y as f32 / ctx.pixels_per_point();
-                                info!("resize: {}x{}", width, height);
+                                debug!("resize: {}x{}", width, height);
                                 if width < 20.0 || height < 20.0 {
                                     warn!("size too small, ignore");
                                 } else {

@@ -161,7 +161,10 @@ impl WaveView {
                 (old_range.1 - old_range.0) as f32 / 100.0,
                 speed_min,
             ));
-            let range_right = f32::min(info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE, old_range.1 as f32);
+            let range_right = f32::min(
+                info.range.1 as f32 * ZOOM_SIZE_MAX_SCALE,
+                old_range.1 as f32,
+            );
             let drag_value = if self.limit_range_left {
                 drag_value.clamp_range(0.0..=range_right)
             } else {
@@ -215,30 +218,34 @@ impl WaveView {
                 });
             if let Some(zoom) = zoom {
                 let zoom = 1.0 / zoom as f64;
-                if let Some(pos) = response.hover_pos() {
-                    let painter = ui.painter();
-                    let pos = pos2(pos.x - wave_left, pos.y);
-                    // zoom from this pos
-                    let center_pos = (pos.x as f64 * (self.range.1 - self.range.0)
-                        / self.wave_width as f64
-                        + self.range.0)
-                        .clamp(info.range.0 as f64, info.range.1 as f64);
-                    painter.debug_rect(
-                        Rect::from_center_size(
-                            pos2(self.fpos_to_x(center_pos as f32) + wave_left, pos.y),
-                            vec2(4.0, 4.0),
-                        ),
-                        Color32::RED,
-                        "Center",
-                    );
-                    let left = (center_pos - self.range.0) * zoom;
-                    let right = (self.range.1 - center_pos) * zoom;
-                    let new_range_check = (center_pos - left, center_pos + right);
-                    let d = new_range_check.1 - new_range_check.0;
-                    if d > ZOOM_SIZE_MIN as f64
-                        && d < ZOOM_SIZE_MAX_SCALE as f64 * (info.range.1 - info.range.0) as f64
-                    {
-                        state.new_range = new_range_check;
+                // if let Some(pos) = response.hover_pos() {
+                if let Some(pos) = ui.ctx().input(|i| i.pointer.hover_pos()) {
+                    if pos.x >= wave_left && pos.x <= wave_left + self.wave_width {
+                        let painter = ui.painter();
+                        let pos = pos2(pos.x - wave_left, pos.y);
+                        // zoom from this pos
+                        let center_pos = (pos.x as f64 * (self.range.1 - self.range.0)
+                            / self.wave_width as f64
+                            + self.range.0)
+                            .clamp(info.range.0 as f64, info.range.1 as f64);
+                        painter.debug_rect(
+                            Rect::from_center_size(
+                                pos2(self.fpos_to_x(center_pos as f32) + wave_left, pos.y),
+                                vec2(4.0, 4.0),
+                            ),
+                            Color32::RED,
+                            "Center",
+                        );
+                        let left = (center_pos - self.range.0) * zoom;
+                        let right = (self.range.1 - center_pos) * zoom;
+                        let new_range_check = (center_pos - left, center_pos + right);
+                        let d = new_range_check.1 - new_range_check.0;
+                        if d > ZOOM_SIZE_MIN as f64
+                            && d < ZOOM_SIZE_MAX_SCALE as f64 * (info.range.1 - info.range.0) as f64
+                        {
+                            tracing::debug!("zoom: {:?} -> {:?}", state.new_range, new_range_check);
+                            state.new_range = new_range_check;
+                        }
                     }
                 }
             } else if let Some(scroll) = scroll {
