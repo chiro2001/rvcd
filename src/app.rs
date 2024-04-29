@@ -19,8 +19,9 @@ use egui::{
     Window,
 };
 use rust_i18n::locale;
+use tracing::debug;
 use std::mem::MaybeUninit;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc};
 use tokio::io::AsyncWriteExt;
 // use tokio::sync::Mutex as FrameMutex;
 use std::sync::Mutex as FrameMutex;
@@ -71,8 +72,6 @@ pub struct RvcdApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub default_source_dir: String,
     #[serde(skip)]
-    pub frame: Mutex<Option<Arc<ColorImage>>>,
-    #[serde(skip)]
     pub global_frame: &'static mut FrameMutex<Option<Arc<ColorImage>>>,
 }
 
@@ -109,7 +108,6 @@ impl Default for RvcdApp {
             code_editor: Default::default(),
             #[cfg(not(target_arch = "wasm32"))]
             default_source_dir: "".to_string(),
-            frame: Default::default(),
             #[allow(static_mut_refs)]
             global_frame: unsafe { FRAME.assume_init_mut() },
         }
@@ -400,10 +398,7 @@ async fn handle_connection(
     loop {
         // request frame
         tx.send(RvcdRpcMessage::RequestFrame)?;
-        // 从互斥锁中获取图像帧数据
-        // let frame_data = unsafe { FRAME.assume_init_mut() }.lock().await;
         let frame_data = unsafe { FRAME.assume_init_mut() }.lock()?.clone();
-        // 发送图像帧数据给客户端
         if let Some(f) = frame_data {
             let (width, height) = (f.size[0] as u16, f.size[1] as u16);
             let mut data = vec![0u8; f.pixels.len() * 2];
@@ -421,27 +416,15 @@ async fn handle_connection(
                     rgb565.to_be_bytes()
                 }))
                 .for_each(|(d, s)| *d = s);
-            // let mut buf: Vec<u8> = vec![];
-            // buf.put_u16(width);
-            // buf.put_u16(height);
             socket.write_u16(width).await?;
             socket.write_u16(height).await?;
-            // let hex_string = buf
-            //     .iter()
-            //     .map(|&x| format!("{:02X}", x))
-            //     .collect::<Vec<_>>()
-            //     .join(", ");
-            // info!("send frame header: {}", hex_string);
-            // socket.write_all(&buf).await?;
-            // info!("send frame data: {:?}", data.len());
             socket.write_all(&data).await?;
         } else {
-            warn!("no frame data");
+            debug!("no frame data");
         }
         sleep_ms(10).await;
     }
-
-    Ok(())
+    // Ok(())
 }
 
 impl eframe::App for RvcdApp {
@@ -812,7 +795,6 @@ impl eframe::App for RvcdApp {
                         viewport_id: _,
                         image,
                     } => {
-                        self.frame.lock().unwrap().replace(image.clone());
                         self.global_frame.lock().unwrap().replace(image.clone());
                     }
                     _ => {}
