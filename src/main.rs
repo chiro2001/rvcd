@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
     // let native_options = eframe::NativeOptions::default();
     let native_options = eframe::NativeOptions {
         // drag_and_drop_support: true,
-        depth_buffer: 3,
+        // depth_buffer: 3,
         // initial_window_size: Some([1280.0, 1024.0].into()),
         // #[cfg(feature = "wgpu")]
         // renderer: eframe::Renderer::Wgpu,

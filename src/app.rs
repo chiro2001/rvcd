@@ -536,15 +536,6 @@ impl eframe::App for RvcdApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
-        // ctx.input(|i| {
-        //     info!(
-        //         "update: raw_scroll_delta {:?}, smooth_scroll_delta {:?}",
-        //         i.raw_scroll_delta, i.smooth_scroll_delta
-        //     );
-        // });
-        // ctx.input_mut(|i| {
-        //     i.smooth_scroll_delta = egui::vec2(0.0, 10.0);
-        // });
         ctx.input_mut(|i| {
             i.smooth_scroll_delta += self.extra_scroll;
             // i.raw_scroll_delta += self.extra_scroll;
@@ -704,14 +695,6 @@ impl eframe::App for RvcdApp {
             .filter(|x| to_removes.iter().any(|id| x.1.id == *id))
             .map(|x| x.0)
             .collect::<Vec<_>>();
-        // if self.apps.len() > 1 {
-        //     info!(
-        //         "ids: {:?}, to_removes: {:?}, to_remove_indexes: {:?}",
-        //         self.apps.iter().map(|x| x.id).collect::<Vec<_>>(),
-        //         to_removes,
-        //         to_remove_indexes
-        //     );
-        // }
         for i in to_remove_indexes {
             if i < self.apps.len() {
                 let removed = self.apps.remove(i);
@@ -896,16 +879,6 @@ impl eframe::App for RvcdApp {
                                 events.push(egui::Event::PointerMoved(pos));
                             }
                             crate::rpc::EventType::Wheel => {
-                                // let events = self.extra_events.get_or_insert(vec![]);
-                                // events.push(egui::Event::MouseWheel {
-                                //     unit: egui::MouseWheelUnit::Line,
-                                //     delta: egui::vec2(event.x as f32, event.y as f32),
-                                //     modifiers: Default::default(),
-                                // });
-                                // ctx.input_mut(|i| {
-                                //     i.smooth_scroll_delta +=
-                                //         egui::vec2(event.x as f32 * 50.0, event.y as f32 * 50.0);
-                                // });
                                 self.extra_scroll += egui::vec2(event.x as f32, event.y as f32);
                             }
                             crate::rpc::EventType::Click => {
@@ -983,36 +956,10 @@ impl eframe::App for RvcdApp {
     }
 
     fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
-        // _ctx.input(|i| {
-        //     info!(
-        //         "raw_input_hook: raw_scroll_delta {:?}, smooth_scroll_delta {:?}",
-        //         i.raw_scroll_delta, i.smooth_scroll_delta
-        //     );
-        // });
         let events = self.extra_events.take();
         if let Some(mut events) = events {
-            // events.append(&mut raw_input.events);
-            // raw_input.events = events;
             raw_input.events.append(&mut events)
         }
-        // _ctx.input_mut(|i| {
-        //     i.smooth_scroll_delta = egui::vec2(0.0, 10.0);
-        // });
-        // for e in raw_input.events.iter() {
-        //     match e {
-        //         egui::Event::MouseWheel {
-        //             unit,
-        //             delta,
-        //             modifiers,
-        //         } => {
-        //             info!("mouse wheel: {:?} {:?} {:?}", unit, delta, modifiers);
-        //         }
-        //         // egui::Event::MouseMoved(pos) => {
-        //         //     info!("mouse moved: {:?}", pos);
-        //         // }
-        //         _ => {}
-        //     }
-        // }
     }
 }
 
