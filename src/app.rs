@@ -1,15 +1,15 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::code::editor::CodeEditor;
+use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::manager::RvcdRpcMessage;
+use crate::manager::{RvcdExitMessage, RvcdManagerMessage};
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
+use crate::utils::sleep_ms;
 use crate::verilog::VerilogGotoSource;
-use crate::{code::CodeEditorType, rpc::RvcdFrame};
-// use crate::{available_locales, Rvcd};
-use crate::manager::{RvcdExitMessage, RvcdManagerMessage};
 use crate::Rvcd;
 use eframe::emath::Align;
 use eframe::glow::Context;
@@ -19,7 +19,11 @@ use egui::{
     Window,
 };
 use rust_i18n::locale;
+use std::mem::MaybeUninit;
 use std::sync::{mpsc, Arc, Mutex};
+use tokio::io::AsyncWriteExt;
+// use tokio::sync::Mutex as FrameMutex;
+use std::sync::Mutex as FrameMutex;
 #[allow(unused_imports)]
 use tracing::{error, info, warn};
 
@@ -66,7 +70,17 @@ pub struct RvcdApp {
     pub code_editor: CodeEditorType,
     #[cfg(not(target_arch = "wasm32"))]
     pub default_source_dir: String,
+    #[serde(skip)]
     pub frame: Mutex<Option<Arc<ColorImage>>>,
+    #[serde(skip)]
+    pub global_frame: &'static mut FrameMutex<Option<Arc<ColorImage>>>,
+}
+
+pub fn init() {
+    info!("init rvcd app");
+    unsafe {
+        FRAME = MaybeUninit::new(FrameMutex::new(None));
+    }
 }
 
 impl Default for RvcdApp {
@@ -96,6 +110,8 @@ impl Default for RvcdApp {
             #[cfg(not(target_arch = "wasm32"))]
             default_source_dir: "".to_string(),
             frame: Default::default(),
+            #[allow(static_mut_refs)]
+            global_frame: unsafe { FRAME.assume_init_mut() },
         }
     }
 }
@@ -341,6 +357,91 @@ impl RvcdApp {
             _ => {}
         }
     }
+    pub async fn frame_buffer_tcp_server(port: u16, tx: mpsc::Sender<RvcdRpcMessage>) {
+        loop {
+            let tx = tx.clone();
+            if let Err(e) = Self::frame_buffer_tcp_server_internal(port, tx).await {
+                warn!("frame buffer tcp server error: {:?}", e);
+                sleep_ms(1000).await;
+            } else {
+                break;
+            }
+        }
+    }
+    pub async fn frame_buffer_tcp_server_internal(
+        port: u16,
+        tx: mpsc::Sender<RvcdRpcMessage>,
+    ) -> anyhow::Result<()> {
+        // 创建一个 TCP 监听器，绑定到本地地址并监听端口
+        let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
+        info!("FB Server started on port {}", port);
+
+        let tx = tx.clone();
+        // 接受客户端连接并处理
+        while let Ok((mut socket, _)) = listener.accept().await {
+            let tx = tx.clone();
+            // 启动一个新的任务来处理连接
+            tokio::spawn(async move {
+                info!("New FB client connected: {:?}", socket.peer_addr().unwrap());
+                // 处理连接
+                if let Err(e) = handle_connection(&mut socket, tx).await {
+                    error!("Error handling connection: {:?}", e);
+                }
+            });
+        }
+        Ok(())
+    }
+}
+
+async fn handle_connection(
+    socket: &mut tokio::net::TcpStream,
+    tx: mpsc::Sender<RvcdRpcMessage>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    loop {
+        // request frame
+        tx.send(RvcdRpcMessage::RequestFrame)?;
+        // 从互斥锁中获取图像帧数据
+        // let frame_data = unsafe { FRAME.assume_init_mut() }.lock().await;
+        let frame_data = unsafe { FRAME.assume_init_mut() }.lock()?.clone();
+        // 发送图像帧数据给客户端
+        if let Some(f) = frame_data {
+            let (width, height) = (f.size[0] as u16, f.size[1] as u16);
+            let mut data = vec![0u8; f.pixels.len() * 2];
+            // copy data, can be optimized...
+            data.iter_mut()
+                // .zip(f.pixels.iter().flat_map(|p| p.to_array()))
+                .zip(f.pixels.iter().flat_map(|p| {
+                    let (r, g, b, _a) = p.to_tuple();
+                    // [a, r, g, b]
+                    // convert to rgb565
+                    let red5 = (r as u16 >> 3) & 0x1F;
+                    let green6 = (g as u16 >> 2) & 0x3F;
+                    let blue5 = (b as u16 >> 3) & 0x1F;
+                    let rgb565: u16 = (red5 << 11) | (green6 << 5) | blue5;
+                    rgb565.to_be_bytes()
+                }))
+                .for_each(|(d, s)| *d = s);
+            // let mut buf: Vec<u8> = vec![];
+            // buf.put_u16(width);
+            // buf.put_u16(height);
+            socket.write_u16(width).await?;
+            socket.write_u16(height).await?;
+            // let hex_string = buf
+            //     .iter()
+            //     .map(|&x| format!("{:02X}", x))
+            //     .collect::<Vec<_>>()
+            //     .join(", ");
+            // info!("send frame header: {}", hex_string);
+            // socket.write_all(&buf).await?;
+            // info!("send frame data: {:?}", data.len());
+            socket.write_all(&data).await?;
+        } else {
+            warn!("no frame data");
+        }
+        sleep_ms(10).await;
+    }
+
+    Ok(())
 }
 
 impl eframe::App for RvcdApp {
@@ -563,7 +664,10 @@ impl eframe::App for RvcdApp {
             }
             let mut handled_app = vec![];
             for message in &messages {
-                info!("rvcd app handle rpc message: {:?}", message);
+                match message {
+                    RvcdRpcMessage::RequestFrame => {}
+                    _ => info!("rvcd app handle rpc message: {:?}", message),
+                }
                 match message {
                     RvcdRpcMessage::GotoPath(g) => {
                         if g.file.is_empty() {
@@ -663,22 +767,23 @@ impl eframe::App for RvcdApp {
                     }
                     RvcdRpcMessage::RequestFrame => {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
-                        self.frame.lock().unwrap().as_ref().map(|f| {
-                            if let Some(tx) = &self.manager_tx {
-                                let (width, height) = (f.size[0] as u32, f.size[1] as u32);
-                                let mut data = Vec::<u8>::with_capacity(f.pixels.len() * 4);
-                                // copy data, can be optimized...
-                                data.iter_mut()
-                                    .zip(f.pixels.iter().flat_map(|p| p.to_array()))
-                                    .for_each(|(d, s)| *d = s);
-                                let rvcd_frame = RvcdFrame {
-                                    width,
-                                    height,
-                                    data,
-                                };
-                                tx.send(RvcdManagerMessage::RecvFrame(rvcd_frame)).unwrap();
-                            }
-                        });
+                        // match self.frame.lock().unwrap().as_ref() {
+                        //     Some(f) => {
+                        //         if let Some(tx) = &self.manager_tx {
+                        //             tx.send(RvcdManagerMessage::RecvFrame(f.clone())).unwrap();
+                        //         }
+                        //         // self.global_frame.blocking_lock().replace(f.clone());
+                        //         match self.global_frame.lock() {
+                        //             Ok(mut global_frame) => {
+                        //                 global_frame.replace(f.clone());
+                        //             }
+                        //             Err(e) => error!("cannot lock global frame: {:?}", e),
+                        //         }
+                        //     }
+                        //     None => {
+                        //         warn!("failed to get lock of frame");
+                        //     }
+                        // }
                     }
                 }
             }
@@ -708,6 +813,7 @@ impl eframe::App for RvcdApp {
                         image,
                     } => {
                         self.frame.lock().unwrap().replace(image.clone());
+                        self.global_frame.lock().unwrap().replace(image.clone());
                     }
                     _ => {}
                 }
@@ -730,3 +836,5 @@ impl eframe::App for RvcdApp {
         }
     }
 }
+
+pub static mut FRAME: MaybeUninit<FrameMutex<Option<Arc<ColorImage>>>> = MaybeUninit::uninit();

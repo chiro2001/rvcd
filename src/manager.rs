@@ -6,6 +6,7 @@ use crate::rpc::{
     RvcdEmpty, RvcdFrame, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile,
     RvcdOpenFileWith, RvcdRemoveClient, RvcdSignalPath,
 };
+use egui::ColorImage;
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -14,6 +15,7 @@ use tonic::{IntoRequest, Request, Response, Status};
 use tracing::{info, trace, warn};
 
 pub const MANAGER_PORT: u16 = 5411;
+pub const DISP_PORT: u16 = 5444;
 
 #[derive(Clone, Debug)]
 pub enum RvcdRpcMessage {
@@ -25,9 +27,12 @@ pub enum RvcdRpcMessage {
 }
 unsafe impl Send for RvcdRpcMessage {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub enum RvcdManagerMessage {
-    RecvFrame(RvcdFrame),
+    // RecvFrame(RvcdFrame),
+    #[default]
+    None,
+    RecvFrame(Arc<ColorImage>),
 }
 unsafe impl Send for RvcdManagerMessage {}
 
@@ -240,17 +245,46 @@ impl RvcdRpc for RvcdManager {
         &self,
         _request: Request<RvcdEmpty>,
     ) -> Result<Response<RvcdFrame>, Status> {
-        self.tx
-            .lock()
-            .unwrap()
-            .send(RvcdRpcMessage::RequestFrame)
-            .unwrap();
-        let frame = match self.rx.lock().unwrap().try_recv() {
-            Ok(msg) => match msg {
-                RvcdManagerMessage::RecvFrame(frame) => Some(frame),
-                // _ => None,
-            },
-            Err(_) => None,
+        let _ = self.tx.lock().unwrap().send(RvcdRpcMessage::RequestFrame);
+        let mut msg = Default::default();
+        loop {
+            match self.rx.lock().unwrap().try_recv() {
+                Ok(m) => msg = m,
+                _ => break,
+            }
+        }
+        let frame = match msg {
+            RvcdManagerMessage::RecvFrame(f) => {
+                let (width, height) = (f.size[0] as u32, f.size[1] as u32);
+                let mut data = vec![0u8; f.pixels.len() * 2];
+                // copy data, can be optimized...
+                data.iter_mut()
+                    // .zip(f.pixels.iter().flat_map(|p| p.to_array()))
+                    .zip(f.pixels.iter().flat_map(|p| {
+                        let (r, g, b, _a) = p.to_tuple();
+                        // [a, r, g, b]
+                        // convert to rgb565
+                        let red5 = (r as u16 >> 3) & 0x1F;
+                        let green6 = (g as u16 >> 2) & 0x3F;
+                        let blue5 = (b as u16 >> 3) & 0x1F;
+                        let rgb565: u16 = (red5 << 11) | (green6 << 5) | blue5;
+                        rgb565.to_be_bytes()
+                    }))
+                    .for_each(|(d, s)| *d = s);
+                let rvcd_frame = RvcdFrame {
+                    width,
+                    height,
+                    data,
+                };
+                info!(
+                    "ready frame: {}x{} data len {}",
+                    rvcd_frame.width,
+                    rvcd_frame.height,
+                    rvcd_frame.data.len()
+                );
+                Some(rvcd_frame)
+            }
+            _ => None,
         };
         Ok(Response::new(frame.map_or(Default::default(), |f| f)))
     }

@@ -36,7 +36,10 @@ struct RvcdArgs {
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<()> {
-    use rvcd::manager::{RvcdExitMessage, RvcdManager};
+    use rvcd::{
+        app,
+        manager::{RvcdExitMessage, RvcdManager},
+    };
     use std::sync::{Arc, Mutex};
     use tonic::transport::Server;
     use tracing::error;
@@ -46,9 +49,12 @@ async fn main() -> Result<()> {
     // Log to stdout (if you run with `RUST_LOG=debug`).
     tracing_subscriber::fmt::init();
 
+    app::init();
+
     // let native_options = eframe::NativeOptions::default();
     let native_options = eframe::NativeOptions {
         // drag_and_drop_support: true,
+        depth_buffer: 3,
         // initial_window_size: Some([1280.0, 1024.0].into()),
         // #[cfg(feature = "wgpu")]
         // renderer: eframe::Renderer::Wgpu,
@@ -57,6 +63,7 @@ async fn main() -> Result<()> {
     let (rpc_tx, rpc_rx) = mpsc::channel();
     let rpc_tx2 = rpc_tx.clone();
     let rpc_tx3 = rpc_tx.clone();
+    let rpc_tx4 = rpc_tx.clone();
     let (manager_tx, manager_rx) = mpsc::channel();
     let (exit_tx, exit_rx) = mpsc::channel();
     let exit_tx2 = exit_tx.clone();
@@ -117,19 +124,11 @@ async fn main() -> Result<()> {
             .send(RvcdRpcMessage::OpenSourceFile(source))
             .unwrap();
     }
-    // pin_mut!(gui, rpc);
-    // let _ = select(gui, rpc).await;
     tokio::spawn(rpc);
-    // make pings to make rpc awake
-    // {
-    //     let rpc_tx = rpc_tx.clone();
-    //     let pings = async move {
-    //         loop {
-    //             rpc_tx.send(RvcdRpcMessage::Ping)
-    //             sleep_ms(100);
-    //         }
-    //     };
-    // }
+    tokio::spawn(RvcdApp::frame_buffer_tcp_server(
+        rvcd::manager::DISP_PORT,
+        rpc_tx4,
+    ));
     gui.await;
     Ok(())
 }
