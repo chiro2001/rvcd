@@ -899,13 +899,14 @@ impl eframe::App for RvcdApp {
                                     modifiers: Default::default(),
                                 });
                             }
+                            EventType::Zoom => {
+                                let events = self.extra_events.get_or_insert(vec![]);
+                                let zoom = event.data as f32 / 1000.0;
+                                events.push(egui::Event::Zoom(zoom));
+                            }
                         }
                     }
                 }
-                // if !frame_requested {
-                //     ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
-                //     frame_requested = true;
-                // }
             }
         }
         let mut messages = vec![];
