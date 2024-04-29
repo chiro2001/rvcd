@@ -77,8 +77,6 @@ pub struct RvcdApp {
     pub global_frame: &'static mut FrameMutex<Option<Arc<ColorImage>>>,
     #[serde(skip)]
     pub extra_events: Option<Vec<egui::Event>>,
-    #[serde(skip)]
-    pub extra_scroll: egui::Vec2,
 }
 
 pub fn init() {
@@ -117,7 +115,6 @@ impl Default for RvcdApp {
             #[allow(static_mut_refs)]
             global_frame: unsafe { FRAME.assume_init_mut() },
             extra_events: None,
-            extra_scroll: Default::default(),
         }
     }
 }
@@ -536,12 +533,6 @@ impl eframe::App for RvcdApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
-        ctx.input_mut(|i| {
-            i.smooth_scroll_delta += self.extra_scroll;
-            // i.raw_scroll_delta += self.extra_scroll;
-        });
-        self.extra_scroll = Default::default();
-
         self.frame_history
             .on_new_frame(ctx.input(|i| i.time), frame.info().cpu_usage);
         match self.run_mode {
@@ -866,9 +857,14 @@ impl eframe::App for RvcdApp {
                             crate::rpc::EventType::Resize => {
                                 let width = event.x as f32 / ctx.pixels_per_point();
                                 let height = event.y as f32 / ctx.pixels_per_point();
-                                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
-                                    width, height,
-                                )))
+                                info!("resize: {}x{}", width, height);
+                                if width < 20.0 || height < 20.0 {
+                                    warn!("size too small, ignore");
+                                } else {
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(
+                                        egui::vec2(width, height),
+                                    ));
+                                }
                             }
                             crate::rpc::EventType::PointerMovement => {
                                 let events = self.extra_events.get_or_insert(vec![]);
@@ -879,7 +875,11 @@ impl eframe::App for RvcdApp {
                                 events.push(egui::Event::PointerMoved(pos));
                             }
                             crate::rpc::EventType::Wheel => {
-                                self.extra_scroll += egui::vec2(event.x as f32, event.y as f32);
+                                let events = self.extra_events.get_or_insert(vec![]);
+                                events.push(egui::Event::Scroll(egui::vec2(
+                                    event.x as f32,
+                                    event.y as f32,
+                                )));
                             }
                             crate::rpc::EventType::Click => {
                                 let events = self.extra_events.get_or_insert(vec![]);
