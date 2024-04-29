@@ -3,8 +3,8 @@
 use crate::rpc::rvcd_client_client::RvcdClientClient;
 use crate::rpc::rvcd_rpc_server::RvcdRpc;
 use crate::rpc::{
-    RvcdEmpty, RvcdFrame, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo, RvcdOpenFile,
-    RvcdOpenFileWith, RvcdRemoveClient, RvcdSignalPath,
+    RvcdEmpty, RvcdFrame, RvcdInputEvent, RvcdLoadSourceDir, RvcdLoadSources, RvcdManagedInfo,
+    RvcdOpenFile, RvcdOpenFileWith, RvcdRemoveClient, RvcdSignalPath,
 };
 use egui::ColorImage;
 use std::collections::HashMap;
@@ -25,6 +25,7 @@ pub enum RvcdRpcMessage {
     OpenSourceFile(String),
     OpenSourceDir(String),
     RequestFrame,
+    InputEvent(RvcdInputEvent),
 }
 unsafe impl Send for RvcdRpcMessage {}
 
@@ -249,7 +250,7 @@ impl RvcdRpc for RvcdManager {
         let _ = self.tx.lock().unwrap().send(RvcdRpcMessage::RequestFrame);
         let mut msg = Default::default();
         loop {
-            match self.rx.lock().unwrap().try_recv() {
+            match self.rx.lock().unwrap().recv() {
                 Ok(m) => msg = m,
                 _ => break,
             }
@@ -288,5 +289,16 @@ impl RvcdRpc for RvcdManager {
             _ => None,
         };
         Ok(Response::new(frame.map_or(Default::default(), |f| f)))
+    }
+    async fn input_event(
+        &self,
+        request: Request<RvcdInputEvent>,
+    ) -> Result<Response<RvcdEmpty>, Status> {
+        self.tx
+            .lock()
+            .unwrap()
+            .send(RvcdRpcMessage::InputEvent(request.into_inner()))
+            .unwrap();
+        Ok(Response::new(RvcdEmpty::default()))
     }
 }

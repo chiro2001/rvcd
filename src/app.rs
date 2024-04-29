@@ -796,23 +796,26 @@ impl eframe::App for RvcdApp {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
                             frame_requested = true;
                         }
-                        // match self.frame.lock().unwrap().as_ref() {
-                        //     Some(f) => {
-                        //         if let Some(tx) = &self.manager_tx {
-                        //             tx.send(RvcdManagerMessage::RecvFrame(f.clone())).unwrap();
-                        //         }
-                        //         // self.global_frame.blocking_lock().replace(f.clone());
-                        //         match self.global_frame.lock() {
-                        //             Ok(mut global_frame) => {
-                        //                 global_frame.replace(f.clone());
-                        //             }
-                        //             Err(e) => error!("cannot lock global frame: {:?}", e),
-                        //         }
-                        //     }
-                        //     None => {
-                        //         warn!("failed to get lock of frame");
-                        //     }
-                        // }
+                    }
+                    RvcdRpcMessage::InputEvent(event) => {
+                        info!("recv input event: {:?}", event);
+                        match event.r#type() {
+                            crate::rpc::EventType::None => {}
+                            crate::rpc::EventType::Resize => {
+                                let width = event.x as f32 / ctx.pixels_per_point();
+                                let height = event.y as f32 / ctx.pixels_per_point();
+                                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+                                    width, height,
+                                )))
+                            }
+                            crate::rpc::EventType::PointerMovement => {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::CursorPosition(
+                                    egui::pos2(event.x as f32, event.y as f32),
+                                ))
+                            }
+                            crate::rpc::EventType::Wheel => {}
+                            crate::rpc::EventType::Click => {}
+                        }
                     }
                 }
             }

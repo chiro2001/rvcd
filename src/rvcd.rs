@@ -866,6 +866,7 @@ impl Rvcd {
                 }
             }
             RvcdRpcMessage::RequestFrame => {}
+            RvcdRpcMessage::InputEvent(_) => {}
         }
         false
     }
