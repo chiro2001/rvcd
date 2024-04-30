@@ -92,7 +92,7 @@ impl Service {
                     }
                     let time_stop = std::time::Instant::now();
                     let duration = time_stop - time_start;
-                    info!("stop reading file, used {} seconds", duration.as_secs());
+                    info!("stop reading file, used {} ms", duration.as_millis());
                     if !canceled {
                         data
                     } else {
@@ -190,13 +190,16 @@ impl Service {
             RvcdMsg::ServiceDataReady(data) => {
                 *self.loading.lock().unwrap() = false;
                 info!("start parsing data");
+                let time_start = std::time::Instant::now();
                 if !self.parse_data_send(data) {
                     self.channel
                         .tx
                         .send(RvcdMsg::FileOpenFailed("".to_string()))
                         .unwrap();
                 }
-                info!("stop parsing data");
+                let time_stop = std::time::Instant::now();
+                let duration = time_stop - time_start;
+                info!("stop parsing data, used {} ms", duration.as_millis());
             }
             RvcdMsg::StopService => return Ok(true),
             RvcdMsg::UpdateSourceDir(_path) => {

@@ -14,6 +14,10 @@ use rvcd::utils::sleep_ms;
 use std::sync::mpsc;
 use tracing::info;
 
+#[cfg(all(target_arch = "x86_64", feature = "jemalloc"))]
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 /// Simple program to greet a person
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Parser)]

@@ -12,8 +12,8 @@ egui = { version = "0.27.2", features = ["serde"] }
 eframe = { version = "0.27.2", default-features = false, features = [
     #    "accesskit", # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
-    "glow", # Use the glow rendering backend. Alternative: "wgpu".
-    "persistence", # Enable restoring app state when restarting the app.
+    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+    "persistence",   # Enable restoring app state when restarting the app.
     #    "wgpu",
 ] }
 
@@ -57,6 +57,9 @@ egui-toast = "0.13.0"
 walkdir = "2.3.2"
 tower = "0.4.13"
 
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+jemallocator = { version = "0.5.4", optional = true }
+
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
@@ -96,6 +99,10 @@ opt-level = 3
 
 [dev-dependencies]
 criterion = "0.5.1"
+
+[features]
+default = ["jemalloc"]
+jemalloc = ["dep:jemallocator"]
 
 [[bench]]
 name = "vcd_parse"
