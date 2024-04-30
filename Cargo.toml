@@ -76,10 +76,10 @@ web-sys = { version = "0.3.60", features = ["Window"] }
 
 
 [profile.release]
-# opt-level = "z" # fast and small wasm
-opt-level = 3
-# strip = true  # Automatically strip symbols from the binary.
-# lto = true
+opt-level = "z" # fast and small wasm
+# opt-level = 3
+strip = true  # Automatically strip symbols from the binary.
+lto = true
 
 
 # Optimize all dependencies even in debug builds:

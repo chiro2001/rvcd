@@ -520,7 +520,18 @@ async fn handle_connection<S: AsyncWriteExt + std::marker::Unpin>(
             writer.write_u16(width).await?;
             writer.write_u16(height).await?;
             writer.write_all(&data).await?;
-            // socket.flush().await?;
+
+            // // convert rgba to argb: shift 1 byte right
+            // writer.write_u16(width).await?;
+            // writer.write_u16(height).await?;
+            // writer.write_u8(0xff).await?;
+            // let len = f.pixels.len();
+            // // zero-copy write
+            // let data =
+            //     unsafe { std::slice::from_raw_parts(f.pixels.as_ptr() as *const u8, len * 4 - 1) };
+            // writer.write_all(data).await?;
+            // // keep data
+            // let _ = f.clone();
         } else {
             debug!("no frame data");
         }
