@@ -4,7 +4,14 @@ use std::future::Future;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
     // this is stupid... use any executor of your choice instead
-    std::thread::spawn(move || futures::executor::block_on(f));
+    // std::thread::spawn(move || futures::executor::block_on(f));
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(f);
+    });
 }
 #[cfg(target_arch = "wasm32")]
 pub fn execute<F: Future<Output = ()> + 'static>(f: F) {
@@ -13,7 +20,8 @@ pub fn execute<F: Future<Output = ()> + 'static>(f: F) {
 
 pub async fn sleep_ms(mills: u64) {
     #[cfg(not(target_arch = "wasm32"))]
-    std::thread::sleep(std::time::Duration::from_millis(mills));
+    // std::thread::sleep(std::time::Duration::from_millis(mills));
+    tokio::time::sleep(std::time::Duration::from_millis(mills)).await;
     #[cfg(target_arch = "wasm32")]
     {
         // #[wasm_bindgen]
