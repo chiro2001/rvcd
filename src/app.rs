@@ -4,8 +4,8 @@ use crate::code::CodeEditorType;
 use crate::files::preview_files_being_dropped;
 use crate::frame_history::FrameHistory;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::manager::RvcdRpcMessage;
-use crate::manager::{RvcdExitMessage, RvcdManagerMessage};
+use crate::manager::{RvcdRpcMessage, RvcdExitMessage, RvcdManagerMessage};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::rpc::{EventType, RvcdInputEvent};
 use crate::run_mode::RunMode;
 use crate::rvcd::State;
@@ -19,11 +19,9 @@ use egui::{
     CentralPanel, ColorImage, DroppedFile, FontData, FontDefinitions, FontFamily, Id, Layout, Ui,
     Window,
 };
-use prost::Message;
 use rust_i18n::locale;
 use std::mem::MaybeUninit;
 use std::sync::{mpsc, Arc};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;
 // use tokio::sync::Mutex as FrameMutex;
 use std::sync::Mutex as FrameMutex;
@@ -360,6 +358,7 @@ impl RvcdApp {
             _ => {}
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn frame_buffer_tcp_server(port: u16, tx: mpsc::Sender<RvcdRpcMessage>) {
         loop {
             let tx = tx.clone();
@@ -371,6 +370,7 @@ impl RvcdApp {
             }
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn frame_buffer_tcp_server_internal(
         port: u16,
         tx: mpsc::Sender<RvcdRpcMessage>,
@@ -445,7 +445,8 @@ impl RvcdApp {
     }
 }
 
-async fn handle_stream_input<S: AsyncReadExt + std::marker::Unpin>(
+#[cfg(not(target_arch = "wasm32"))]
+async fn handle_stream_input<S: tokio::io::AsyncReadExt + std::marker::Unpin>(
     mut reader: S,
     tx: mpsc::Sender<RvcdRpcMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -492,7 +493,8 @@ async fn handle_stream_input<S: AsyncReadExt + std::marker::Unpin>(
     }
 }
 
-async fn handle_connection<S: AsyncWriteExt + std::marker::Unpin>(
+#[cfg(not(target_arch = "wasm32"))]
+async fn handle_connection<S: tokio::io::AsyncWriteExt + std::marker::Unpin>(
     mut writer: S,
     tx: mpsc::Sender<RvcdRpcMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -974,6 +976,7 @@ impl eframe::App for RvcdApp {
 
     fn on_exit(&mut self, _gl: Option<&Context>) {
         // self.close_all();
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(tx) = &self.exit_tx {
             tx.send(RvcdExitMessage::Exit).unwrap();
         }

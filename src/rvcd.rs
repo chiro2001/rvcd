@@ -712,7 +712,12 @@ impl Rvcd {
                 }
                 #[cfg(target_arch = "wasm32")]
                 {
-                    self.toasts.error(text, egui_toast::ToastOptions::default());
+                    // self.toasts.error(text, egui_toast::ToastOptions::default());
+                    self.toasts.add(Toast {
+                        kind: ToastKind::Error,
+                        text: WidgetText::RichText(RichText::new(text)),
+                        options: ToastOptions::default(),
+                    });
                 }
                 self.reset();
             }

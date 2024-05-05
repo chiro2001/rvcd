@@ -170,12 +170,14 @@ fn main() {
     info!("starting rvcd");
 
     wasm_bindgen_futures::spawn_local(async {
-        eframe::start_web(
+        let runner = eframe::WebRunner::new();
+        runner.start(
             "the_canvas_id", // hardcode it
             web_options,
             Box::new(|cc| Box::new(RvcdApp::new(cc))),
         )
         .await
         .expect("failed to start eframe");
+
     });
 }

@@ -39,6 +39,7 @@ antlr-rust = "0.3.0-beta"
 debug-ignore = "1.0.5"
 clap = { version = "4.1.6", features = ["derive"] }
 enum-map = "2.4.2"
+egui-toast = "0.13.0"
 
 [build-dependencies]
 tonic-build = "0.11.0"
@@ -53,7 +54,6 @@ tonic-reflection = "0.11.0"
 prost = "0.12.4"
 tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros"] }
 # egui-toast = { git = "https://github.com/chiro2001/egui-toast", rev = "2f3adaab2e7b1512b9d6101ba5d668351e224056" }
-egui-toast = "0.13.0"
 walkdir = "2.3.2"
 tower = "0.4.13"
 
