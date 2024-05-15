@@ -475,6 +475,7 @@ async fn handle_stream_input<S: tokio::io::AsyncReadExt + std::marker::Unpin>(
             .collect::<Vec<String>>()
             .join(" ");
         debug!("read data: {}", string);
+        use prost::Message;
         match RvcdInputEvent::decode(&buf[..len]) {
             Ok(event) => {
                 if event.r#type() != EventType::None {
