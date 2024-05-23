@@ -97,13 +97,13 @@ impl WaveView {
         let start_index = wave_data.binary_search_by_key(&start_pos, |x| x.timestamp);
         let start_items = match start_index {
             Ok(index) | Err(index) => {
-                // FIXME: skip less items failed
-                // if index >= 1 {
-                //     items.skip(index - 1)
-                // } else {
-                //     items.skip(0)
-                // }
-                items.skip(index.min(wave_data.len() - 1))
+                // skip less items failed?
+                if index >= 1 {
+                    items.skip(index - 1)
+                } else {
+                    items.skip(0)
+                }
+                // items.skip(index.min(wave_data.len() - 1))
             }
         };
         let text_color = ui.visuals().strong_text_color();
