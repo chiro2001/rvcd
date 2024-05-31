@@ -56,8 +56,28 @@ fn main() -> Result<()> {
     rt.block_on(async {
         let args = RvcdArgs::parse();
 
+        // Configure a custom event formatter
+        let format = tracing_subscriber::fmt::format()
+            .with_level(true)
+            .with_target(false)
+            .with_thread_ids(false)
+            .with_thread_names(false)
+            .with_file(true)
+            .with_line_number(true)
+            .without_time()
+            .compact(); // use the `Compact` formatting style.
+        let filter = tracing_subscriber::filter::EnvFilter::from_default_env();
+
         // Log to stdout (if you run with `RUST_LOG=debug`).
-        tracing_subscriber::fmt::init();
+        tracing_subscriber::fmt()
+            .event_format(format)
+            .with_env_filter(filter)
+            .init();
+
+        log::info!("starting rvcd");
+        log::warn!("warn");
+        log::debug!("debug");
+        log::trace!("trace");
 
         app::init();
 
@@ -68,6 +88,7 @@ fn main() -> Result<()> {
             // initial_window_size: Some([1280.0, 1024.0].into()),
             // #[cfg(feature = "wgpu")]
             // renderer: eframe::Renderer::Wgpu,
+            // run_and_return: false,
             ..Default::default()
         };
         let (rpc_tx, rpc_rx) = mpsc::channel();
@@ -171,13 +192,13 @@ fn main() {
 
     wasm_bindgen_futures::spawn_local(async {
         let runner = eframe::WebRunner::new();
-        runner.start(
-            "the_canvas_id", // hardcode it
-            web_options,
-            Box::new(|cc| Box::new(RvcdApp::new(cc))),
-        )
-        .await
-        .expect("failed to start eframe");
-
+        runner
+            .start(
+                "the_canvas_id", // hardcode it
+                web_options,
+                Box::new(|cc| Box::new(RvcdApp::new(cc))),
+            )
+            .await
+            .expect("failed to start eframe");
     });
 }

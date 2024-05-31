@@ -1,0 +1,103 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'rvcd'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=rvcd"
+                ],
+                "filter": {
+                    "name": "rvcd",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rvcd'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rvcd",
+                    "--package=rvcd",
+                    "--target=x86_64-unknown-linux-musl"
+                ],
+                "filter": {
+                    "name": "rvcd",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rvcd'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rvcd",
+                    "--package=rvcd"
+                ],
+                "filter": {
+                    "name": "rvcd",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'code_parser'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=code_parser",
+                    "--package=rvcd"
+                ],
+                "filter": {
+                    "name": "code_parser",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'vcd_parse'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=vcd_parse",
+                    "--package=rvcd"
+                ],
+                "filter": {
+                    "name": "vcd_parse",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
